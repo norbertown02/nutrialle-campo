@@ -4,6 +4,7 @@ import AppBar from './components/AppBar'
 import TabBar from './components/TabBar'
 import Home from './screens/Home'
 import Clientes from './screens/Clientes'
+import NovaFazenda from './screens/NovaFazenda'
 import Agenda from './screens/Agenda'
 import Vendas from './screens/Vendas'
 import Mercado from './screens/Mercado'
@@ -18,6 +19,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/clientes" element={<Clientes />} />
+            <Route path="/clientes/novo" element={<NovaFazenda />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/vendas" element={<Vendas />} />
             <Route path="/mercado" element={<Mercado />} />
