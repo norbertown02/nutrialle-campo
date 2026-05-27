@@ -7,22 +7,37 @@ import {
   IconChecklist, IconRoute, IconCash
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
+import { useVisits } from '../lib/useVisits'
+import { useSales } from '../lib/useSales'
 import { SEGMENTS, SEGMENT_COLORS } from '../data/farms'
 
 function initials(name) {
   return (name || '')
-    .split(' ').filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase()
+    .split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
 
 function onlyDigits(s) {
   return (s || '').replace(/\D/g, '')
 }
 
+function formatDate(iso) {
+  if (!iso) return ''
+  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR')
+}
+
 const backBtnStyle = {
-  background: 'none', border: 'none', cursor: 'pointer',
-  color: 'var(--text-dim)', fontSize: 13, fontWeight: 500,
-  display: 'flex', alignItems: 'center', gap: 4,
-  padding: 0, marginBottom: 14, fontFamily: 'inherit'
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: 'var(--text-dim)',
+  fontSize: 13,
+  fontWeight: 500,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: 0,
+  marginBottom: 14,
+  fontFamily: 'inherit'
 }
 
 const actionBtnStyle = {
@@ -32,44 +47,111 @@ const actionBtnStyle = {
   fontSize: 11
 }
 
-function Row({ icon, label, value }) {
+function Row(props) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 11,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 11,
       padding: '8px 0',
       borderBottom: '1px solid var(--line-soft)'
     }}>
-      <div style={{ color: 'var(--text-faint)', flexShrink: 0 }}>{icon}</div>
+      <div style={{ color: 'var(--text-faint)', flexShrink: 0 }}>{props.icon}</div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{label}</div>
-        <div style={{ fontSize: 13, fontWeight: 500 }}>{value}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{props.label}</div>
+        <div style={{ fontSize: 13, fontWeight: 500 }}>{props.value}</div>
       </div>
     </div>
   )
 }
 
-function EmptyHistory({ icon, label, hint }) {
+function EmptyHistory(props) {
   return (
     <div className="empty" style={{ padding: 30 }}>
-      {icon}
-      <p>{label}</p>
+      {props.icon}
+      <p>{props.label}</p>
       <p style={{
-        fontSize: 11, color: 'var(--text-faint)', marginTop: 6,
-        maxWidth: 240, marginLeft: 'auto', marginRight: 'auto'
-      }}>{hint}</p>
+        fontSize: 11,
+        color: 'var(--text-faint)',
+        marginTop: 6,
+        maxWidth: 240,
+        marginLeft: 'auto',
+        marginRight: 'auto'
+      }}>{props.hint}</p>
+    </div>
+  )
+}
+
+function VisitCard(props) {
+  const v = props.visit
+  const o = v.outcome
+  const color = o === 'positiva' ? 'var(--green)' : o === 'negativa' ? 'var(--red)' : 'var(--silver-dim)'
+  const bg = o === 'positiva' ? 'var(--green-bg)' : o === 'negativa' ? 'var(--red-bg)' : 'var(--surface-2)'
+  const label = o === 'positiva' ? 'Positiva' : o === 'negativa' ? 'Negativa' : 'Neutra'
+
+  return (
+    <div className="card" style={{ padding: 14, marginBottom: 8 }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6
+      }}>
+        <span style={{ fontWeight: 600, fontSize: 13 }}>{formatDate(v.visitDate)}</span>
+        <span style={{
+          fontSize: 11,
+          fontWeight: 600,
+          padding: '3px 9px',
+          borderRadius: 20,
+          background: bg,
+          color: color
+        }}>
+          {label}
+        </span>
+      </div>
+      {v.notes ? (
+        <div style={{
+          fontSize: 12,
+          color: 'var(--text-dim)',
+          lineHeight: 1.45,
+          marginTop: 6
+        }}>
+          {v.notes}
+        </div>
+      ) : null}
+      {v.nextVisitDate ? (
+        <div style={{
+          fontSize: 11,
+          color: 'var(--text-faint)',
+          marginTop: 8,
+          paddingTop: 8,
+          borderTop: '1px solid var(--line-soft)'
+        }}>
+          Proxima visita: {formatDate(v.nextVisitDate)}
+        </div>
+      ) : null}
     </div>
   )
 }
 
 export default function FichaCliente() {
-  const { id } = useParams()
+  const params = useParams()
+  const id = params.id
   const navigate = useNavigate()
-  const { getFarm, removeFarm } = useFarms()
+  const farmsHook = useFarms()
+  const getFarm = farmsHook.getFarm
+  const removeFarm = farmsHook.removeFarm
+  const visitsHook = useVisits()
+  const getVisitsByFarm = visitsHook.getVisitsByFarm
+  const salesHook = useSales()
+  const getSalesByFarm = salesHook.getSalesByFarm
 
   const [tab, setTab] = useState('visitas')
   const [confirmRemove, setConfirmRemove] = useState(false)
 
   const farm = getFarm(id)
+  const farmVisits = farm ? getVisitsByFarm(farm.id) : []
+  const farmSales = farm ? getSalesByFarm(farm.id) : []
 
   if (!farm) {
     return (
@@ -96,6 +178,22 @@ export default function FichaCliente() {
     navigate('/clientes')
   }
 
+  const handleVisita = () => {
+    navigate('/visitas/nova?farm=' + farm.id)
+  }
+
+  const handleChecklist = () => {
+    alert('Checklist sera implementado em breve')
+  }
+
+ const handleVenda = () => {
+    navigate('/vendas/nova?farm=' + farm.id)
+  }
+
+  const handleEditar = () => {
+    alert('Edicao sera implementada em breve')
+  }
+
   return (
     <div className="content">
       <button onClick={() => navigate('/clientes')} style={backBtnStyle}>
@@ -105,10 +203,16 @@ export default function FichaCliente() {
       <div className="card" style={{ padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
-            width: 64, height: 64, borderRadius: 16,
+            width: 64,
+            height: 64,
+            borderRadius: 16,
             background: segmentColor,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#000', fontWeight: 700, fontSize: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#000',
+            fontWeight: 700,
+            fontSize: 22,
             fontFamily: "'Barlow Condensed', sans-serif",
             flexShrink: 0
           }}>
@@ -117,46 +221,58 @@ export default function FichaCliente() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{
               fontFamily: "'Barlow Condensed', sans-serif",
-              fontWeight: 600, fontSize: 22, lineHeight: 1.1
+              fontWeight: 600,
+              fontSize: 22,
+              lineHeight: 1.1
             }}>
               {farm.name}
             </h2>
             <div style={{
-              fontSize: 12, color: 'var(--text-dim)', marginTop: 4,
-              display: 'flex', alignItems: 'center', gap: 4
+              fontSize: 12,
+              color: 'var(--text-dim)',
+              marginTop: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
             }}>
               <IconMapPin size={12} /> {farm.city}, {farm.state}
             </div>
             <div style={{
-              display: 'flex', gap: 6, marginTop: 8, alignItems: 'center'
+              display: 'flex',
+              gap: 6,
+              marginTop: 8,
+              alignItems: 'center'
             }}>
               <span className="pill pill-silver">{SEGMENTS[farm.segment]}</span>
-              {farm.clientCode && (
+              {farm.clientCode ? (
                 <span style={{
-                  fontSize: 10, color: 'var(--text-faint)',
+                  fontSize: 10,
+                  color: 'var(--text-faint)',
                   letterSpacing: 0.5
                 }}>
                   {farm.clientCode}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
       </div>
 
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-        gap: 8, marginTop: 12
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: 8,
+        marginTop: 12
       }}>
-        <button className="btn btn-ghost" style={actionBtnStyle}>
+        <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleChecklist}>
           <IconClipboardList size={22} />
           <span>Checklist</span>
         </button>
-        <button className="btn btn-ghost" style={actionBtnStyle}>
+        <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleVisita}>
           <IconCalendarPlus size={22} />
           <span>Visita</span>
         </button>
-        <button className="btn btn-primary" style={actionBtnStyle}>
+        <button className="btn btn-primary" style={actionBtnStyle} onClick={handleVenda}>
           <IconReceipt size={22} />
           <span>Venda</span>
         </button>
@@ -166,9 +282,13 @@ export default function FichaCliente() {
       <div className="card">
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 11,
+            width: 40,
+            height: 40,
+            borderRadius: 11,
             background: 'var(--surface-2)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: 'var(--text-dim)'
           }}>
             <IconUser size={20} />
@@ -180,17 +300,19 @@ export default function FichaCliente() {
             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
               {farm.ownerRole || 'Proprietario'}
             </div>
-            {farm.phone && (
+            {farm.phone ? (
               <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>
                 {farm.phone}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
-        {farm.phone && (
+        {farm.phone ? (
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr',
-            gap: 8, marginTop: 12
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 8,
+            marginTop: 12
           }}>
             <a
               href={'tel:' + onlyDigits(farm.phone)}
@@ -214,24 +336,32 @@ export default function FichaCliente() {
                 fontSize: 14,
                 letterSpacing: 0.6,
                 textTransform: 'uppercase',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
               }}
             >
               <IconBrandWhatsapp size={16} /> WhatsApp
             </a>
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="section-label">
         Operacao
         <button
           style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--orange)', fontSize: 11, fontWeight: 600,
-            marginLeft: 'auto', fontFamily: 'inherit'
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--orange)',
+            fontSize: 11,
+            fontWeight: 600,
+            marginLeft: 'auto',
+            fontFamily: 'inherit'
           }}
-          onClick={() => alert('Edicao sera implementada em breve')}
+          onClick={handleEditar}
         >
           <IconEdit size={13} style={{ verticalAlign: -2 }} /> editar
         </button>
@@ -243,69 +373,172 @@ export default function FichaCliente() {
           value={farm.production || 'Nao cadastrada'} />
         <Row icon={<IconMapPin size={18} />} label="Area"
           value={farm.area || 'Nao cadastrada'} />
-        {farm.region && (
+        {farm.region ? (
           <Row icon={<IconMapPin size={18} />} label="Regiao"
             value={farm.region} />
-        )}
+        ) : null}
       </div>
 
       <div className="section-label">Historico</div>
 
       <div style={{
-        display: 'flex', gap: 5,
+        display: 'flex',
+        gap: 5,
         background: 'var(--surface-2)',
-        padding: 4, borderRadius: 10, marginBottom: 12
+        padding: 4,
+        borderRadius: 10,
+        marginBottom: 12
       }}>
-        {[
-          ['visitas', 'Visitas', IconRoute],
-          ['vendas', 'Vendas', IconCash],
-          ['checklists', 'Checklists', IconChecklist],
-        ].map(([tabId, label, Icon]) => (
-          <button
-            key={tabId}
-            onClick={() => setTab(tabId)}
-            style={{
-              flex: 1, padding: '9px 4px', borderRadius: 7,
-              border: 'none', cursor: 'pointer',
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: 12, fontWeight: 600,
-              letterSpacing: 0.4, textTransform: 'uppercase',
-              background: tab === tabId ? 'var(--orange)' : 'transparent',
-              color: tab === tabId ? '#1a0d00' : 'var(--text-dim)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5
-            }}
-          >
-            <Icon size={14} /> {label}
-          </button>
-        ))}
+        <button
+          onClick={() => setTab('visitas')}
+          style={{
+            flex: 1,
+            padding: '9px 4px',
+            borderRadius: 7,
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: 0.4,
+            textTransform: 'uppercase',
+            background: tab === 'visitas' ? 'var(--orange)' : 'transparent',
+            color: tab === 'visitas' ? '#1a0d00' : 'var(--text-dim)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 5
+          }}
+        >
+          <IconRoute size={14} /> Visitas {farmVisits.length > 0 ? '(' + farmVisits.length + ')' : ''}
+        </button>
+        <button
+          onClick={() => setTab('vendas')}
+          style={{
+            flex: 1,
+            padding: '9px 4px',
+            borderRadius: 7,
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: 0.4,
+            textTransform: 'uppercase',
+            background: tab === 'vendas' ? 'var(--orange)' : 'transparent',
+            color: tab === 'vendas' ? '#1a0d00' : 'var(--text-dim)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 5
+          }}
+        >
+          <IconCash size={14} /> Vendas {farmSales.length > 0 ? '(' + farmSales.length + ')' : ''}
+        </button>
+        <button
+          onClick={() => setTab('checklists')}
+          style={{
+            flex: 1,
+            padding: '9px 4px',
+            borderRadius: 7,
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: 0.4,
+            textTransform: 'uppercase',
+            background: tab === 'checklists' ? 'var(--orange)' : 'transparent',
+            color: tab === 'checklists' ? '#1a0d00' : 'var(--text-dim)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 5
+          }}
+        >
+          <IconChecklist size={14} /> Checklists
+        </button>
       </div>
 
-      {tab === 'visitas' && (
-        <EmptyHistory icon={<IconRoute />} label="Nenhuma visita registrada"
-          hint="Toque em Visita acima para registrar a primeira." />
-      )}
-      {tab === 'vendas' && (
-        <EmptyHistory icon={<IconCash />} label="Nenhuma venda registrada"
-          hint="Toque em Venda acima para registrar a primeira." />
-      )}
-      {tab === 'checklists' && (
-        <EmptyHistory icon={<IconChecklist />} label="Nenhum checklist aplicado"
-          hint="Toque em Checklist acima para fazer a primeira avaliacao." />
-      )}
+      {tab === 'visitas' && farmVisits.length === 0 ? (
+        <EmptyHistory
+          icon={<IconRoute />}
+          label="Nenhuma visita registrada"
+          hint="Toque em Visita acima para registrar a primeira."
+        />
+      ) : null}
 
-      <div style={{ marginTop: 30, paddingTop: 20, borderTop: '1px solid var(--line-soft)' }}>
+      {tab === 'visitas' && farmVisits.length > 0 ? (
+        farmVisits.map(v => <VisitCard key={v.id} visit={v} />)
+      ) : null}
+
+      {tab === 'vendas' && farmSales.length === 0 ? (
+        <EmptyHistory
+          icon={<IconCash />}
+          label="Nenhuma venda registrada"
+          hint="Toque em Venda acima para registrar a primeira."
+        />
+      ) : null}
+
+      {tab === 'vendas' && farmSales.length > 0 ? (
+        farmSales.map(s => (
+          <div key={s.id} className="card" style={{ padding: 14, marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontWeight: 600, fontSize: 13 }}>
+                {formatDate(s.saleDate)}
+              </span>
+              <span style={{
+                fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
+                background: s.needsApproval ? 'var(--red-bg)' : 'var(--amber-bg)',
+                color: s.needsApproval ? 'var(--red)' : 'var(--amber)'
+              }}>
+                {s.needsApproval ? 'Precisa aprovacao' : 'Pendente envio'}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
+              {s.items.length} {s.items.length === 1 ? 'item' : 'itens'} · {s.paymentTermLabel}
+            </div>
+            <div style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 700, fontSize: 18, color: 'var(--orange)'
+            }}>
+              R$ {Number(s.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+        ))
+      ) : null}
+
+      {tab === 'checklists' ? (
+        <EmptyHistory
+          icon={<IconChecklist />}
+          label="Nenhum checklist aplicado"
+          hint="Toque em Checklist acima para fazer a primeira avaliacao."
+        />
+      ) : null}
+
+      <div style={{
+        marginTop: 30,
+        paddingTop: 20,
+        borderTop: '1px solid var(--line-soft)'
+      }}>
         {confirmRemove ? (
           <div className="hint" style={{
             background: 'var(--red-bg)',
             borderColor: 'rgba(217,83,79,0.3)',
             color: 'var(--red)',
-            flexDirection: 'column', alignItems: 'stretch'
+            flexDirection: 'column',
+            alignItems: 'stretch'
           }}>
             <div>
               <strong>Tem certeza?</strong> Esta acao remove a fazenda da sua carteira.
               Os dados historicos serao perdidos.
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              marginTop: 10
+            }}>
               <button
                 className="btn btn-ghost"
                 onClick={() => setConfirmRemove(false)}
@@ -316,12 +549,21 @@ export default function FichaCliente() {
               <button
                 onClick={handleRemove}
                 style={{
-                  background: 'var(--red)', color: '#fff',
-                  border: 'none', borderRadius: 10, padding: '10px',
-                  fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 600,
-                  letterSpacing: 0.6, textTransform: 'uppercase',
-                  fontSize: 14, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                  background: 'var(--red)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '10px',
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontWeight: 600,
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6
                 }}
               >
                 <IconTrash size={16} /> Remover
@@ -332,9 +574,15 @@ export default function FichaCliente() {
           <button
             onClick={handleRemove}
             style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--text-faint)', fontSize: 12, fontFamily: 'inherit',
-              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-faint)',
+              fontSize: 12,
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
               margin: '0 auto'
             }}
           >

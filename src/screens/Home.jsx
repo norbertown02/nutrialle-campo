@@ -1,11 +1,14 @@
+
 import {
   IconClipboardList, IconReceipt, IconUserPlus,
   IconTargetArrow, IconChartBar, IconSend,
   IconMapPin, IconClock
 } from '@tabler/icons-react'
-import { Link } from 'react-router-dom'
+
+import { useNavigate, Link } from 'react-router-dom'
 
 export default function Home() {
+  const navigate = useNavigate()
   // dados de demonstração — vão sair daqui quando conectar ao Supabase
   const seller = { name: 'Carlos Eduardo' }
   const stats = {
@@ -79,10 +82,10 @@ export default function Home() {
           <IconClipboardList size={21} />
           Checklist
         </button>
-        <button className="btn btn-ghost" style={atalhoStyle}>
-          <IconReceipt size={21} />
-          Venda
-        </button>
+        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/vendas/nova')}>
+            <IconReceipt size={21} />
+            Venda
+          </button>
         <button className="btn btn-ghost" style={atalhoStyle}>
           <IconTargetArrow size={21} />
           Prospecção
@@ -91,9 +94,9 @@ export default function Home() {
           <IconChartBar size={21} />
           Dados
         </button>
-        <button className="btn btn-primary" style={atalhoStyle}>
-          <IconSend size={21} />
-          Fechar dia
+        <button className="btn btn-primary" style={atalhoStyle} onClick={() => navigate('/vendas')}>
+        <IconSend size={21} />
+        Fechar dia
         </button>
       </div>
     </div>
