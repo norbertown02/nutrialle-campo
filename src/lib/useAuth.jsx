@@ -3,7 +3,7 @@ import { useState, useCallback, createContext, useContext } from 'react'
 const STORAGE_KEY = 'nutrialle_auth'
 
 const USERS = [
-  { id: 'u1', name: 'Carlos Eduardo', email: 'carlos@nutrialle.com.br', password: 'nutri2024', role: 'vendedor' },
+  { id: 'u1', name: 'Teste', email: 'teste@gmail.com', password: '123456', role: 'vendedor' },
   { id: 'u2', name: 'Admin Nutrialle', email: 'admin@nutrialle.com.br', password: 'admin2024', role: 'admin' },
 ]
 
