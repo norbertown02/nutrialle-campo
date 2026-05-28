@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconMail, IconLock, IconEye, IconEyeOff } from '@tabler/icons-react'
-import { useAuth } from '../lib/useAuth'
+import { useAuth } from '../lib/useAuth.jsx'
 import logo from '../assets/logo-nutrialle.jpg'
 
 export default function Login() {

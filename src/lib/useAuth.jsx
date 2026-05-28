@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, createContext, useContext } from 'react'
 
 const STORAGE_KEY = 'nutrialle_auth'
 
-// Usuários temporários — substituir por Supabase Auth quando migrar
 const USERS = [
   { id: 'u1', name: 'Carlos Eduardo', email: 'carlos@nutrialle.com.br', password: 'nutri2024', role: 'vendedor' },
   { id: 'u2', name: 'Admin Nutrialle', email: 'admin@nutrialle.com.br', password: 'admin2024', role: 'admin' },
@@ -15,20 +14,27 @@ function loadSession() {
   } catch { return null }
 }
 
-export function useAuth() {
-  const [user, setUser]       = useState(loadSession)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
+const AuthContext = createContext(null)
+
+export function AuthProvider({ children }) {
+  const [user, setUser]             = useState(loadSession)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState(null)
+  const [showSplash, setShowSplash] = useState(false)
 
   const login = useCallback(async (email, password) => {
     setLoading(true)
     setError(null)
-    await new Promise(r => setTimeout(r, 600)) // simula latência
+    await new Promise(r => setTimeout(r, 600))
     const found = USERS.find(u => u.email === email && u.password === password)
     if (found) {
       const session = { id: found.id, name: found.name, email: found.email, role: found.role }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
-      setUser(session)
+      setShowSplash(true)
+      setTimeout(() => {
+        setUser(session)
+        setShowSplash(false)
+      }, 2200)
       setLoading(false)
       return true
     }
@@ -42,5 +48,13 @@ export function useAuth() {
     setUser(null)
   }, [])
 
-  return { user, loading, error, login, logout }
+  return (
+    <AuthContext.Provider value={{ user, loading, error, login, logout, showSplash }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export function useAuth() {
+  return useContext(AuthContext)
 }
