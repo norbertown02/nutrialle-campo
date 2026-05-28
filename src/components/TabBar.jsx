@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   IconHome, IconUsers, IconCalendar,
-  IconReceipt, IconChartLine
+  IconReceipt, IconChartLine, IconDatabase
 } from '@tabler/icons-react'
 
 const TABS = [
@@ -9,7 +9,8 @@ const TABS = [
   { to: '/clientes', label: 'Clientes', Icon: IconUsers },
   { to: '/agenda',   label: 'Agenda',   Icon: IconCalendar },
   { to: '/vendas',   label: 'Vendas',   Icon: IconReceipt },
-  { to: '/mercado',  label: 'Mercado',  Icon: IconChartLine },
+  { to: "/mercado",  label: "Mercado",  Icon: IconChartLine, IconDatabase },
+  { to: "/dados",    label: "Dados",    Icon: IconDatabase },
 ]
 
 export default function TabBar() {

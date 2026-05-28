@@ -1,4 +1,5 @@
 import { IconArrowLeft } from '@tabler/icons-react'
+import logo from '../assets/logo-nutrialle.jpg'
 
 export default function AppBar({ title, onBack, action }) {
   return (
@@ -8,15 +9,11 @@ export default function AppBar({ title, onBack, action }) {
           <IconArrowLeft size={18} />
         </button>
       ) : (
-        <div style={{
-          width: 30, height: 30, borderRadius: 8,
-          background: 'var(--orange)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#1a0d00', fontWeight: 700, fontSize: 14,
-          fontFamily: "'Barlow Condensed', sans-serif"
-        }}>
-          N
-        </div>
+        <img
+          src={logo}
+          alt="Nutrialle"
+          style={{ width: 62, height: 62, borderRadius: 8, objectFit: 'cover' }}
+        />
       )}
       <h1>{title}</h1>
       {action}

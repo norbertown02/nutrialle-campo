@@ -73,27 +73,20 @@ export default function Home() {
       )}
 
       <div className="section-label">Atalhos</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 9 }}>
-        <button className="btn btn-ghost" style={atalhoStyle}>
-          <IconUserPlus size={21} />
-          Novo cliente
-        </button>
-        <button className="btn btn-ghost" style={atalhoStyle}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+       <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/clientes/novo')}>
+              <IconUserPlus size={21} />
+              Novo cliente
+            </button>
+        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/checklist')}>
           <IconClipboardList size={21} />
-          Checklist
-        </button>
+            Checklist
+          </button>
         <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/vendas/nova')}>
             <IconReceipt size={21} />
             Venda
           </button>
-        <button className="btn btn-ghost" style={atalhoStyle}>
-          <IconTargetArrow size={21} />
-          Prospecção
-        </button>
-        <button className="btn btn-ghost" style={atalhoStyle}>
-          <IconChartBar size={21} />
-          Dados
-        </button>
+       
         <button className="btn btn-primary" style={atalhoStyle} onClick={() => navigate('/vendas')}>
         <IconSend size={21} />
         Fechar dia

@@ -4,10 +4,11 @@ import {
   IconArrowLeft, IconPhone, IconBrandWhatsapp, IconMapPin,
   IconEdit, IconTrash, IconClipboardList, IconCalendarPlus,
   IconReceipt, IconUser, IconBuildingWarehouse,
-  IconChecklist, IconRoute, IconCash
+  IconChecklist, IconRoute, IconCash, IconChartBar
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
+import { useChecklists } from '../lib/useChecklists'
 import { useSales } from '../lib/useSales'
 import { SEGMENTS, SEGMENT_COLORS } from '../data/farms'
 
@@ -143,6 +144,8 @@ export default function FichaCliente() {
   const removeFarm = farmsHook.removeFarm
   const visitsHook = useVisits()
   const getVisitsByFarm = visitsHook.getVisitsByFarm
+  const checklistsHook = useChecklists()
+  const getChecklistsByFarm = checklistsHook.getChecklistsByFarm
   const salesHook = useSales()
   const getSalesByFarm = salesHook.getSalesByFarm
 
@@ -151,6 +154,7 @@ export default function FichaCliente() {
 
   const farm = getFarm(id)
   const farmVisits = farm ? getVisitsByFarm(farm.id) : []
+  const farmChecklists = farm ? getChecklistsByFarm(farm.id) : []
   const farmSales = farm ? getSalesByFarm(farm.id) : []
 
   if (!farm) {
@@ -183,8 +187,9 @@ export default function FichaCliente() {
   }
 
   const handleChecklist = () => {
-    alert('Checklist sera implementado em breve')
+    navigate('/clientes/' + farm.id + '/checklist')
   }
+  
 
  const handleVenda = () => {
     navigate('/vendas/nova?farm=' + farm.id)
@@ -259,24 +264,28 @@ export default function FichaCliente() {
       </div>
 
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        gap: 8,
-        marginTop: 12
-      }}>
-        <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleChecklist}>
-          <IconClipboardList size={22} />
-          <span>Checklist</span>
-        </button>
-        <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleVisita}>
-          <IconCalendarPlus size={22} />
-          <span>Visita</span>
-        </button>
-        <button className="btn btn-primary" style={actionBtnStyle} onClick={handleVenda}>
-          <IconReceipt size={22} />
-          <span>Venda</span>
-        </button>
-      </div>
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr 1fr',
+            gap: 8,
+            marginTop: 12
+          }}>
+            <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleChecklist}>
+              <IconClipboardList size={22} />
+              <span>Checklist</span>
+            </button>
+            <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleVisita}>
+              <IconCalendarPlus size={22} />
+              <span>Visita</span>
+            </button>
+            <button className="btn btn-ghost" style={actionBtnStyle} onClick={() => navigate('/fazenda-dados/' + farm.id)}>
+              <IconChartBar size={22} />
+              <span>Dados</span>
+            </button>
+            <button className="btn btn-primary" style={actionBtnStyle} onClick={handleVenda}>
+              <IconReceipt size={22} />
+              <span>Venda</span>
+            </button>
+          </div>
 
       <div className="section-label">Produtor</div>
       <div className="card">
@@ -456,7 +465,7 @@ export default function FichaCliente() {
             gap: 5
           }}
         >
-          <IconChecklist size={14} /> Checklists
+          <IconChecklist size={14} /> Checklists {farmChecklists.length > 0 ? '(' + farmChecklists.length + ')' : ''}
         </button>
       </div>
 
@@ -508,12 +517,46 @@ export default function FichaCliente() {
         ))
       ) : null}
 
-      {tab === 'checklists' ? (
+      {tab === 'checklists' && farmChecklists.length === 0 ? (
         <EmptyHistory
           icon={<IconChecklist />}
           label="Nenhum checklist aplicado"
           hint="Toque em Checklist acima para fazer a primeira avaliacao."
         />
+      ) : null}
+
+      {tab === 'checklists' && farmChecklists.length > 0 ? (
+        farmChecklists.map(c => {
+          const color = c.overallScore >= 75 ? 'var(--green)'
+            : c.overallScore >= 50 ? 'var(--amber)' : 'var(--red)'
+          const bg = c.overallScore >= 75 ? 'var(--green-bg)'
+            : c.overallScore >= 50 ? 'var(--amber-bg)' : 'var(--red-bg)'
+          return (
+            <div key={c.id} className="card" style={{ padding: 14, marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontWeight: 600, fontSize: 13 }}>{formatDate(c.appliedAt)}</span>
+                <div style={{
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontWeight: 700, fontSize: 20, color: color,
+                  padding: '2px 12px', borderRadius: 20, background: bg
+                }}>
+                  {c.overallScore}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {Object.entries(c.stageScores).map(([stage, score]) => (
+                  <span key={stage} style={{
+                    fontSize: 10, fontWeight: 600,
+                    padding: '3px 8px', borderRadius: 12,
+                    background: 'var(--surface-2)', color: 'var(--text-dim)'
+                  }}>
+                    {stage}: {score}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )
+        })
       ) : null}
 
       <div style={{
