@@ -1,4 +1,4 @@
-\import {
+import {
   IconClipboardList, IconReceipt, IconUserPlus,
   IconSend, IconMapPin, IconClock, IconCalendar
 } from '@tabler/icons-react'
