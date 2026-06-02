@@ -5,7 +5,7 @@ import {
   IconUsersGroup, IconCheck, IconClock
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
-import { SEGMENTS, SEGMENT_COLORS } from '../data/farms'
+import { useConfig } from '../lib/useConfig'
 
 const SEGMENT_TABS = [
   { id: 'todos', label: 'Todos' },
@@ -26,6 +26,7 @@ function initials(name) {
 
 export default function Clientes() {
   const { farms } = useFarms()
+  const { SEGMENTS, SEGMENT_COLORS } = useConfig()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [segment, setSegment] = useState('todos')

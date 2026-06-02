@@ -1,44 +1,51 @@
 import { useState, useEffect, useCallback } from 'react'
+import { supabase } from './supabase'
 
-const STORAGE_KEY = 'nutrialle_checklists'
-
-function loadChecklists() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveChecklists(items) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-  } catch (e) {
-    console.error('Erro ao salvar checklists:', e)
+function fromDB(row) {
+  if (!row) return null
+  return {
+    id:           row.id,
+    farmId:       row.farm_id,
+    segment:      row.segment,
+    appliedAt:    row.applied_at,
+    overallScore: row.overall_score,
+    stageScores:  row.stage_scores,
+    answers:      row.answers,
+    createdAt:    row.created_at,
   }
 }
 
 export function useChecklists() {
-  const [checklists, setChecklists] = useState(loadChecklists)
+  const [checklists, setChecklists] = useState([])
 
   useEffect(() => {
-    saveChecklists(checklists)
-  }, [checklists])
-
-  const addChecklist = useCallback((data) => {
-    setChecklists(prev => {
-      const item = {
-        ...data,
-        id: 'c' + Date.now(),
-        createdAt: new Date().toISOString(),
-      }
-      return [item, ...prev]
-    })
+    async function load() {
+      const { data, error } = await supabase
+        .from('checklists')
+        .select('*')
+        .order('applied_at', { ascending: false })
+      if (!error && data) setChecklists(data.map(fromDB))
+    }
+    load()
   }, [])
 
-  const removeChecklist = useCallback((id) => {
-    setChecklists(prev => prev.filter(c => c.id !== id))
+  const addChecklist = useCallback(async (data) => {
+    const item = {
+      id:            'c' + Date.now(),
+      farm_id:       data.farmId,
+      segment:       data.segment,
+      applied_at:    data.appliedAt,
+      overall_score: data.overallScore,
+      stage_scores:  data.stageScores,
+      answers:       data.answers,
+    }
+    const { error } = await supabase.from('checklists').insert(item)
+    if (!error) setChecklists(prev => [fromDB(item), ...prev])
+  }, [])
+
+  const removeChecklist = useCallback(async (id) => {
+    const { error } = await supabase.from('checklists').delete().eq('id', id)
+    if (!error) setChecklists(prev => prev.filter(c => c.id !== id))
   }, [])
 
   const getChecklistsByFarm = useCallback((farmId) => {

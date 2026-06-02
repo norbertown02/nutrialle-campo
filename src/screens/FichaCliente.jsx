@@ -10,7 +10,7 @@ import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
 import { useChecklists } from '../lib/useChecklists'
 import { useSales } from '../lib/useSales'
-import { SEGMENTS, SEGMENT_COLORS } from '../data/farms'
+import { useConfig } from '../lib/useConfig'
 
 function initials(name) {
   return (name || '')
@@ -147,6 +147,7 @@ export default function FichaCliente() {
   const checklistsHook = useChecklists()
   const getChecklistsByFarm = checklistsHook.getChecklistsByFarm
   const salesHook = useSales()
+  const { SEGMENTS, SEGMENT_COLORS } = useConfig()
   const getSalesByFarm = salesHook.getSalesByFarm
 
   const [tab, setTab] = useState('visitas')

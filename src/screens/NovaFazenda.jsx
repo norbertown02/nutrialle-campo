@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconCheck } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
-import { SEGMENT_OPTIONS, STATES, inferRegion } from '../data/farms'
+import { useConfig } from '../lib/useConfig'
 
 export default function NovaFazenda() {
   const navigate = useNavigate()
   const { addFarm } = useFarms()
+  const { SEGMENT_OPTIONS, STATES, inferRegion } = useConfig()
 
   const [form, setForm] = useState({
     name: '',

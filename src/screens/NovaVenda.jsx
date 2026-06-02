@@ -6,7 +6,7 @@ import {
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useSales } from '../lib/useSales'
-import { PRODUCTS, PAYMENT_TERMS, MAX_DISCOUNT_PERCENT } from '../data/products'
+import { useProducts } from '../lib/useProducts'
 
 function todayISO() {
   const d = new Date()
@@ -43,6 +43,7 @@ export default function NovaVenda() {
   const getFarm = farmsHook.getFarm
   const salesHook = useSales()
   const addSale = salesHook.addSale
+  const { products, paymentTerms, loading: loadingProducts, MAX_DISCOUNT_PERCENT } = useProducts()
 
   const preselectedFarmId = searchParams.get('farm')
   const preselectedFarm = preselectedFarmId ? getFarm(preselectedFarmId) : null
@@ -56,8 +57,8 @@ export default function NovaVenda() {
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
 
   const availableProducts = selectedFarm
-    ? PRODUCTS.filter(p => p.segment === selectedFarm.segment || p.segment === 'todos')
-    : PRODUCTS
+    ? products.filter(p => p.segment === selectedFarm.segment || p.segment === 'todos')
+    : products
 
   const addItem = () => {
     if (availableProducts.length === 0) return
@@ -77,7 +78,7 @@ export default function NovaVenda() {
       if (it.key !== key) return it
       const updated = { ...it, ...changes }
       if (changes.productId) {
-        const p = PRODUCTS.find(p => p.id === changes.productId)
+        const p = products.find(p => p.id === changes.productId)
         if (p) {
           updated.productName = p.name
           updated.unitPrice = p.price
@@ -120,7 +121,7 @@ export default function NovaVenda() {
       })),
       total: subtotal,
       paymentTermId,
-      paymentTermLabel: PAYMENT_TERMS.find(p => p.id === paymentTermId).label,
+      paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || "",
       notes: notes.trim(),
       needsApproval: hasOverDiscount,
     })
@@ -321,7 +322,7 @@ export default function NovaVenda() {
       <div className="section-label">Condicao de pagamento</div>
       <div style={{ marginBottom: 14 }}>
         <select value={paymentTermId} onChange={e => setPaymentTermId(e.target.value)}>
-          {PAYMENT_TERMS.map(t => (
+          {paymentTerms.map(t => (
             <option key={t.id} value={t.id}>{t.label}</option>
           ))}
         </select>
@@ -364,7 +365,7 @@ export default function NovaVenda() {
               {items.length} {items.length === 1 ? 'item' : 'itens'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>
-              {PAYMENT_TERMS.find(p => p.id === paymentTermId).label}
+              {paymentTerms.find(p => p.id === paymentTermId)?.label || ""}
             </div>
           </div>
         </div>

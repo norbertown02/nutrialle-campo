@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconClipboardCheck, IconMapPin } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
-import { SEGMENTS, SEGMENT_COLORS } from '../data/farms'
+import { useConfig } from '../lib/useConfig'
 
 const backBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer',

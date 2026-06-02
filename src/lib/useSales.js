@@ -1,72 +1,71 @@
 import { useState, useEffect, useCallback } from 'react'
+import { supabase } from './supabase'
 
-const STORAGE_KEY = 'nutrialle_sales'
-
-function loadSales() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveSales(sales) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sales))
-  } catch (e) {
-    console.error('Erro ao salvar vendas:', e)
+function fromDB(row) {
+  if (!row) return null
+  return {
+    id:               row.id,
+    farmId:           row.farm_id,
+    saleDate:         row.sale_date,
+    items:            row.items,
+    total:            row.total,
+    paymentTerm:      row.payment_term,
+    paymentTermLabel: row.payment_term_label,
+    needsApproval:    row.needs_approval,
+    status:           row.status,
+    sentAt:           row.sent_at,
+    createdAt:        row.created_at,
   }
 }
 
 export function useSales() {
-  const [sales, setSales] = useState(loadSales)
+  const [sales, setSales] = useState([])
 
   useEffect(() => {
-    saveSales(sales)
-  }, [sales])
-
-  const addSale = useCallback((saleData) => {
-    setSales(prev => {
-      const newSale = {
-        ...saleData,
-        id: 's' + Date.now(),
-        status: 'pendente_envio',
-        createdAt: new Date().toISOString(),
-      }
-      return [newSale, ...prev]
-    })
+    async function load() {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .order('sale_date', { ascending: false })
+      if (!error && data) setSales(data.map(fromDB))
+    }
+    load()
   }, [])
 
-  const removeSale = useCallback((id) => {
-    setSales(prev => prev.filter(s => s.id !== id))
+  const addSale = useCallback(async (saleData) => {
+    const item = {
+      id:                 's' + Date.now(),
+      farm_id:            saleData.farmId,
+      sale_date:          saleData.saleDate,
+      items:              saleData.items,
+      total:              saleData.total,
+      payment_term:       saleData.paymentTerm,
+      payment_term_label: saleData.paymentTermLabel,
+      needs_approval:     saleData.needsApproval ?? false,
+      status:             'pendente_envio',
+    }
+    const { error } = await supabase.from('sales').insert(item)
+    if (!error) setSales(prev => [fromDB(item), ...prev])
+  }, [])
+
+  const removeSale = useCallback(async (id) => {
+    const { error } = await supabase.from('sales').delete().eq('id', id)
+    if (!error) setSales(prev => prev.filter(s => s.id !== id))
   }, [])
 
   const getSalesByFarm = useCallback((farmId) => {
-    return sales
-      .filter(s => s.farmId === farmId)
-      .sort((a, b) => b.saleDate.localeCompare(a.saleDate))
+    return sales.filter(s => s.farmId === farmId).sort((a, b) => b.saleDate.localeCompare(a.saleDate))
   }, [sales])
 
   const getPendingSales = useCallback(() => {
     return sales.filter(s => s.status === 'pendente_envio')
   }, [sales])
 
-  const markAsSent = useCallback((saleIds) => {
+  const markAsSent = useCallback(async (saleIds) => {
     const sentAt = new Date().toISOString()
-    setSales(prev => prev.map(s =>
-      saleIds.includes(s.id)
-        ? { ...s, status: 'enviado', sentAt }
-        : s
-    ))
+    const { error } = await supabase.from('sales').update({ status: 'enviado', sent_at: sentAt }).in('id', saleIds)
+    if (!error) setSales(prev => prev.map(s => saleIds.includes(s.id) ? { ...s, status: 'enviado', sentAt } : s))
   }, [])
 
-  return {
-    sales,
-    addSale,
-    removeSale,
-    getSalesByFarm,
-    getPendingSales,
-    markAsSent
-  }
+  return { sales, addSale, removeSale, getSalesByFarm, getPendingSales, markAsSent }
 }

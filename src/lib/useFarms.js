@@ -1,70 +1,116 @@
 import { useState, useEffect, useCallback } from 'react'
+import { supabase } from './supabase'
 
-const STORAGE_KEY = 'nutrialle_farms'
-
-function loadFarms() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
+function fromDB(row) {
+  if (!row) return null
+  return {
+    id:           row.id,
+    clientCode:   row.client_code,
+    name:         row.name,
+    ownerName:    row.owner_name,
+    ownerRole:    row.owner_role,
+    phone:        row.phone,
+    city:         row.city,
+    state:        row.state,
+    region:       row.region,
+    segment:      row.segment,
+    herdSize:     row.herd_size,
+    production:   row.production,
+    area:         row.area,
+    status:       row.status,
+    hasChecklist: row.has_checklist,
+    clientSince:  row.client_since,
+    createdAt:    row.created_at,
+    updatedAt:    row.updated_at,
   }
 }
 
-function saveFarms(farms) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(farms))
-  } catch (e) {
-    console.error('Erro ao salvar fazendas:', e)
+function toDB(farm) {
+  return {
+    id:            farm.id,
+    client_code:   farm.clientCode,
+    name:          farm.name,
+    owner_name:    farm.ownerName,
+    owner_role:    farm.ownerRole,
+    phone:         farm.phone,
+    city:          farm.city,
+    state:         farm.state,
+    region:        farm.region,
+    segment:       farm.segment,
+    herd_size:     farm.herdSize,
+    production:    farm.production,
+    area:          farm.area,
+    status:        farm.status ?? 'ativo',
+    has_checklist: farm.hasChecklist ?? false,
+    client_since:  farm.clientSince,
   }
 }
 
-function generateClientCode(existingFarms) {
-  const codes = existingFarms
+function generateClientCode(farms) {
+  const codes = farms
     .map(f => f.clientCode)
     .filter(c => c && c.startsWith('NUT-'))
     .map(c => parseInt(c.replace('NUT-', ''), 10))
     .filter(n => !isNaN(n))
-
   const next = codes.length > 0 ? Math.max(...codes) + 1 : 2841
   return `NUT-${next}`
 }
 
 export function useFarms() {
-  const [farms, setFarms] = useState(loadFarms)
+  const [farms, setFarms]     = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    saveFarms(farms)
+    async function load() {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('farms')
+        .select('*')
+        .order('name')
+      if (!error && data) setFarms(data.map(fromDB))
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const addFarm = useCallback(async (farmData) => {
+    const id         = 'f' + Date.now()
+    const clientCode = generateClientCode(farms)
+    const newFarm    = {
+      ...farmData,
+      id,
+      clientCode,
+      clientSince: String(new Date().getFullYear()),
+      status: 'ativo',
+      hasChecklist: false,
+      createdAt: new Date().toISOString(),
+    }
+    const { error } = await supabase.from('farms').insert(toDB(newFarm))
+    if (!error) setFarms(prev => [newFarm, ...prev])
+    return newFarm
   }, [farms])
 
-  const addFarm = useCallback((farmData) => {
-    setFarms(prev => {
-      const newFarm = {
-        ...farmData,
-        id: 'f' + Date.now(),
-        clientCode: generateClientCode(prev),
-        clientSince: String(new Date().getFullYear()),
-        status: 'ativo',
-        hasChecklist: false,
-        createdAt: new Date().toISOString(),
-      }
-      return [newFarm, ...prev]
-    })
+  const updateFarm = useCallback(async (id, changes) => {
+    const updatedAt = new Date().toISOString()
+    const { error } = await supabase
+      .from('farms')
+      .update({ ...toDB(changes), updated_at: updatedAt })
+      .eq('id', id)
+    if (!error) {
+      setFarms(prev => prev.map(f =>
+        f.id === id ? { ...f, ...changes, updatedAt } : f
+      ))
+    }
   }, [])
 
-  const updateFarm = useCallback((id, changes) => {
-    setFarms(prev => prev.map(f =>
-      f.id === id ? { ...f, ...changes, updatedAt: new Date().toISOString() } : f
-    ))
-  }, [])
-
-  const removeFarm = useCallback((id) => {
-    setFarms(prev => prev.filter(f => f.id !== id))
+  const removeFarm = useCallback(async (id) => {
+    const { error } = await supabase.from('farms').delete().eq('id', id)
+    if (!error) setFarms(prev => prev.filter(f => f.id !== id))
   }, [])
 
   const getFarm = useCallback((id) => {
     return farms.find(f => f.id === id)
   }, [farms])
 
-  return { farms, addFarm, updateFarm, removeFarm, getFarm }
+  return { farms, loading, addFarm, updateFarm, removeFarm, getFarm }
 }

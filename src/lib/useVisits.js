@@ -1,44 +1,49 @@
 import { useState, useEffect, useCallback } from 'react'
+import { supabase } from './supabase'
 
-const STORAGE_KEY = 'nutrialle_visits'
-
-function loadVisits() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveVisits(visits) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(visits))
-  } catch (e) {
-    console.error('Erro ao salvar visitas:', e)
+function fromDB(row) {
+  if (!row) return null
+  return {
+    id:            row.id,
+    farmId:        row.farm_id,
+    visitDate:     row.visit_date,
+    outcome:       row.outcome,
+    notes:         row.notes,
+    nextVisitDate: row.next_visit_date,
+    createdAt:     row.created_at,
   }
 }
 
 export function useVisits() {
-  const [visits, setVisits] = useState(loadVisits)
+  const [visits, setVisits] = useState([])
 
   useEffect(() => {
-    saveVisits(visits)
-  }, [visits])
-
-  const addVisit = useCallback((visitData) => {
-    setVisits(prev => {
-      const newVisit = {
-        ...visitData,
-        id: 'v' + Date.now(),
-        createdAt: new Date().toISOString(),
-      }
-      return [newVisit, ...prev]
-    })
+    async function load() {
+      const { data, error } = await supabase
+        .from('visits')
+        .select('*')
+        .order('visit_date', { ascending: false })
+      if (!error && data) setVisits(data.map(fromDB))
+    }
+    load()
   }, [])
 
-  const removeVisit = useCallback((id) => {
-    setVisits(prev => prev.filter(v => v.id !== id))
+  const addVisit = useCallback(async (visitData) => {
+    const item = {
+      id:              'v' + Date.now(),
+      farm_id:         visitData.farmId,
+      visit_date:      visitData.visitDate,
+      outcome:         visitData.outcome,
+      notes:           visitData.notes,
+      next_visit_date: visitData.nextVisitDate || null,
+    }
+    const { error } = await supabase.from('visits').insert(item)
+    if (!error) setVisits(prev => [fromDB(item), ...prev])
+  }, [])
+
+  const removeVisit = useCallback(async (id) => {
+    const { error } = await supabase.from('visits').delete().eq('id', id)
+    if (!error) setVisits(prev => prev.filter(v => v.id !== id))
   }, [])
 
   const getVisitsByFarm = useCallback((farmId) => {
