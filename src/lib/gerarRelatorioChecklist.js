@@ -358,21 +358,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     cp(25)
     doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...OG);doc.text(stage.title,M+4,y);y+=4
     autoTable(doc,{
-      willDrawPage:()=>{doc.setFillColor(...BG);doc.rect(0,0,W,297,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F');doc.setFillColor(26,26,26);doc.rect(6,0,W-6,14,'F');try{doc.addImage('data:image/jpeg;base64,'+logoB64,'JPEG',M+4,2.5,9,9)}catch(e){};doc.setFontSize(7.5);doc.setTextColor(...OG);doc.setFont('helvetica','bold');doc.text('NUTRIALLE',M+16,9);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');doc.text(farm.name,W-M,9,{align:'right'})},
-      startY:y,
-      showHead:false,
-      body:stage.questions.map(q=>{
-        const v=ans[q.id];let r='—'
-        if(q.type==='boolean')r=v===true?'Sim':v===false?'Nao':'—'
-        if(q.type==='select') r=q.options[v]?.label||'—'
-        if(q.type==='number') r=v!=null?v+' '+(q.unit||''):'—'
-        return [q.label,r]
-      }),
-      theme:'grid',
-      headStyles:{fillColor:[28,28,28],textColor:OG,fontSize:7.5,fontStyle:'bold',cellPadding:3,lineColor:[50,50,50]},
-      bodyStyles:{fontSize:7.5,textColor:[195,195,195],cellPadding:3,fillColor:[20,20,20],lineColor:[38,38,38]},
-      alternateRowStyles:{fillColor:[26,26,26]},
-      columnStyles:{0:{cellWidth:118},1:{cellWidth:52,halign:'center',fontStyle:'bold',textColor:W1}},
+      
       margin:{left:M+4,right:M},
     })
     y=doc.lastAutoTable.finalY+5
@@ -384,12 +370,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     doc.setFontSize(12);doc.setTextColor(...W1);doc.setFont('helvetica','bold');doc.text('HISTÓRICO DE AVALIAÇÕES',M+4,y);y+=2
     doc.setDrawColor(...OG);doc.setLineWidth(1.2);doc.line(M+4,y,M+4+58,y);y+=5
     autoTable(doc,{
-      willDrawPage:()=>{doc.setFillColor(...BG);doc.rect(0,0,W,297,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F');doc.setFillColor(26,26,26);doc.rect(6,0,W-6,14,'F');try{doc.addImage('data:image/jpeg;base64,'+logoB64,'JPEG',M+4,2.5,9,9)}catch(e){};doc.setFontSize(7.5);doc.setTextColor(...OG);doc.setFont('helvetica','bold');doc.text('NUTRIALLE',M+16,9);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');doc.text(farm.name,W-M,9,{align:'right'})},
-      startY:y,
-      head:[['Data','Score','Classificação',...template.map(s=>s.title.split(' ')[0])]],
-      body:ord.map(c=>[
-        new Date(c.appliedAt+'T12:00:00').toLocaleDateString('pt-BR'),
-        {content:c.overallScore,styles:{textColor:scoreCor(c.overallScore).r,fontStyle:'bold',halign:'center'}},
+      
         {content:scoreCor(c.overallScore).label,styles:{textColor:scoreCor(c.overallScore).r}},
         ...template.map(s=>({content:c.stageScores?.[s.stage]||'—',styles:{halign:'center',textColor:[180,180,180]}}))
       ]),
