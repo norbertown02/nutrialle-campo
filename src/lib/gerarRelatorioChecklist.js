@@ -359,7 +359,9 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...OG);doc.text(stage.title,M+4,y);y+=4
     autoTable(doc,{
       startY:y,
-            showHead:false,
+            didAddPage:()=>{doc.setFillColor(...BG);doc.rect(6,14,W-6,275,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F')},
+      margin:{top:16},
+      showHead:false,
       body:stage.questions.map(q=>{
         const v=ans[q.id];let r='—'
         if(q.type==='boolean')r=v===true?'Sim':v===false?'Nao':'—'
@@ -384,6 +386,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     doc.setDrawColor(...OG);doc.setLineWidth(1.2);doc.line(M+4,y,M+4+58,y);y+=5
     autoTable(doc,{
       startY:y,
+      didAddPage:()=>{doc.setFillColor(...BG);doc.rect(6,14,W-6,275,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F')},
       head:[['Data','Score','Classificacao',...template.map(s=>s.title.split(' ')[0])]],
       body:ord.map(c=>[
         new Date(c.appliedAt+'T12:00:00').toLocaleDateString('pt-BR'),
