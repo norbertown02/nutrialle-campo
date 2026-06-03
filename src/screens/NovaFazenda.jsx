@@ -183,7 +183,12 @@ export default function NovaFazenda() {
         </div>
       </Field>
 
-      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:10 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
+        <Field label="UF *">
+          <select value={form.state} onChange={e => { setField('state', e.target.value); setField('city', ''); setCidadeVerificada(false) }}>
+            {STATES.map(s => <option key={s.value} value={s.value}>{s.value}</option>)}
+          </select>
+        </Field>
         <Field label="Cidade *">
           <CidadeInput
             value={form.city}
@@ -191,11 +196,6 @@ export default function NovaFazenda() {
             onChange={v => { setField('city', v); setCidadeVerificada(false) }}
             onSelectCity={onSelectCity}
           />
-        </Field>
-        <Field label="UF">
-          <select value={form.state} onChange={e => setField('state', e.target.value)}>
-            {STATES.map(s => <option key={s.value} value={s.value}>{s.value}</option>)}
-          </select>
         </Field>
       </div>
 
