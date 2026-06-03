@@ -4,11 +4,13 @@ import {
   IconArrowLeft, IconPhone, IconBrandWhatsapp, IconMapPin,
   IconEdit, IconTrash, IconClipboardList, IconCalendarPlus,
   IconReceipt, IconUser, IconBuildingWarehouse,
-  IconChecklist, IconRoute, IconCash, IconChartBar
+  IconChecklist, IconRoute, IconCash, IconChartBar, IconDownload
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
 import { useChecklists } from '../lib/useChecklists'
+import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
+import { CHECKLIST_TEMPLATES } from '../data/checklists'
 import { useSales } from '../lib/useSales'
 import { useConfig } from '../lib/useConfig'
 
@@ -527,7 +529,19 @@ export default function FichaCliente() {
       ) : null}
 
       {tab === 'checklists' && farmChecklists.length > 0 ? (
-        farmChecklists.map(c => {
+        <>
+          <button
+            className="btn btn-ghost"
+            style={{ width: '100%', justifyContent: 'center', marginBottom: 14 }}
+            onClick={() => gerarRelatorioChecklist({
+              farm,
+              checklists: farmChecklists,
+              template: CHECKLIST_TEMPLATES[farm.segment] || CHECKLIST_TEMPLATES.leite
+            })}
+          >
+            <IconDownload size={15} /> Exportar relatório PDF completo
+          </button>
+          {farmChecklists.map(c => {
           const color = c.overallScore >= 75 ? 'var(--green)'
             : c.overallScore >= 50 ? 'var(--amber)' : 'var(--red)'
           const bg = c.overallScore >= 75 ? 'var(--green-bg)'
