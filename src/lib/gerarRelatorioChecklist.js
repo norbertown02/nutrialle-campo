@@ -188,10 +188,10 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
   doc.text('SCORE GERAL DA PROPRIEDADE',M+6,255)
   doc.setFontSize(52);doc.setFont('helvetica','bold');doc.setTextColor(...cor.r)
   doc.text(String(os),M+6,282)
-  doc.setFontSize(18);doc.setFont('helvetica','normal');doc.setTextColor(140,140,140)
-  doc.text('/100',M+6+doc.getTextWidth(String(os))+2,282)
-  doc.setFontSize(14);doc.setFont('helvetica','bold');doc.setTextColor(...cor.r)
-  doc.text(cor.label.toUpperCase(),M+6,292)
+  doc.setFontSize(20);doc.setFont('helvetica','normal');doc.setTextColor(140,140,140)
+  doc.text('/100',M+6+doc.getStringUnitWidth(String(os))*52/doc.internal.scaleFactor+3,282)
+  doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(...cor.r)
+  doc.text(cor.label.toUpperCase(),M+6,291)
 
   // Barra score rodapé
   doc.setFillColor(40,40,40);doc.roundedRect(W-M-75,258,70,10,5,5,'F')
@@ -349,18 +349,8 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     y+=cardH+5
   })
 
-  // ══════════════════════════════════════════════════════
-  // ÚLTIMA PÁG — RESPOSTAS
-  // ══════════════════════════════════════════════════════
-  np()
-  doc.setFillColor(...BG);doc.rect(0,0,W,297,'F')
-  doc.setFillColor(...OG);doc.rect(0,0,6,297,'F')
-  doc.setFillColor(26,26,26);doc.rect(6,0,W-6,14,'F')
-  try{doc.addImage('data:image/jpeg;base64,'+logoB64,'JPEG',M+4,2.5,9,9)}catch(e){}
-  doc.setFontSize(7.5);doc.setTextColor(...OG);doc.setFont('helvetica','bold');doc.text('NUTRIALLE',M+16,9)
-  doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');doc.text('Respostas — '+farm.name,W-M,9,{align:'right'})
-  y=22
-
+  // RESPOSTAS — sem quebra de página, continua após diagnóstico
+  cp(20)
   doc.setFontSize(14);doc.setTextColor(...W1);doc.setFont('helvetica','bold');doc.text('RESPOSTAS DA AVALIAÇÃO',M+4,y);y+=2
   doc.setDrawColor(...OG);doc.setLineWidth(1.5);doc.line(M+4,y,M+4+56,y);y+=6
 
@@ -368,8 +358,9 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     cp(25)
     doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...OG);doc.text(stage.title,M+4,y);y+=4
     autoTable(doc,{
+      didDrawPage:()=>{doc.setFillColor(...BG);doc.rect(0,0,W,297,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F');doc.setFillColor(26,26,26);doc.rect(6,0,W-6,14,'F');try{doc.addImage('data:image/jpeg;base64,'+logoB64,'JPEG',M+4,2.5,9,9)}catch(e){}; doc.setFontSize(7.5);doc.setTextColor(...OG);doc.setFont('helvetica','bold');doc.text('NUTRIALLE',M+16,9);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');doc.text(farm.name,W-M,9,{align:'right'})},
       startY:y,
-      head:[['Pergunta','Resposta']],
+      showHead:false,
       body:stage.questions.map(q=>{
         const v=ans[q.id];let r='—'
         if(q.type==='boolean')r=v===true?'✓ Sim':v===false?'✗ Não':'—'
@@ -393,6 +384,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     doc.setFontSize(12);doc.setTextColor(...W1);doc.setFont('helvetica','bold');doc.text('HISTÓRICO DE AVALIAÇÕES',M+4,y);y+=2
     doc.setDrawColor(...OG);doc.setLineWidth(1.2);doc.line(M+4,y,M+4+58,y);y+=5
     autoTable(doc,{
+      didDrawPage:()=>{doc.setFillColor(...BG);doc.rect(0,0,W,297,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F');doc.setFillColor(26,26,26);doc.rect(6,0,W-6,14,'F');try{doc.addImage('data:image/jpeg;base64,'+logoB64,'JPEG',M+4,2.5,9,9)}catch(e){}; doc.setFontSize(7.5);doc.setTextColor(...OG);doc.setFont('helvetica','bold');doc.text('NUTRIALLE',M+16,9);doc.setTextColor(150,150,150);doc.setFont('helvetica','normal');doc.text(farm.name,W-M,9,{align:'right'})},
       startY:y,
       head:[['Data','Score','Classificação',...template.map(s=>s.title.split(' ')[0])]],
       body:ord.map(c=>[
