@@ -344,7 +344,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
       const pyPos=cardH-10
       doc.setFillColor(...OG);doc.setGState(new doc.GState({opacity:0.12}));doc.roundedRect(M+14,y+pyPos-4,W-M*2-22,9,2,2,'F');doc.setGState(new doc.GState({opacity:1}))
       doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(...OG)
-      doc.text('▶ Nutrialle sugere: '+pr,M+18,y+pyPos+2)
+      doc.text('>> Nutrialle sugere: '+pr,M+18,y+pyPos+2)
     }
     y+=cardH+5
   })
@@ -363,7 +363,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
       showHead:false,
       body:stage.questions.map(q=>{
         const v=ans[q.id];let r='—'
-        if(q.type==='boolean')r=v===true?'✓ Sim':v===false?'✗ Não':'—'
+        if(q.type==='boolean')r=v===true?'Sim':v===false?'Nao':'—'
         if(q.type==='select') r=q.options[v]?.label||'—'
         if(q.type==='number') r=v!=null?v+' '+(q.unit||''):'—'
         return [q.label,r]
