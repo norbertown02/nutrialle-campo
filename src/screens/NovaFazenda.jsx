@@ -105,11 +105,27 @@ export default function NovaFazenda() {
 
   const [form, setForm] = useState({
     name:'', owner:'', ownerRole:'Proprietário', phone:'',
+    docTipo:'cpf', cpf:'', cnpj:'', cadpro1:'', cadpro2:'', cadpro3:'',
     segment:'leite', city:'', state:'PR',
     herdSize:'', production:'', area:'',
   })
 
   const [cidadeVerificada, setCidadeVerificada] = useState(false)
+
+  function maskCPF(v) {
+    return v.replace(/\D/g,'').slice(0,11)
+      .replace(/(\d{3})(\d)/,'$1.$2')
+      .replace(/(\d{3})(\d)/,'$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/,'$1-$2')
+  }
+
+  function maskCNPJ(v) {
+    return v.replace(/\D/g,'').slice(0,14)
+      .replace(/(\d{2})(\d)/,'$1.$2')
+      .replace(/(\d{3})(\d)/,'$1.$2')
+      .replace(/(\d{3})(\d)/,'$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/,'$1-$2')
+  }
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
@@ -125,6 +141,8 @@ export default function NovaFazenda() {
     addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
       phone: form.phone.trim(), segment: form.segment,
+      doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
+      cadpro_1: form.cadpro1||null, cadpro_2: form.cadpro2||null, cadpro_3: form.cadpro3||null,
       city: form.city.trim(), state: form.state,
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
@@ -164,6 +182,43 @@ export default function NovaFazenda() {
       <Field label="Telefone / WhatsApp">
         <input value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="(45) 99000-0000" inputMode="tel" />
       </Field>
+
+      <div className="section-label">Documentos</div>
+
+      <Field label="Tipo de documento">
+        <div style={{ display:'flex', gap:6, marginBottom:10 }}>
+          {[{v:'cpf',l:'CPF (Pessoa Física)'},{v:'cnpj',l:'CNPJ (Pessoa Jurídica)'}].map(opt=>(
+            <button key={opt.v} type="button" onClick={()=>{ setField('docTipo',opt.v); setField('cpf',''); setField('cnpj','') }} style={{
+              flex:1, padding:'10px 8px', borderRadius:10,
+              border:'1px solid '+(form.docTipo===opt.v?'var(--orange)':'var(--line)'),
+              background:form.docTipo===opt.v?'rgba(240,125,26,0.08)':'var(--surface-2)',
+              color:form.docTipo===opt.v?'var(--orange)':'var(--text-dim)',
+              fontFamily:'inherit', fontSize:12, fontWeight:600, cursor:'pointer'
+            }}>{opt.l}</button>
+          ))}
+        </div>
+      </Field>
+
+      {form.docTipo==='cpf' ? (
+        <>
+          <Field label="CPF">
+            <input value={form.cpf} onChange={e=>setField('cpf',maskCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric"/>
+          </Field>
+          <Field label="CAD/PRO 1 (Cadastro de Produtor Rural)">
+            <input value={form.cadpro1} onChange={e=>setField('cadpro1',e.target.value)} placeholder="Número do CAD/PRO"/>
+          </Field>
+          <Field label="CAD/PRO 2 (opcional)">
+            <input value={form.cadpro2} onChange={e=>setField('cadpro2',e.target.value)} placeholder="Número do CAD/PRO"/>
+          </Field>
+          <Field label="CAD/PRO 3 (opcional)">
+            <input value={form.cadpro3} onChange={e=>setField('cadpro3',e.target.value)} placeholder="Número do CAD/PRO"/>
+          </Field>
+        </>
+      ) : (
+        <Field label="CNPJ">
+          <input value={form.cnpj} onChange={e=>setField('cnpj',maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" inputMode="numeric"/>
+        </Field>
+      )}
 
       <div className="section-label">Segmento e localização</div>
 
