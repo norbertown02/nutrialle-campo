@@ -571,7 +571,9 @@ export default function FichaCliente() {
               </div>
             </div>
           )
-        })
+          })
+          }
+        </>
       ) : null}
 
       <div style={{
