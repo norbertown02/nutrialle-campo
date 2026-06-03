@@ -358,7 +358,20 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     cp(25)
     doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...OG);doc.text(stage.title,M+4,y);y+=4
     autoTable(doc,{
-      
+      startY:y,
+      showHead:false,
+      body:stage.questions.map(q=>{
+        const v=ans[q.id];let r='—'
+        if(q.type==='boolean')r=v===true?'Sim':v===false?'Nao':'—'
+        if(q.type==='select') r=q.options[v]?.label||'—'
+        if(q.type==='number') r=v!=null?v+' '+(q.unit||''):'—'
+        return [q.label,r]
+      }),
+      theme:'grid',
+      headStyles:{fillColor:[28,28,28],textColor:OG,fontSize:7.5,fontStyle:'bold',lineColor:[50,50,50]},
+      bodyStyles:{fontSize:7.5,textColor:[195,195,195],cellPadding:3,fillColor:[20,20,20],lineColor:[38,38,38]},
+      alternateRowStyles:{fillColor:[26,26,26]},
+      columnStyles:{0:{cellWidth:118},1:{cellWidth:52,halign:'center',fontStyle:'bold',textColor:[255,255,255]}},
       margin:{left:M+4,right:M},
     })
     y=doc.lastAutoTable.finalY+5
