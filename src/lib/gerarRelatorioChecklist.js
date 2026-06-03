@@ -370,7 +370,11 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     doc.setFontSize(12);doc.setTextColor(...W1);doc.setFont('helvetica','bold');doc.text('HISTÓRICO DE AVALIAÇÕES',M+4,y);y+=2
     doc.setDrawColor(...OG);doc.setLineWidth(1.2);doc.line(M+4,y,M+4+58,y);y+=5
     autoTable(doc,{
-      
+      startY:y,
+      head:[['Data','Score','Classificacao',...template.map(s=>s.title.split(' ')[0])]],
+      body:ord.map(c=>[
+        new Date(c.appliedAt+'T12:00:00').toLocaleDateString('pt-BR'),
+        {content:c.overallScore,styles:{textColor:scoreCor(c.overallScore).r,fontStyle:'bold',halign:'center'}},
         {content:scoreCor(c.overallScore).label,styles:{textColor:scoreCor(c.overallScore).r}},
         ...template.map(s=>({content:c.stageScores?.[s.stage]||'—',styles:{halign:'center',textColor:[180,180,180]}}))
       ]),
