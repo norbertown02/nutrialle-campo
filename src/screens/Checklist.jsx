@@ -7,6 +7,7 @@ import {
 import { useFarms } from '../lib/useFarms'
 import { useChecklists } from '../lib/useChecklists'
 import { CHECKLIST_TEMPLATES, calculateStageScore, calculateOverallScore } from '../data/checklists'
+import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
 
 const backBtnStyle = {
   background: 'none', border: 'none', cursor: 'pointer',
@@ -32,6 +33,7 @@ export default function Checklist() {
   const farm = getFarm(id)
   const [answers, setAnswers] = useState({})
   const [expanded, setExpanded] = useState({})
+  const [checklistSalvo, setChecklistSalvo] = useState(null)
 
   if (!farm) {
     return (
@@ -96,7 +98,18 @@ export default function Checklist() {
     // Marca a fazenda como tendo checklist aplicado
     updateFarm(farm.id, { hasChecklist: true, overallScore })
 
-    navigate('/clientes/' + farm.id)
+    setChecklistSalvo({ stageScores, overallScore, answers, template })
+  }
+
+  async function handleGerarPDF() {
+    if (!checklistSalvo) return
+    await gerarRelatorioChecklist({
+      farm,
+      stageScores: checklistSalvo.stageScores,
+      overallScore: checklistSalvo.overallScore,
+      template: checklistSalvo.template,
+      answers: checklistSalvo.answers,
+    })
   }
 
   return (
