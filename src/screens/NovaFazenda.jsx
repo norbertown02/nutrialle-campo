@@ -109,13 +109,16 @@ export default function NovaFazenda() {
     herdSize:'', production:'', area:'',
   })
 
+  const [cidadeVerificada, setCidadeVerificada] = useState(false)
+
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
   function onSelectCity(nome, uf) {
     setForm(prev => ({ ...prev, city: nome, state: uf }))
+    setCidadeVerificada(true)
   }
 
-  const isValid = form.name.trim().length >= 3 && form.owner.trim().length >= 3 && form.city.trim().length >= 2
+  const isValid = form.name.trim().length >= 3 && form.owner.trim().length >= 3 && form.city.trim().length >= 2 && cidadeVerificada
 
   const handleSave = () => {
     if (!isValid) return
@@ -185,7 +188,7 @@ export default function NovaFazenda() {
           <CidadeInput
             value={form.city}
             uf={form.state}
-            onChange={v => setField('city', v)}
+            onChange={v => { setField('city', v); setCidadeVerificada(false) }}
             onSelectCity={onSelectCity}
           />
         </Field>
@@ -197,9 +200,11 @@ export default function NovaFazenda() {
       </div>
 
       {form.city && (
-        <div style={{ fontSize:11, color:'var(--text-faint)', marginTop:-8, marginBottom:12, display:'flex', alignItems:'center', gap:4 }}>
+        <div style={{ fontSize:11, color: cidadeVerificada ? 'var(--text-faint)' : 'var(--red)', marginTop:-8, marginBottom:12, display:'flex', alignItems:'center', gap:4 }}>
           <IconMapPin size={11} />
-          {form.city}, {form.state} · verificado pelo IBGE
+          {cidadeVerificada
+            ? `${form.city}, ${form.state} · verificado pelo IBGE`
+            : 'Selecione uma cidade da lista para validar'}
         </div>
       )}
 
