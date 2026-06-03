@@ -359,9 +359,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(...OG);doc.text(stage.title,M+4,y);y+=4
     autoTable(doc,{
       startY:y,
-            didAddPage:()=>{doc.setFillColor(...BG);doc.rect(6,14,W-6,275,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F')},
-      margin:{top:16},
-      showHead:false,
+                  showHead:false,
       body:stage.questions.map(q=>{
         const v=ans[q.id];let r='—'
         if(q.type==='boolean')r=v===true?'Sim':v===false?'Nao':'—'
@@ -386,8 +384,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
     doc.setDrawColor(...OG);doc.setLineWidth(1.2);doc.line(M+4,y,M+4+58,y);y+=5
     autoTable(doc,{
       startY:y,
-      didAddPage:()=>{doc.setFillColor(...BG);doc.rect(6,14,W-6,275,'F');doc.setFillColor(...OG);doc.rect(0,0,6,297,'F')},
-      head:[['Data','Score','Classificacao',...template.map(s=>s.title.split(' ')[0])]],
+            head:[['Data','Score','Classificacao',...template.map(s=>s.title.split(' ')[0])]],
       body:ord.map(c=>[
         new Date(c.appliedAt+'T12:00:00').toLocaleDateString('pt-BR'),
         {content:c.overallScore,styles:{textColor:scoreCor(c.overallScore).r,fontStyle:'bold',halign:'center'}},
@@ -407,8 +404,6 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
   for(let i=1;i<=pgs;i++){
     doc.setPage(i)
     if(i>1){
-      doc.setFillColor(...BG);doc.rect(0,0,W,297,'F')
-      doc.setFillColor(...OG);doc.rect(0,0,6,297,'F')
       doc.setFillColor(...OD);doc.rect(6,289,W-6,8,'F')
       doc.setFillColor(...OG);doc.rect(0,289,6,8,'F')
       doc.setFontSize(6.5);doc.setTextColor(...W1);doc.setFont('helvetica','normal')
