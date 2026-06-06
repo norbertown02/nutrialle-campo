@@ -112,7 +112,11 @@ export default function NovaCotacao() {
       needs_approval: temDesconto,
     }
     const { data, error } = await supabase.from('quotes').insert(payload).select().single()
-    if (!error && data) navigate(`/prospeccao/${data.id}`)
+    console.log('payload:', JSON.stringify(payload))
+    console.log('error:', JSON.stringify(error))
+    console.log('data:', JSON.stringify(data))
+    if (error) { alert('Erro: ' + error.message); setSalvando(false); return }
+    if (data) navigate(`/prospeccao/${data.id}`)
     setSalvando(false)
   }
 
