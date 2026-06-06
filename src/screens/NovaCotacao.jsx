@@ -260,14 +260,12 @@ export default function NovaCotacao() {
           <div style={{fontSize:20,fontWeight:700,color:'var(--orange)'}}>R$ {fmt(total)}</div>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,paddingBottom:40}}>
-          <button className="btn btn-ghost" disabled={!farmSel||items.length===0||salvando} onClick={() => salvar('rascunho')}>
-            Salvar rascunho
-          </button>
-          <button className="btn btn-primary" disabled={!farmSel||items.length===0||salvando} onClick={() => salvar('enviada')}>
-            {salvando ? 'Salvando...' : 'Salvar e enviar'}
+        <div style={{position:'fixed',bottom:65,left:0,right:0,padding:'12px 16px',background:'var(--surface-1)',borderTop:'1px solid var(--line)',zIndex:100}}>
+          <button className="btn btn-primary" style={{width:'100%'}} disabled={!farmSel||items.length===0||salvando} onClick={() => salvar('rascunho')}>
+            {salvando ? 'Salvando...' : 'Salvar Cotação'}
           </button>
         </div>
+        <div style={{height:80}}/>
       </div>
     </div>
   )
