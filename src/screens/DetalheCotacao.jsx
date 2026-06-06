@@ -20,7 +20,7 @@ const STATUS_CFG = {
 export default function DetalheCotacao() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { seller, user } = useAuth()
+  const { user } = useAuth()
   const [quote, setQuote] = useState(null)
   const [farm, setFarm] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -124,7 +124,7 @@ export default function DetalheCotacao() {
 
     // Vendedor
     doc.setFontSize(7); doc.setTextColor(...GY)
-    doc.text(`Vendedor: ${user?.name || seller?.name || '—'}`, W - M - 4, y + 21, { align: 'right' })
+    doc.text(`Vendedor: ${user?.name || '—'}`, W - M - 4, y + 21, { align: 'right' })
 
     y += 36
 

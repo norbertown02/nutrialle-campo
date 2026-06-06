@@ -19,29 +19,15 @@ export default function Prospeccao() {
   const { user } = useAuth()
   const [quotes, setQuotes] = useState([])
   const [farms, setFarms] = useState([])
-  const [seller, setSeller] = useState(null)
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('todos')
 
-  useEffect(() => { carregar() }, [user])
+  useEffect(() => { if(user?.id) carregar() }, [user])
 
   async function carregar() {
-    if (!user?.id) return
     setLoading(true)
-
-    // Busca seller pelo user_id
-    const { data: sellerData } = await supabase
-      .from('sellers')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    setSeller(sellerData)
-
     const [rQuotes, rFarms] = await Promise.all([
-      sellerData
-        ? supabase.from('quotes').select('*').eq('seller_id', sellerData.id).order('created_at', {ascending: false})
-        : supabase.from('quotes').select('*').order('created_at', {ascending: false}),
+      supabase.from('quotes').select('*').eq('seller_id', user.id).order('created_at', {ascending: false}),
       supabase.from('farms').select('id,name,segment,prospect'),
     ])
 

@@ -17,14 +17,6 @@ export default function NovaCotacao() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const { user } = useAuth()
-  const [seller, setSeller] = useState(null)
-
-  useEffect(() => {
-    if (user?.id) {
-      supabase.from('sellers').select('*').eq('user_id', user.id).single()
-        .then(({ data }) => setSeller(data))
-    }
-  }, [user])
 
   const [farms, setFarms] = useState([])
   const [products, setProducts] = useState([])
@@ -101,7 +93,7 @@ export default function NovaCotacao() {
     setSalvando(true)
     const payload = {
       farm_id: farmSel,
-      seller_id: seller?.id,
+      seller_id: user?.id,
       items: items.map(it => ({
         product_id: it.product_id,
         product_name: it.product_name,
