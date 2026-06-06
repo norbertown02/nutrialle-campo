@@ -256,6 +256,13 @@ export default function DetalheCotacao() {
 
         {/* Ações */}
         <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:40}}>
+          {quote.status === 'rascunho' && (
+            <button className="btn btn-ghost" onClick={() => navigate(`/prospeccao/${id}/editar`)}
+              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              <IconEdit size={15}/> Editar Cotação
+            </button>
+          )}
+
           <button className="btn btn-ghost" onClick={gerarPDF} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
             <IconDownload size={15}/> Gerar PDF
           </button>

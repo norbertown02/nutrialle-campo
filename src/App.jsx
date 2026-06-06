@@ -19,6 +19,7 @@ import Vendas from './screens/Vendas'
 import Prospeccao from './screens/Prospeccao'
 import NovaCotacao from './screens/NovaCotacao'
 import DetalheCotacao from './screens/DetalheCotacao'
+import EditarCotacao from './screens/EditarCotacao'
 import Mercado from './screens/Mercado'
 import Dados from './screens/Dados'
 import FazendaDados from './screens/FazendaDados'
@@ -49,6 +50,7 @@ function AppContent() {
           <Route path="/prospeccao"           element={<Prospeccao />} />
           <Route path="/prospeccao/nova"      element={<NovaCotacao />} />
           <Route path="/prospeccao/:id"       element={<DetalheCotacao />} />
+          <Route path="/prospeccao/:id/editar" element={<EditarCotacao />} />
           <Route path="/mercado"                element={<Mercado />} />
           <Route path="/dados"                  element={<Dados />} />
           <Route path="/fazenda-dados/:id"      element={<FazendaDados />} />
