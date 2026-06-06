@@ -50,17 +50,17 @@ export default function DetalheCotacao() {
     if (!confirm('Converter esta cotação em venda?')) return
     setAtualizando(true)
 
-    // Cria venda
+    // Cria venda com campos corretos da tabela sales
     const venda = {
+      id: 's' + Date.now(),
       farm_id: quote.farm_id,
-      seller_id: quote.seller_id,
       sale_date: new Date().toISOString().split('T')[0],
       items: quote.items,
       payment_term: quote.payment_term,
       payment_term_label: quote.payment_term_label,
       total: quote.total,
-      status: 'enviado',
-      notes: quote.notes,
+      needs_approval: false,
+      status: 'pendente_envio',
     }
     const { error: errVenda } = await supabase.from('sales').insert(venda)
     if (errVenda) { alert('Erro ao criar venda: ' + errVenda.message); setAtualizando(false); return }
