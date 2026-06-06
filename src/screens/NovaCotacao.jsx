@@ -109,12 +109,9 @@ export default function NovaCotacao() {
       status,
       valid_until: validUntil,
       notes,
-      needs_approval: temDesconto,
+
     }
     const { data, error } = await supabase.from('quotes').insert(payload).select().single()
-    console.log('payload:', JSON.stringify(payload))
-    console.log('error:', JSON.stringify(error))
-    console.log('data:', JSON.stringify(data))
     if (error) { alert('Erro: ' + error.message); setSalvando(false); return }
     if (data) navigate(`/prospeccao/${data.id}`)
     setSalvando(false)
