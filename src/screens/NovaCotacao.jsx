@@ -29,7 +29,7 @@ export default function NovaCotacao() {
   const [salvando, setSalvando] = useState(false)
   const [stepFarm, setStepFarm] = useState(!params.get('farm_id'))
 
-  useEffect(() => { if(seller) carregar() }, [seller])
+  useEffect(() => { carregar() }, [])
 
   async function carregar() {
     const [rFarms, rProducts] = await Promise.all([
