@@ -60,10 +60,10 @@ export default function DetalheCotacao() {
       payment_term_label: quote.payment_term_label,
       total: quote.total,
       status: 'enviado',
-      needs_approval: quote.needs_approval,
       notes: quote.notes,
     }
-    await supabase.from('sales').insert(venda)
+    const { error: errVenda } = await supabase.from('sales').insert(venda)
+    if (errVenda) { alert('Erro ao criar venda: ' + errVenda.message); setAtualizando(false); return }
 
     // Atualiza cotação
     await supabase.from('quotes').update({ status: 'convertida', converted_at: new Date().toISOString() }).eq('id', id)
