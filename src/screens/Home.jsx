@@ -1,6 +1,6 @@
 import {
   IconClipboardList, IconReceipt, IconUserPlus,
-  IconSend, IconMapPin, IconClock, IconCalendar
+  IconSend, IconMapPin, IconClock, IconCalendar, IconFileText
 } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/useAuth.jsx'
@@ -131,21 +131,21 @@ export default function Home() {
       {/* Atalhos */}
       <div className="section-label">Atalhos</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/clientes/novo')}>
+        <button className="btn btn-primary" style={atalhoStyle} onClick={() => navigate('/prospeccao/nova')}>
+          <IconFileText size={21} />
+          Nova Cotação
+        </button>
+        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/clientes/novo?prospect=true')}>
           <IconUserPlus size={21} />
-          Novo cliente
+          Novo Lead
         </button>
         <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/checklist')}>
           <IconClipboardList size={21} />
           Checklist
         </button>
-        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/vendas/nova')}>
-          <IconReceipt size={21} />
-          Venda
-        </button>
-        <button className="btn btn-primary" style={atalhoStyle} onClick={() => navigate('/vendas')}>
+        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/agenda/novo')}>
           <IconSend size={21} />
-          Fechar dia
+          Agendar Visita
         </button>
       </div>
     </div>
