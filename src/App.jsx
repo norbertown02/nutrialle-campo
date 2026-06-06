@@ -16,6 +16,9 @@ import PickChecklist from './screens/PickChecklist'
 import Agenda from './screens/Agenda'
 import NovoCompromisso from './screens/NovoCompromisso'
 import Vendas from './screens/Vendas'
+import Prospeccao from './screens/Prospeccao'
+import NovaCotacao from './screens/NovaCotacao'
+import DetalheCotacao from './screens/DetalheCotacao'
 import Mercado from './screens/Mercado'
 import Dados from './screens/Dados'
 import FazendaDados from './screens/FazendaDados'
@@ -43,6 +46,9 @@ function AppContent() {
           <Route path="/agenda"                 element={<Agenda />} />
           <Route path="/agenda/novo"            element={<NovoCompromisso />} />
           <Route path="/vendas"                 element={<Vendas />} />
+          <Route path="/prospeccao"           element={<Prospeccao />} />
+          <Route path="/prospeccao/nova"      element={<NovaCotacao />} />
+          <Route path="/prospeccao/:id"       element={<DetalheCotacao />} />
           <Route path="/mercado"                element={<Mercado />} />
           <Route path="/dados"                  element={<Dados />} />
           <Route path="/fazenda-dados/:id"      element={<FazendaDados />} />
