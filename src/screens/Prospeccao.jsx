@@ -67,8 +67,8 @@ export default function Prospeccao() {
             <div style={{fontSize:18,fontWeight:700}}>Prospecção</div>
             <div style={{fontSize:12,color:'var(--text-faint)'}}>{quotes.length} cotações no total</div>
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => navigate('/prospeccao/nova')}>
-            <IconPlus size={15}/> Nova Cotação
+          <button className="btn btn-primary" style={{fontSize:13,padding:'7px 14px'}} onClick={() => navigate('/prospeccao/nova')}>
+            <IconPlus size={14}/> Nova Cotação
           </button>
         </div>
 

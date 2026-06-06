@@ -16,7 +16,15 @@ function fmt(n) { return Number(n||0).toLocaleString('pt-BR',{minimumFractionDig
 export default function NovaCotacao() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { seller } = useAuth()
+  const { user } = useAuth()
+  const [seller, setSeller] = useState(null)
+
+  useEffect(() => {
+    if (user?.id) {
+      supabase.from('sellers').select('*').eq('user_id', user.id).single()
+        .then(({ data }) => setSeller(data))
+    }
+  }, [user])
 
   const [farms, setFarms] = useState([])
   const [products, setProducts] = useState([])
@@ -29,7 +37,7 @@ export default function NovaCotacao() {
   const [salvando, setSalvando] = useState(false)
   const [stepFarm, setStepFarm] = useState(!params.get('farm_id'))
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => { if(seller) carregar() }, [seller])
 
   async function carregar() {
     const [rFarms, rProducts] = await Promise.all([
@@ -260,8 +268,8 @@ export default function NovaCotacao() {
           <div style={{fontSize:20,fontWeight:700,color:'var(--orange)'}}>R$ {fmt(total)}</div>
         </div>
 
-        <div style={{position:'fixed',bottom:65,left:0,right:0,padding:'12px 16px',background:'var(--surface-1)',borderTop:'1px solid var(--line)',zIndex:100}}>
-          <button className="btn btn-primary" style={{width:'100%'}} disabled={!farmSel||items.length===0||salvando} onClick={() => salvar('rascunho')}>
+        <div style={{position:'fixed',bottom:65,left:0,right:0,padding:'10px 16px',background:'var(--surface-1)',borderTop:'1px solid var(--line)',zIndex:100,maxWidth:430,margin:'0 auto'}}>
+          <button className="btn btn-primary" style={{width:'100%',fontSize:14,padding:'10px'}} disabled={!farmSel||items.length===0||salvando} onClick={() => salvar('rascunho')}>
             {salvando ? 'Salvando...' : 'Salvar Cotação'}
           </button>
         </div>
