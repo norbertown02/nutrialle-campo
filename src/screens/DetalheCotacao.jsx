@@ -144,13 +144,12 @@ export default function DetalheCotacao() {
     // Tabela de produtos
     autoTable(doc, {
       startY: y,
-      head: [['Produto', 'Unid.', 'Qtd.', 'Preço Unit.', 'Desc.%', 'Subtotal']],
+      head: [['Produto', 'Unid.', 'Qtd.', 'Preço Unit.', 'Subtotal']],
       body: (quote.items || []).map(it => [
         it.product_name,
         it.unit || 'kg',
         it.quantity,
         `R$ ${fmt(it.unit_price)}`,
-        `${it.discount || 0}%`,
         `R$ ${fmt(it.subtotal)}`,
       ]),
       theme: 'grid',
@@ -158,12 +157,11 @@ export default function DetalheCotacao() {
       bodyStyles: { fontSize: 8, textColor: W1, fillColor: [22, 22, 22], lineColor: [38, 38, 38], cellPadding: 4 },
       alternateRowStyles: { fillColor: [28, 28, 28] },
       columnStyles: {
-        0: { cellWidth: 70 },
-        1: { cellWidth: 18, halign: 'center' },
-        2: { cellWidth: 18, halign: 'center' },
-        3: { cellWidth: 30, halign: 'right' },
-        4: { cellWidth: 18, halign: 'center' },
-        5: { cellWidth: 30, halign: 'right', fontStyle: 'bold', textColor: OG },
+        0: { cellWidth: 80 },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 35, halign: 'right' },
+        4: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: OG },
       },
       margin: { left: M, right: M },
     })
