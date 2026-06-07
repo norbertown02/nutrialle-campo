@@ -157,11 +157,11 @@ export default function DetalheCotacao() {
       bodyStyles: { fontSize: 8, textColor: W1, fillColor: [22, 22, 22], lineColor: [38, 38, 38], cellPadding: 4 },
       alternateRowStyles: { fillColor: [28, 28, 28] },
       columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 20, halign: 'center' },
-        3: { cellWidth: 35, halign: 'right' },
-        4: { cellWidth: 35, halign: 'right', fontStyle: 'bold', textColor: OG },
+        0: { cellWidth: 85 },
+        1: { cellWidth: 18, halign: 'center' },
+        2: { cellWidth: 15, halign: 'center' },
+        3: { cellWidth: 32, halign: 'right' },
+        4: { cellWidth: 32, halign: 'right', fontStyle: 'bold', textColor: OG },
       },
       margin: { left: M, right: M },
     })
