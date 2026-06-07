@@ -19,7 +19,8 @@ function initials(name) {
 export default function PickChecklist() {
   const navigate = useNavigate()
   const farmsHook = useFarms()
-  const farms = farmsHook.farms
+  const farms = farmsHook.farms.filter(f => !f.prospect)
+  const { SEGMENTS, SEGMENT_COLORS } = useConfig()
 
   return (
     <div className="content">
