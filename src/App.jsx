@@ -16,6 +16,7 @@ import PickChecklist from './screens/PickChecklist'
 import Agenda from './screens/Agenda'
 import NovoCompromisso from './screens/NovoCompromisso'
 import Vendas from './screens/Vendas'
+import DetalheVenda from './screens/DetalheVenda'
 import Prospeccao from './screens/Prospeccao'
 import NovaCotacao from './screens/NovaCotacao'
 import DetalheCotacao from './screens/DetalheCotacao'
@@ -47,6 +48,7 @@ function AppContent() {
           <Route path="/agenda"                 element={<Agenda />} />
           <Route path="/agenda/novo"            element={<NovoCompromisso />} />
           <Route path="/vendas"                 element={<Vendas />} />
+          <Route path="/vendas/:id"             element={<DetalheVenda />} />
           <Route path="/prospeccao"           element={<Prospeccao />} />
           <Route path="/prospeccao/nova"      element={<NovaCotacao />} />
           <Route path="/prospeccao/:id"       element={<DetalheCotacao />} />

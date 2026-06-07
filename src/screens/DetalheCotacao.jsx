@@ -47,6 +47,19 @@ export default function DetalheCotacao() {
   }
 
   async function converterEmVenda() {
+    // Valida dados obrigatórios da fazenda
+    const camposFaltando = []
+    if (!farm?.cpf_cnpj) camposFaltando.push('CPF/CNPJ')
+    if (!farm?.cad_pro) camposFaltando.push('CAD/PRO')
+    if (!farm?.address) camposFaltando.push('Endereço')
+    if (!farm?.city) camposFaltando.push('Município')
+    if (!farm?.phone) camposFaltando.push('Telefone')
+
+    if (camposFaltando.length > 0) {
+      alert('Para converter em venda, complete os dados da fazenda:\n\n• ' + camposFaltando.join('\n• ') + '\n\nAcesse a ficha do cliente e preencha os dados faltantes.')
+      return
+    }
+
     if (!confirm('Converter esta cotação em venda?')) return
     setAtualizando(true)
 
