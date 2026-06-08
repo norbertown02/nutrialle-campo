@@ -39,6 +39,7 @@ export function useVisits() {
       outcome:         visitData.outcome,
       notes:           visitData.notes,
       next_visit_date: visitData.nextVisitDate || null,
+      seller_id:       user && user.id,
     }
     const { error } = await supabase.from('visits').insert(item)
     if (!error) setVisits(prev => [fromDB(item), ...prev])

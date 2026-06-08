@@ -47,7 +47,6 @@ export function useAppointments() {
       status:           'agendado',
       kind:             data.kind || 'visita',
       seller_id:        user && user.id,
-      seller_id:        user && user.id,
     }
     const { error } = await supabase.from('appointments').insert(item)
     if (!error) setAppointments(prev => [...prev, fromDB(item)])

@@ -46,6 +46,7 @@ export function useSales() {
       payment_term_label: saleData.paymentTermLabel,
       needs_approval:     saleData.needsApproval ?? false,
       status:             'pendente_envio',
+      seller_id:          user && user.id,
     }
     const { error } = await supabase.from('sales').insert(item)
     if (!error) setSales(prev => [fromDB(item), ...prev])

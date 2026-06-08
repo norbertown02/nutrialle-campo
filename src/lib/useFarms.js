@@ -92,6 +92,7 @@ export function useFarms() {
       clientCode,
       clientSince: String(new Date().getFullYear()),
       status: 'ativo',
+      sellerId: user && user.id,
       hasChecklist: false,
       createdAt: new Date().toISOString(),
     }
