@@ -17,7 +17,6 @@ function fromDB(row) {
 
 export function useVisits() {
   const { user } = useAuth()
-  const { user } = useAuth()
   const [visits, setVisits] = useState([])
 
   useEffect(() => {

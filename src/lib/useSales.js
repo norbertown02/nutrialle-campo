@@ -21,7 +21,6 @@ function fromDB(row) {
 
 export function useSales() {
   const { user } = useAuth()
-  const { user } = useAuth()
   const [sales, setSales] = useState([])
 
   useEffect(() => {

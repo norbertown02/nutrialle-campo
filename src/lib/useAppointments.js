@@ -21,7 +21,6 @@ function fromDB(row) {
 
 export function useAppointments() {
   const { user } = useAuth()
-  const { user } = useAuth()
   const [appointments, setAppointments] = useState([])
 
   useEffect(() => {
