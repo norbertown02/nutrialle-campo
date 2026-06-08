@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
 
 function fromDB(row) {
@@ -65,21 +66,24 @@ function generateClientCode(farms) {
 }
 
 export function useFarms() {
+  const { user } = useAuth()
   const [farms, setFarms]     = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user || !user.id) return
     async function load() {
       setLoading(true)
       const { data, error } = await supabase
         .from('farms')
         .select('*')
+        .eq('seller_id', user && user.id)
         .order('name')
       if (!error && data) setFarms(data.map(fromDB))
       setLoading(false)
     }
     load()
-  }, [])
+  }, [user?.id])
 
   const addFarm = useCallback(async (farmData) => {
     const id         = 'f' + Date.now()

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
 
 function fromDB(row) {
@@ -19,6 +20,8 @@ function fromDB(row) {
 }
 
 export function useSales() {
+  const { user } = useAuth()
+  const { user } = useAuth()
   const [sales, setSales] = useState([])
 
   useEffect(() => {
@@ -26,6 +29,7 @@ export function useSales() {
       const { data, error } = await supabase
         .from('sales')
         .select('*')
+        .eq('seller_id', user && user.id)
         .order('sale_date', { ascending: false })
       if (!error && data) setSales(data.map(fromDB))
     }

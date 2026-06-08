@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
 
 function fromDB(row) {
@@ -19,6 +20,8 @@ function fromDB(row) {
 }
 
 export function useAppointments() {
+  const { user } = useAuth()
+  const { user } = useAuth()
   const [appointments, setAppointments] = useState([])
 
   useEffect(() => {
@@ -26,6 +29,7 @@ export function useAppointments() {
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
+        .eq('seller_id', user && user.id)
         .order('appointment_date', { ascending: true })
       if (!error && data) setAppointments(data.map(fromDB))
     }
@@ -43,6 +47,8 @@ export function useAppointments() {
       notes:            data.notes || null,
       status:           'agendado',
       kind:             data.kind || 'visita',
+      seller_id:        user && user.id,
+      seller_id:        user && user.id,
     }
     const { error } = await supabase.from('appointments').insert(item)
     if (!error) setAppointments(prev => [...prev, fromDB(item)])
