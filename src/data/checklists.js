@@ -8,6 +8,15 @@ export const CHECKLIST_TEMPLATES = {
       stage: 'ordenha', title: 'Ordenha e qualidade do leite', icon: 'droplet',
       questions: [
         {
+          id: 'q0', label: 'Vacas em lactacao (cabecas)', type: 'number', unit: 'cab',
+          ranges: [
+            { max: 20, score: 50 },
+            { max: 50, score: 65 },
+            { max: 100, score: 80 },
+            { max: 99999, score: 100 },
+          ]
+        },
+        {
           id: 'q1', label: 'Tipo de ordenha', type: 'select',
           options: [
             { label: 'Mecanica canalizada', score: 100 },
@@ -131,6 +140,15 @@ export const CHECKLIST_TEMPLATES = {
       stage: 'pasto', title: 'Pastagem e lotacao', icon: 'plant',
       questions: [
         {
+          id: 'q0', label: 'Total de cabecas no rebanho', type: 'number', unit: 'cab',
+          ranges: [
+            { max: 50, score: 50 },
+            { max: 150, score: 65 },
+            { max: 300, score: 80 },
+            { max: 99999, score: 100 },
+          ]
+        },
+        {
           id: 'q1', label: 'Taxa de lotacao (UA/ha)', type: 'number', unit: 'UA/ha',
           ranges: [
             { max: 0.8, score: 50 },
@@ -234,6 +252,15 @@ export const CHECKLIST_TEMPLATES = {
     {
       stage: 'sanidade', title: 'Sanidade do plantel', icon: 'vaccine',
       questions: [
+        {
+          id: 'q0', label: 'Total de matrizes no plantel', type: 'number', unit: 'cab',
+          ranges: [
+            { max: 50, score: 50 },
+            { max: 100, score: 65 },
+            { max: 200, score: 80 },
+            { max: 99999, score: 100 },
+          ]
+        },
         { id: 'q1', label: 'Calendario de vacinacao em dia?', type: 'boolean' },
         {
           id: 'q2', label: 'Taxa de mortalidade na creche (%)', type: 'number', unit: '%',
