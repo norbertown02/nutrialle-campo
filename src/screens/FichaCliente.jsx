@@ -198,9 +198,94 @@ export default function FichaCliente() {
     navigate('/vendas/nova?farm=' + farm.id)
   }
 
+  const [editando, setEditando] = useState(false)
+  const [editForm, setEditForm] = useState({})
+
   const handleEditar = () => {
-    alert('Edicao sera implementada em breve')
+    setEditForm({
+      name: farm.name || '',
+      owner: farm.owner || '',
+      phone: farm.phone || '',
+      city: farm.city || '',
+      state: farm.state || '',
+      cep: farm.cep || '',
+      street: farm.street || '',
+      street_number: farm.street_number || '',
+      cpf_cnpj: farm.cpf_cnpj || '',
+      cad_pro: farm.cad_pro || '',
+      notes: farm.notes || '',
+    })
+    setEditando(true)
   }
+
+  async function salvarEdicao() {
+    const { error } = await supabase.from('farms').update(editForm).eq('id', farm.id)
+    if (!error) {
+      setEditando(false)
+      // Atualiza localmente
+      Object.assign(farm, editForm)
+      window.location.reload()
+    } else {
+      alert('Erro ao salvar: ' + error.message)
+    }
+  }
+
+  if (editando) return (
+    <div className="content">
+      <button onClick={() => setEditando(false)} style={backBtnStyle}>
+        <IconArrowLeft size={16} /> Voltar
+      </button>
+      <div className="page-head">
+        <div className="eyebrow">Editar dados</div>
+        <h2>{farm.name}</h2>
+      </div>
+
+      <div className="section-label">Dados principais</div>
+      {[
+        {label:'Nome da fazenda', key:'name'},
+        {label:'Produtor', key:'owner'},
+        {label:'Telefone / WhatsApp', key:'phone'},
+      ].map(f => (
+        <div key={f.key} style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--text-dim)',marginBottom:4}}>{f.label}</label>
+          <input value={editForm[f.key]||''} onChange={e=>setEditForm(p=>({...p,[f.key]:e.target.value}))} />
+        </div>
+      ))}
+
+      <div className="section-label">Documentos</div>
+      {[
+        {label:'CPF / CNPJ', key:'cpf_cnpj'},
+        {label:'CAD/PRO', key:'cad_pro'},
+      ].map(f => (
+        <div key={f.key} style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--text-dim)',marginBottom:4}}>{f.label}</label>
+          <input value={editForm[f.key]||''} onChange={e=>setEditForm(p=>({...p,[f.key]:e.target.value}))} />
+        </div>
+      ))}
+
+      <div className="section-label">Endereço</div>
+      {[
+        {label:'CEP', key:'cep'},
+        {label:'Rua / Logradouro', key:'street'},
+        {label:'Número', key:'street_number'},
+        {label:'Cidade', key:'city'},
+        {label:'Estado', key:'state'},
+      ].map(f => (
+        <div key={f.key} style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--text-dim)',marginBottom:4}}>{f.label}</label>
+          <input value={editForm[f.key]||''} onChange={e=>setEditForm(p=>({...p,[f.key]:e.target.value}))} />
+        </div>
+      ))}
+
+      <div className="section-label">Observações</div>
+      <textarea value={editForm.notes||''} onChange={e=>setEditForm(p=>({...p,notes:e.target.value}))}
+        style={{width:'100%',minHeight:80,marginBottom:20}} placeholder="Observações sobre o cliente..."/>
+
+      <button className="btn btn-primary" style={{width:'100%'}} onClick={salvarEdicao}>
+        Salvar alterações
+      </button>
+    </div>
+  )
 
   return (
     <div className="content">
