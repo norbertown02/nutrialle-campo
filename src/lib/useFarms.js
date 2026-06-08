@@ -52,6 +52,15 @@ function toDB(farm) {
     status:        farm.status ?? 'ativo',
     has_checklist: farm.hasChecklist ?? false,
     client_since:  farm.clientSince,
+    seller_id:     farm.sellerId,
+    cpf_cnpj:      farm.cpfCnpj,
+    cad_pro:       farm.cadPro,
+    cep:           farm.cep,
+    street:        farm.street,
+    street_number: farm.streetNumber,
+    owner:         farm.owner,
+    prospect:      farm.prospect,
+    notes:         farm.notes,
   }
 }
 
