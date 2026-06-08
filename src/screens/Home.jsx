@@ -43,15 +43,16 @@ export default function Home() {
   const primeiroNome = user?.name?.split(' ')[0] || 'Vendedor'
 
   // Stats reais
-  const visitasHoje  = visits.filter(v => v.visitDate === hoje()).length
+  const visitasAgendadasHoje = appointments.filter(a => a.appointmentDate === hoje() && (a.kind === 'visita' || !a.kind) && a.status === 'agendado').length
+  const visitasHoje  = visits.filter(v => v.visitDate === hoje()).length + visitasAgendadasHoje
   const visitasMes   = visits.filter(v => v.visitDate?.startsWith(mesAtual())).length
   const vendasMes    = sales.filter(s => s.saleDate?.startsWith(mesAtual())).reduce((a, s) => a + (Number(s.total) || 0), 0)
   const novosClientes = farms.filter(f => f.createdAt?.startsWith(mesAtual())).length
 
   // Próximos compromissos — hoje e futuros, ordenados
   const proximosCompromissos = appointments
-    .filter(a => a.status === 'agendado' && a.date >= hoje())
-    .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))
+    .filter(a => a.status === 'agendado' && a.appointmentDate >= hoje())
+    .sort((a, b) => (a.appointmentDate||'').localeCompare(b.appointmentDate||'') || (a.appointmentTime || '').localeCompare(b.appointmentTime || ''))
     .slice(0, 3)
 
   return (
@@ -94,7 +95,7 @@ export default function Home() {
       ) : (
         proximosCompromissos.map(apt => {
           const farm = farms.find(f => f.id === apt.farmId)
-          const isHoje = apt.date === hoje()
+          const isHoje = apt.appointmentDate === hoje()
           return (
             <div key={apt.id} className="row-item" onClick={() => navigate('/agenda')} style={{ cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

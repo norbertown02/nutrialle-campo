@@ -14,6 +14,7 @@ function fromDB(row) {
     status:          row.status,
     doneAt:          row.done_at,
     createdAt:       row.created_at,
+    kind:            row.kind || 'visita',
   }
 }
 
@@ -41,6 +42,7 @@ export function useAppointments() {
       city:             data.city || null,
       notes:            data.notes || null,
       status:           'agendado',
+      kind:             data.kind || 'visita',
     }
     const { error } = await supabase.from('appointments').insert(item)
     if (!error) setAppointments(prev => [...prev, fromDB(item)])
