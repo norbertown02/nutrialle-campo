@@ -26,7 +26,6 @@ export function useAppointments() {
   useEffect(() => {
     async function load() {
       let q = supabase.from('appointments')
-      if (user && user.role === 'vendedor') q = q.eq('seller_id', user.id)
       const { data, error } = await q
         .select('*')
         .order('appointment_date', { ascending: true })

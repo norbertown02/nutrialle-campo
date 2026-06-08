@@ -75,7 +75,6 @@ export function useFarms() {
     async function load() {
       setLoading(true)
       let query = supabase.from('farms').select('*').order('name')
-      if (user.role === 'vendedor') query = query.eq('seller_id', user.id)
       const { data, error } = await query
       if (!error && data) setFarms(data.map(fromDB))
       setLoading(false)

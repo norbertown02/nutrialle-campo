@@ -22,7 +22,6 @@ export function useVisits() {
   useEffect(() => {
     async function load() {
       let q = supabase.from('visits')
-      if (user && user.role === 'vendedor') q = q.eq('seller_id', user.id)
       const { data, error } = await q
         .select('*')
         .order('visit_date', { ascending: false })
