@@ -36,6 +36,15 @@ export const CHECKLIST_TEMPLATES = {
           ]
         },
         { id: 'q5', label: 'Faz teste de mastite (CMT) periodico?', type: 'boolean' },
+        {
+          id: 'q5b', label: 'Producao media por vaca/dia (litros)', type: 'number', unit: 'L/dia',
+          ranges: [
+            { max: 15, score: 40 },
+            { max: 22, score: 65 },
+            { max: 30, score: 85 },
+            { max: 99999, score: 100 },
+          ]
+        },
       ]
     },
     {

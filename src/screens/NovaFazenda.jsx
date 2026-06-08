@@ -278,18 +278,6 @@ export default function NovaFazenda() {
         <input value={form.street_number||''} onChange={e => setField('street_number', e.target.value)} placeholder="Ex.: 123"/>
       </Field>
 
-      <div className="section-label">Dados da operação</div>
-
-      <Field label="Tamanho do rebanho">
-        <input value={form.herdSize} onChange={e => setField('herdSize', e.target.value)}
-          placeholder={form.segment==='leite'?'Ex.: 180 vacas em lactação':form.segment==='corte'?'Ex.: 450 cabeças':'Ex.: 320 matrizes'} />
-      </Field>
-
-      <Field label="Produção atual">
-        <input value={form.production} onChange={e => setField('production', e.target.value)}
-          placeholder={form.segment==='leite'?'Ex.: 4.200 L/dia':form.segment==='corte'?'Ex.: 30 arrobas/cabeça':'Ex.: 28 desmamados/matriz/ano'} />
-      </Field>
-
       <div className="hint" style={{ marginTop:18 }}>
         Campos com * são obrigatórios. A cidade é validada automaticamente pelo IBGE.
       </div>
