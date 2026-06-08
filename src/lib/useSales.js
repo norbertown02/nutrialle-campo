@@ -26,7 +26,7 @@ export function useSales() {
   useEffect(() => {
     async function load() {
       let q = supabase.from('sales')
-      if (user && user.role !== 'admin') q = q.eq('seller_id', user.id)
+      if (user && user.role === 'vendedor') q = q.eq('seller_id', user.id)
       const { data, error } = await q
         .select('*')
         .order('sale_date', { ascending: false })
