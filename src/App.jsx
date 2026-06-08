@@ -18,6 +18,7 @@ import NovoCompromisso from './screens/NovoCompromisso'
 import Vendas from './screens/Vendas'
 import DetalheVenda from './screens/DetalheVenda'
 import Prospeccao from './screens/Prospeccao'
+import Precos from './screens/Precos'
 import NovaCotacao from './screens/NovaCotacao'
 import DetalheCotacao from './screens/DetalheCotacao'
 import EditarCotacao from './screens/EditarCotacao'
@@ -50,6 +51,7 @@ function AppContent() {
           <Route path="/vendas"                 element={<Vendas />} />
           <Route path="/vendas/:id"             element={<DetalheVenda />} />
           <Route path="/prospeccao"           element={<Prospeccao />} />
+          <Route path="/precos"              element={<Precos />} />
           <Route path="/prospeccao/nova"      element={<NovaCotacao />} />
           <Route path="/prospeccao/:id"       element={<DetalheCotacao />} />
           <Route path="/prospeccao/:id/editar" element={<EditarCotacao />} />

@@ -135,9 +135,9 @@ export default function Home() {
           <IconFileText size={21} />
           Nova Cotação
         </button>
-        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/clientes/novo?prospect=true')}>
+        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/clientes/novo')}>
           <IconUserPlus size={21} />
-          Novo Lead
+          Nova Fazenda
         </button>
         <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/checklist')}>
           <IconClipboardList size={21} />
