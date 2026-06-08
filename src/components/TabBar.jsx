@@ -7,6 +7,7 @@ const TABS = [
   { to: '/',           label: 'Início',   Icon: IconHome },
   { to: '/clientes',   label: 'Clientes', Icon: IconUsers },
   { to: '/prospeccao', label: 'Cotações', Icon: IconFileText },
+  { to: '/agenda',     label: 'Agenda',   Icon: IconCalendar },
   { to: '/vendas',     label: 'Vendas',   Icon: IconReceipt },
   { to: '/precos',     label: 'Preços',   Icon: IconTag },
 ]
