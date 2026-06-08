@@ -29,7 +29,7 @@ export default function Login() {
         <img
           src={logo}
           alt="Nutrialle"
-          style={{ width: 90, height: 90, borderRadius: 22, objectFit: 'cover', marginBottom: 16 }}
+          style={{ width: 90, height: 90, borderRadius: 22, objectFit: 'cover', marginBottom: 16, display: 'block', margin: '0 auto 16px' }}
         />
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: 1 }}>
           NUTRIALLE
