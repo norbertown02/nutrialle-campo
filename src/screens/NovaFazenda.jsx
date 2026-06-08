@@ -106,7 +106,7 @@ export default function NovaFazenda() {
   const [form, setForm] = useState({
     name:'', owner:'', ownerRole:'Proprietário', phone:'',
     docTipo:'cpf', cpf:'', cnpj:'', cadpro1:'', cadpro2:'', cadpro3:'',
-    segment:'leite', city:'', state:'PR',
+    segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'',
     herdSize:'', production:'', area:'',
   })
 
@@ -144,6 +144,7 @@ export default function NovaFazenda() {
       doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
       cadpro_1: form.cadpro1||null, cadpro_2: form.cadpro2||null, cadpro_3: form.cadpro3||null,
       city: form.city.trim(), state: form.state,
+      cep: form.cep?.trim(), street: form.street?.trim(), street_number: form.street_number?.trim(),
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
     })
@@ -263,6 +264,20 @@ export default function NovaFazenda() {
         </div>
       )}
 
+      <div className="section-label">Endereço</div>
+
+      <Field label="CEP">
+        <input value={form.cep||''} onChange={e => setField('cep', e.target.value)} placeholder="Ex.: 85900-000" maxLength={9}/>
+      </Field>
+
+      <Field label="Rua / Logradouro">
+        <input value={form.street||''} onChange={e => setField('street', e.target.value)} placeholder="Ex.: Rua das Palmeiras"/>
+      </Field>
+
+      <Field label="Número">
+        <input value={form.street_number||''} onChange={e => setField('street_number', e.target.value)} placeholder="Ex.: 123"/>
+      </Field>
+
       <div className="section-label">Dados da operação</div>
 
       <Field label="Tamanho do rebanho">
@@ -273,10 +288,6 @@ export default function NovaFazenda() {
       <Field label="Produção atual">
         <input value={form.production} onChange={e => setField('production', e.target.value)}
           placeholder={form.segment==='leite'?'Ex.: 4.200 L/dia':form.segment==='corte'?'Ex.: 30 arrobas/cabeça':'Ex.: 28 desmamados/matriz/ano'} />
-      </Field>
-
-      <Field label="Área (hectares)">
-        <input value={form.area} onChange={e => setField('area', e.target.value)} placeholder="Ex.: 120 ha" />
       </Field>
 
       <div className="hint" style={{ marginTop:18 }}>
