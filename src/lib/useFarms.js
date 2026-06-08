@@ -104,7 +104,8 @@ export function useFarms() {
       hasChecklist: false,
       createdAt: new Date().toISOString(),
     }
-    const { error } = await supabase.from('farms').insert(toDB(newFarm))
+    const { data: insertData, error } = await supabase.from('farms').insert(toDB(newFarm)).select()
+    console.log('INSERT farms result:', { insertData, error, payload: toDB(newFarm) })
     if (!error) setFarms(prev => [newFarm, ...prev])
     return newFarm
   }, [farms])
