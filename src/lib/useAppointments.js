@@ -26,10 +26,10 @@ export function useAppointments() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
-        .from('appointments')
+      let q = supabase.from('appointments')
+      if (user && user.role !== 'admin') q = q.eq('seller_id', user.id)
+      const { data, error } = await q
         .select('*')
-        .eq('seller_id', user && user.id)
         .order('appointment_date', { ascending: true })
       if (!error && data) setAppointments(data.map(fromDB))
     }

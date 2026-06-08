@@ -22,10 +22,10 @@ export function useVisits() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
-        .from('visits')
+      let q = supabase.from('visits')
+      if (user && user.role !== 'admin') q = q.eq('seller_id', user.id)
+      const { data, error } = await q
         .select('*')
-        .eq('seller_id', user && user.id)
         .order('visit_date', { ascending: false })
       if (!error && data) setVisits(data.map(fromDB))
     }
