@@ -160,6 +160,9 @@ export default function FichaCliente() {
   const farmChecklists = farm ? getChecklistsByFarm(farm.id) : []
   const farmSales = farm ? getSalesByFarm(farm.id) : []
 
+  const [editando, setEditando] = useState(false)
+  const [editForm, setEditForm] = useState({})
+
   if (!farm) {
     return (
       <div className="content">
@@ -197,9 +200,6 @@ export default function FichaCliente() {
  const handleVenda = () => {
     navigate('/vendas/nova?farm=' + farm.id)
   }
-
-  const [editando, setEditando] = useState(false)
-  const [editForm, setEditForm] = useState({})
 
   const handleEditar = () => {
     setEditForm({
