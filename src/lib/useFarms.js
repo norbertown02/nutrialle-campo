@@ -22,6 +22,14 @@ function fromDB(row) {
     clientSince:  row.client_since,
     createdAt:    row.created_at,
     updatedAt:    row.updated_at,
+    cpfCnpj:      row.cpf_cnpj,
+    cadPro:       row.cad_pro,
+    cep:          row.cep,
+    street:       row.street,
+    streetNumber: row.street_number,
+    owner:        row.owner,
+    prospect:     row.prospect,
+    notes:        row.notes,
   }
 }
 
