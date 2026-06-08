@@ -75,14 +75,14 @@ export default function Precos() {
               </div>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',paddingTop:8,borderTop:'1px solid var(--line)'}}>
                 <div>
-                  <div style={{fontSize:11,color:'var(--text-faint)'}}>Preço por saco</div>
-                  <div style={{fontSize:20,fontWeight:700,color:'var(--orange)'}}>R$ {fmt(p.price)}</div>
-                </div>
-                <div style={{textAlign:'right'}}>
                   <div style={{fontSize:11,color:'var(--text-faint)'}}>Preço por kg</div>
-                  <div style={{fontSize:14,fontWeight:600,color:'var(--text-dim)'}}>
+                  <div style={{fontSize:20,fontWeight:700,color:'var(--orange)'}}>
                     R$ {p.price_kg ? fmt(p.price_kg) : p.bag_kg ? fmt(p.price/p.bag_kg) : '—'}/kg
                   </div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <div style={{fontSize:11,color:'var(--text-faint)'}}>Preço por saco ({p.bag_kg||25}kg)</div>
+                  <div style={{fontSize:14,fontWeight:600,color:'var(--text-dim)'}}>R$ {fmt(p.price)}</div>
                 </div>
               </div>
               {p.description && (
