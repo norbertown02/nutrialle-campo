@@ -203,23 +203,37 @@ export default function FichaCliente() {
 
   const handleEditar = () => {
     setEditForm({
-      name: farm.name || '',
-      owner: farm.owner || '',
-      phone: farm.phone || '',
-      city: farm.city || '',
-      state: farm.state || '',
-      cep: farm.cep || '',
-      street: farm.street || '',
-      street_number: farm.street_number || '',
-      cpf_cnpj: farm.cpf_cnpj || '',
-      cad_pro: farm.cad_pro || '',
-      notes: farm.notes || '',
+      name:         farm.name || '',
+      owner:        farm.owner || farm.ownerName || '',
+      phone:        farm.phone || '',
+      city:         farm.city || '',
+      state:        farm.state || '',
+      cep:          farm.cep || '',
+      street:       farm.street || '',
+      streetNumber: farm.streetNumber || '',
+      cpfCnpj:      farm.cpfCnpj || '',
+      cadPro:       farm.cadPro || '',
+      notes:        farm.notes || '',
     })
     setEditando(true)
   }
 
   async function salvarEdicao() {
-    const { error } = await supabase.from('farms').update(editForm).eq('id', farm.id)
+    const payload = {
+      name:          editForm.name,
+      owner:         editForm.owner,
+      owner_name:    editForm.owner,
+      phone:         editForm.phone,
+      city:          editForm.city,
+      state:         editForm.state,
+      cep:           editForm.cep,
+      street:        editForm.street,
+      street_number: editForm.streetNumber,
+      cpf_cnpj:      editForm.cpfCnpj,
+      cad_pro:       editForm.cadPro,
+      notes:         editForm.notes,
+    }
+    const { error } = await supabase.from('farms').update(payload).eq('id', farm.id)
     if (!error) {
       setEditando(false)
       // Atualiza localmente
@@ -254,8 +268,8 @@ export default function FichaCliente() {
 
       <div className="section-label">Documentos</div>
       {[
-        {label:'CPF / CNPJ', key:'cpf_cnpj'},
-        {label:'CAD/PRO', key:'cad_pro'},
+        {label:'CPF / CNPJ', key:'cpfCnpj'},
+        {label:'CAD/PRO', key:'cadPro'},
       ].map(f => (
         <div key={f.key} style={{marginBottom:12}}>
           <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--text-dim)',marginBottom:4}}>{f.label}</label>
@@ -267,7 +281,7 @@ export default function FichaCliente() {
       {[
         {label:'CEP', key:'cep'},
         {label:'Rua / Logradouro', key:'street'},
-        {label:'Número', key:'street_number'},
+        {label:'Número', key:'streetNumber'},
         {label:'Cidade', key:'city'},
         {label:'Estado', key:'state'},
       ].map(f => (
