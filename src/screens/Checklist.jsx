@@ -29,6 +29,7 @@ export default function Checklist() {
   const updateFarm = farmsHook.updateFarm
   const checklistsHook = useChecklists()
   const addChecklist = checklistsHook.addChecklist
+  const getChecklistsByFarm = checklistsHook.getChecklistsByFarm
 
   const farm = getFarm(id)
   const [answers, setAnswers] = useState({})
@@ -141,12 +142,16 @@ export default function Checklist() {
 
   async function handleGerarPDF() {
     if (!checklistSalvo) return
+    const farmChecklists = getChecklistsByFarm(farm.id)
     await gerarRelatorioChecklist({
       farm,
-      stageScores: checklistSalvo.stageScores,
-      overallScore: checklistSalvo.overallScore,
+      checklists: farmChecklists.length > 0 ? farmChecklists : [{
+        appliedAt: todayISO(),
+        overallScore: checklistSalvo.overallScore,
+        stageScores: checklistSalvo.stageScores,
+        answers: checklistSalvo.answers,
+      }],
       template: checklistSalvo.template,
-      answers: checklistSalvo.answers,
     })
   }
 

@@ -25,6 +25,8 @@ function rec(stage, score) {
     ambiencia:      ['Instalações modernas. Conforto animal reflete diretamente na produtividade.','Controle térmico pode aumentar conversão alimentar em até 10%.','Ambiência crítica. Estresse ambiental compromete toda a cadeia produtiva.'],
     racao:          ['Nutrição de suínos estruturada por fase. Mantenha acompanhamento técnico.','Premix Suínos Crescimento otimiza conversão alimentar e reduz custo.','Nutrição inadequada. Alto custo e baixo desempenho. Reformulação urgente.'],
     biosseguridade: ['Biosseguridade robusta. Barreira sanitária protege eficientemente o plantel.','Reforçar pontos críticos da barreira. Vazio sanitário entre lotes essencial.','Biosseguridade frágil. Risco elevado de entrada de doenças no plantel.'],
+    sistema:        ['Sistema de producao bem estruturado. Manejo de cocho e pre-parto adequados.','Ajustes no sistema e manejo de cocho podem melhorar eficiencia alimentar.','Sistema de producao com gargalos criticos. Revisao do manejo urgente.'],
+    obs:            ['Observacoes registradas.','Observacoes registradas.','Observacoes registradas.'],
   }
   const arr = m[stage] || ['Boa performance.','Há espaço para melhoria.','Atenção necessária.']
   return score >= 70 ? arr[0] : score >= 40 ? arr[1] : arr[2]
@@ -365,6 +367,12 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
         if(q.type==='boolean')r=v===true?'Sim':v===false?'Nao':'—'
         if(q.type==='select') r=q.options[v]?.label||'—'
         if(q.type==='number') r=v!=null?v+' '+(q.unit||''):'—'
+        if(q.type==='multiselect') r=Array.isArray(v)&&v.length>0?v.map(i=>q.options[i]?.label||'').filter(Boolean).join(', '):'—'
+        if(q.type==='text') r=v||'—'
+        if(q.type==='multiselect') r=Array.isArray(v)&&v.length>0?v.map(i=>q.options[i]?.label||'').filter(Boolean).join(', '):'—'
+        if(q.type==='text') r=v||'—'
+        if(q.type==='multiselect') r=Array.isArray(v)&&v.length>0?v.map(i=>q.options[i]?.label||'').filter(Boolean).join(', '):'—'
+        if(q.type==='text') r=v||'—'
         return [q.label,r]
       }),
       theme:'grid',
