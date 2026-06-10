@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconCheck, IconMapPin, IconX } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
@@ -98,6 +98,55 @@ function CidadeInput({ value, uf, onChange, onSelectCity }) {
   )
 }
 
+
+const MARCAS_MERCADO = [
+  'DSM-Biomin','Alltech','Kemin','ICC Brazil','Nutron (Cargill)',
+  'Premix (Nutreco)','Fatec','Tortuga (Phibro)','Vaccinar',
+  'Ouro Fino Saude Animal','Vansul','Brancalion','Matsuda',
+  'Guabi (Gleba)','Beeftek','Provimi (Cargill)','Rindmax',
+  'Impextraco','Supra','Agrocria','Nutriplan','Nutrivale',
+  'Trouw Nutrition','De Heus','Purina (Landcafe)','Kothe',
+  'Brastec','Nutrimax','Rhodina','Tecnutri','Total Alimentos',
+  'Agriverde','Nutrindo','FeedFarm','Proteimax','Outra',
+]
+
+function MarcaInput({ value, onChange }) {
+  const [query, setQuery] = React.useState(value || '')
+  const [open, setOpen]   = React.useState(false)
+  const filtradas = query.length >= 1
+    ? MARCAS_MERCADO.filter(m => m.toLowerCase().includes(query.toLowerCase()))
+    : MARCAS_MERCADO
+  function select(m) { setQuery(m); onChange(m); setOpen(false) }
+  return (
+    <div style={{ position:'relative' }}>
+      <input
+        value={query}
+        onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 180)}
+        placeholder="Buscar ou digitar marca..."
+      />
+      {open && filtradas.length > 0 && (
+        <div style={{
+          position:'absolute', top:'100%', left:0, right:0, zIndex:100,
+          background:'var(--surface)', border:'1px solid var(--line)',
+          borderRadius:10, maxHeight:200, overflowY:'auto', marginTop:4,
+          boxShadow:'0 8px 24px rgba(0,0,0,0.4)'
+        }}>
+          {filtradas.map(m => (
+            <div key={m} onMouseDown={() => select(m)} style={{
+              padding:'10px 14px', fontSize:13, cursor:'pointer',
+              color: m === value ? 'var(--orange)' : 'var(--text)',
+              fontWeight: m === value ? 600 : 400,
+              borderBottom:'1px solid var(--line-soft)',
+            }}>{m}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function NovaFazenda() {
   const navigate = useNavigate()
   const { addFarm } = useFarms()
@@ -107,7 +156,7 @@ export default function NovaFazenda() {
     name:'', owner:'', ownerRole:'Proprietário', phone:'',
     docTipo:'cpf', cpf:'', cnpj:'', cadpro1:'', cadpro2:'', cadpro3:'',
     segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'',
-    herdSize:'', production:'', area:'',
+    herdSize:'', production:'', area:'', marcaAtual:'', marcaOutra:'',
   })
 
   const [cidadeVerificada, setCidadeVerificada] = useState(false)
@@ -277,6 +326,17 @@ export default function NovaFazenda() {
       <Field label="Número">
         <input value={form.street_number||''} onChange={e => setField('street_number', e.target.value)} placeholder="Ex.: 123"/>
       </Field>
+
+
+      <div className="section-label">Concorrencia</div>
+      <Field label="Marca utilizada atualmente">
+        <MarcaInput value={form.marcaAtual} onChange={v => setField('marcaAtual', v)} />
+      </Field>
+      {form.marcaAtual === 'Outra' && (
+        <Field label="Qual marca?">
+          <input value={form.marcaOutra} onChange={e => setField('marcaOutra', e.target.value)} placeholder="Digite o nome da marca" />
+        </Field>
+      )}
 
       <div className="hint" style={{ marginTop:18 }}>
         Campos com * são obrigatórios. A cidade é validada automaticamente pelo IBGE.
