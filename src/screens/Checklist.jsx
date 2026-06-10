@@ -444,21 +444,51 @@ export default function Checklist() {
         )
       })}
 
-      <button
-        className="btn btn-primary"
-        onClick={handleSave}
-        disabled={!allAnswered}
-        style={{
-          marginTop: 18,
-          opacity: allAnswered ? 1 : 0.45,
-          cursor: allAnswered ? 'pointer' : 'not-allowed'
-        }}
-      >
-        <IconCheck size={18} />
-        {allAnswered
-          ? 'Concluir avaliacao'
-          : 'Faltam ' + (totalQuestions - totalAnswered) + ' respostas'}
-      </button>
+      {!checklistSalvo ? (
+        <button
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={!allAnswered}
+          style={{
+            marginTop: 18,
+            opacity: allAnswered ? 1 : 0.45,
+            cursor: allAnswered ? 'pointer' : 'not-allowed'
+          }}
+        >
+          <IconCheck size={18} />
+          {allAnswered
+            ? 'Concluir avaliacao'
+            : 'Faltam ' + (totalQuestions - totalAnswered) + ' respostas'}
+        </button>
+      ) : (
+        <div style={{
+          marginTop: 18, padding: 20, borderRadius: 14,
+          background: 'var(--green-bg)', border: '1px solid var(--green)',
+          textAlign: 'center'
+        }}>
+          <IconCheck size={32} color="var(--green)" />
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--green)', marginTop: 8 }}>
+            Avaliacao concluida!
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4, marginBottom: 16 }}>
+            Score geral: <strong style={{ color: 'var(--orange)' }}>{checklistSalvo.overallScore}</strong> / 100
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={handleGerarPDF}
+            style={{ marginBottom: 10, width: '100%' }}
+          >
+            Gerar Relatorio PDF
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => navigate('/clientes/' + farm.id)}
+            style={{ width: '100%' }}
+          >
+            Voltar para o cliente
+          </button>
+        </div>
+      )}
     </div>
   )
 }
