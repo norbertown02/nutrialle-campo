@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   IconArrowLeft, IconCheck, IconX, IconClipboardCheck,
-  IconChevronDown, IconChevronUp
+  IconChevronDown, IconChevronUp, IconCheckbox, IconSquare
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useChecklists } from '../lib/useChecklists'
@@ -50,17 +50,34 @@ export default function Checklist() {
   }
 
   const template = CHECKLIST_TEMPLATES[farm.segment] || CHECKLIST_TEMPLATES.leite
-  const totalQuestions = template.reduce((s, sec) => s + sec.questions.length, 0)
+
+  // Verifica se uma pergunta está ativa (dependsOn)
+  const isActive = (q) => {
+    if (!q.dependsOn) return true
+    return answers[q.dependsOn.id] === q.dependsOn.value
+  }
+
+  // Perguntas que contam para o progresso: ativas e não opcionais e não texto
+  const mustAnswer = (q) => {
+    if (q.optional) return false
+    if (q.type === 'text') return false
+    if (!isActive(q)) return false
+    return true
+  }
+
+  const totalQuestions = template.reduce((s, sec) => s + sec.questions.filter(mustAnswer).length, 0)
 
   const isAnswered = (q) => {
+    if (!mustAnswer(q)) return true
     const v = answers[q.id]
     if (v === undefined || v === null) return false
     if (q.type === 'number') return v !== '' && !isNaN(parseFloat(v))
+    if (q.type === 'multiselect') return Array.isArray(v) && v.length > 0
     return true
   }
 
   const totalAnswered = template.reduce(
-    (s, sec) => s + sec.questions.filter(isAnswered).length, 0
+    (s, sec) => s + sec.questions.filter(q => mustAnswer(q) && isAnswered(q)).length, 0
   )
   const progress = totalQuestions ? Math.round((totalAnswered / totalQuestions) * 100) : 0
   const allAnswered = totalAnswered === totalQuestions
@@ -69,12 +86,35 @@ export default function Checklist() {
     setAnswers(prev => ({ ...prev, [qId]: value }))
   }
 
+  const toggleMultiselect = (qId, optIdx, options) => {
+    const nenhum = options.findIndex(o => o.label === 'Nenhum')
+    setAnswers(prev => {
+      const current = Array.isArray(prev[qId]) ? prev[qId] : []
+      // Se clicou em "Nenhum", limpa tudo e deixa só "Nenhum"
+      if (optIdx === nenhum) {
+        return { ...prev, [qId]: current.includes(nenhum) ? [] : [nenhum] }
+      }
+      // Se clicou em outra opção, remove "Nenhum" se estiver
+      let next = current.filter(i => i !== nenhum)
+      if (next.includes(optIdx)) {
+        next = next.filter(i => i !== optIdx)
+      } else {
+        next = [...next, optIdx]
+      }
+      return { ...prev, [qId]: next }
+    })
+  }
+
   const toggleSection = (stage) => {
     setExpanded(prev => ({ ...prev, [stage]: !prev[stage] }))
   }
 
   const sectionAnswered = (sec) => {
-    return sec.questions.filter(isAnswered).length
+    return sec.questions.filter(q => mustAnswer(q) && isAnswered(q)).length
+  }
+
+  const sectionTotal = (sec) => {
+    return sec.questions.filter(mustAnswer).length
   }
 
   const handleSave = () => {
@@ -95,9 +135,7 @@ export default function Checklist() {
       answers,
     })
 
-    // Marca a fazenda como tendo checklist aplicado
     updateFarm(farm.id, { hasChecklist: true, overallScore })
-
     setChecklistSalvo({ stageScores, overallScore, answers, template })
   }
 
@@ -164,7 +202,8 @@ export default function Checklist() {
       {/* Etapas */}
       {template.map((sec, secIdx) => {
         const answered = sectionAnswered(sec)
-        const isComplete = answered === sec.questions.length
+        const total = sectionTotal(sec)
+        const isComplete = total > 0 && answered === total
         const isExpanded = expanded[sec.stage] !== false
 
         return (
@@ -203,7 +242,7 @@ export default function Checklist() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{sec.title}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
-                  {answered} de {sec.questions.length} respondidas
+                  {total === 0 ? 'Sem perguntas obrigatorias' : `${answered} de ${total} respondidas`}
                 </div>
               </div>
               {isExpanded
@@ -214,117 +253,185 @@ export default function Checklist() {
 
             {isExpanded ? (
               <div style={{ padding: '0 14px 14px', borderTop: '1px solid var(--line-soft)' }}>
-                {sec.questions.map(q => (
-                  <div key={q.id} style={{ marginTop: 14 }}>
-                    <label style={{
-                      display: 'block', fontSize: 13, fontWeight: 500,
-                      color: 'var(--text)', marginBottom: 8
-                    }}>
-                      {q.label}
-                    </label>
+                {sec.questions.map(q => {
+                  const active = isActive(q)
+                  if (!active) return null
 
-                    {q.type === 'number' ? (
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          placeholder="0"
+                  return (
+                    <div key={q.id} style={{ marginTop: 14 }}>
+                      <label style={{
+                        display: 'block', fontSize: 13, fontWeight: 500,
+                        color: 'var(--text)', marginBottom: 8
+                      }}>
+                        {q.label}
+                        {q.optional && (
+                          <span style={{ fontSize: 11, color: 'var(--text-faint)', marginLeft: 6, fontWeight: 400 }}>
+                            (opcional)
+                          </span>
+                        )}
+                      </label>
+
+                      {/* NUMBER */}
+                      {q.type === 'number' ? (
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={answers[q.id] || ''}
+                            onChange={e => setAnswer(q.id, e.target.value)}
+                          />
+                          {q.unit ? (
+                            <span style={{
+                              position: 'absolute', right: 12, top: 12,
+                              color: 'var(--text-faint)', fontSize: 13
+                            }}>
+                              {q.unit}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {/* TEXT */}
+                      {q.type === 'text' ? (
+                        <textarea
+                          placeholder={q.placeholder || ''}
                           value={answers[q.id] || ''}
                           onChange={e => setAnswer(q.id, e.target.value)}
+                          rows={3}
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            background: 'var(--surface-2)',
+                            border: '1px solid var(--line)',
+                            borderRadius: 9, padding: '10px 12px',
+                            fontSize: 13, color: 'var(--text)',
+                            fontFamily: 'inherit', resize: 'vertical',
+                            outline: 'none',
+                          }}
                         />
-                        {q.unit ? (
-                          <span style={{
-                            position: 'absolute', right: 12, top: 12,
-                            color: 'var(--text-faint)', fontSize: 13
-                          }}>
-                            {q.unit}
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : null}
+                      ) : null}
 
-                    {q.type === 'select' ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {q.options.map((o, oi) => {
-                          const selected = answers[q.id] === oi
-                          return (
-                            <div
-                              key={oi}
-                              onClick={() => setAnswer(q.id, oi)}
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: 9,
-                                cursor: 'pointer',
-                                border: '1px solid ' + (selected ? 'var(--orange)' : 'var(--line)'),
-                                background: selected ? 'rgba(240,125,26,0.08)' : 'var(--surface-2)',
-                                fontSize: 13,
-                                color: selected ? 'var(--orange)' : 'var(--text)',
-                                fontWeight: selected ? 600 : 400,
-                                display: 'flex', alignItems: 'center', gap: 9
-                              }}
-                            >
-                              <div style={{
-                                width: 16, height: 16, borderRadius: '50%',
-                                border: '2px solid ' + (selected ? 'var(--orange)' : 'var(--line)'),
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                flexShrink: 0
-                              }}>
-                                {selected ? (
-                                  <div style={{
-                                    width: 8, height: 8, borderRadius: '50%',
-                                    background: 'var(--orange)'
-                                  }}></div>
-                                ) : null}
+                      {/* SELECT (radio) */}
+                      {q.type === 'select' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {q.options.map((o, oi) => {
+                            const selected = answers[q.id] === oi
+                            return (
+                              <div
+                                key={oi}
+                                onClick={() => setAnswer(q.id, oi)}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: 9,
+                                  cursor: 'pointer',
+                                  border: '1px solid ' + (selected ? 'var(--orange)' : 'var(--line)'),
+                                  background: selected ? 'rgba(240,125,26,0.08)' : 'var(--surface-2)',
+                                  fontSize: 13,
+                                  color: selected ? 'var(--orange)' : 'var(--text)',
+                                  fontWeight: selected ? 600 : 400,
+                                  display: 'flex', alignItems: 'center', gap: 9
+                                }}
+                              >
+                                <div style={{
+                                  width: 16, height: 16, borderRadius: '50%',
+                                  border: '2px solid ' + (selected ? 'var(--orange)' : 'var(--line)'),
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  flexShrink: 0
+                                }}>
+                                  {selected ? (
+                                    <div style={{
+                                      width: 8, height: 8, borderRadius: '50%',
+                                      background: 'var(--orange)'
+                                    }}></div>
+                                  ) : null}
+                                </div>
+                                {o.label}
                               </div>
-                              {o.label}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : null}
+                            )
+                          })}
+                        </div>
+                      ) : null}
 
-                    {q.type === 'boolean' ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <button
-                          type="button"
-                          onClick={() => setAnswer(q.id, true)}
-                          style={{
-                            padding: '12px 0',
-                            borderRadius: 9,
-                            border: '1px solid ' + (answers[q.id] === true ? 'var(--green)' : 'var(--line)'),
-                            background: answers[q.id] === true ? 'var(--green-bg)' : 'var(--surface-2)',
-                            color: answers[q.id] === true ? 'var(--green)' : 'var(--text-dim)',
-                            fontFamily: 'inherit',
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-                          }}
-                        >
-                          <IconCheck size={16} /> Sim
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAnswer(q.id, false)}
-                          style={{
-                            padding: '12px 0',
-                            borderRadius: 9,
-                            border: '1px solid ' + (answers[q.id] === false ? 'var(--red)' : 'var(--line)'),
-                            background: answers[q.id] === false ? 'var(--red-bg)' : 'var(--surface-2)',
-                            color: answers[q.id] === false ? 'var(--red)' : 'var(--text-dim)',
-                            fontFamily: 'inherit',
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-                          }}
-                        >
-                          <IconX size={16} /> Nao
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
+                      {/* MULTISELECT (checkbox) */}
+                      {q.type === 'multiselect' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 2 }}>
+                            Pode selecionar mais de uma opcao
+                          </div>
+                          {q.options.map((o, oi) => {
+                            const current = Array.isArray(answers[q.id]) ? answers[q.id] : []
+                            const selected = current.includes(oi)
+                            return (
+                              <div
+                                key={oi}
+                                onClick={() => toggleMultiselect(q.id, oi, q.options)}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: 9,
+                                  cursor: 'pointer',
+                                  border: '1px solid ' + (selected ? 'var(--orange)' : 'var(--line)'),
+                                  background: selected ? 'rgba(240,125,26,0.08)' : 'var(--surface-2)',
+                                  fontSize: 13,
+                                  color: selected ? 'var(--orange)' : 'var(--text)',
+                                  fontWeight: selected ? 600 : 400,
+                                  display: 'flex', alignItems: 'center', gap: 9
+                                }}
+                              >
+                                {selected
+                                  ? <IconCheckbox size={16} style={{ color: "var(--orange)", flexShrink: 0 }} />
+                                  : <IconSquare size={16} style={{ color: 'var(--line)', flexShrink: 0 }} />
+                                }
+                                {o.label}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+
+                      {/* BOOLEAN */}
+                      {q.type === 'boolean' ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => setAnswer(q.id, true)}
+                            style={{
+                              padding: '12px 0',
+                              borderRadius: 9,
+                              border: '1px solid ' + (answers[q.id] === true ? 'var(--green)' : 'var(--line)'),
+                              background: answers[q.id] === true ? 'var(--green-bg)' : 'var(--surface-2)',
+                              color: answers[q.id] === true ? 'var(--green)' : 'var(--text-dim)',
+                              fontFamily: 'inherit',
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                            }}
+                          >
+                            <IconCheck size={16} /> Sim
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAnswer(q.id, false)}
+                            style={{
+                              padding: '12px 0',
+                              borderRadius: 9,
+                              border: '1px solid ' + (answers[q.id] === false ? 'var(--red)' : 'var(--line)'),
+                              background: answers[q.id] === false ? 'var(--red-bg)' : 'var(--surface-2)',
+                              color: answers[q.id] === false ? 'var(--red)' : 'var(--text-dim)',
+                              fontFamily: 'inherit',
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                            }}
+                          >
+                            <IconX size={16} /> Nao
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })}
               </div>
             ) : null}
           </div>

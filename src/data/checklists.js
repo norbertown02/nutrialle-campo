@@ -1,4 +1,4 @@
-// Checklist objetivo: só perguntas fechadas (boolean, select, number).
+// Checklist objetivo: só perguntas fechadas (boolean, select, number) + text e multiselect.
 // Cada opção tem peso (0 a 100). A nota da etapa é calculada, não escolhida.
 // Norberto: estas perguntas são iniciais. Revisar com técnico antes de produção.
 
@@ -17,9 +17,19 @@ export const CHECKLIST_TEMPLATES = {
           ]
         },
         {
+          id: 'q_prod_vaca', label: 'Producao media por vaca/dia (litros)', type: 'number', unit: 'L/dia',
+          ranges: [
+            { max: 15, score: 40 },
+            { max: 22, score: 65 },
+            { max: 30, score: 85 },
+            { max: 99999, score: 100 },
+          ]
+        },
+        {
           id: 'q1', label: 'Tipo de ordenha', type: 'select',
           options: [
-            { label: 'Mecanica canalizada', score: 100 },
+            { label: 'Automatica (robotica)', score: 100 },
+            { label: 'Mecanica canalizada', score: 90 },
             { label: 'Mecanica balde ao pe', score: 65 },
             { label: 'Manual', score: 30 },
           ]
@@ -37,12 +47,21 @@ export const CHECKLIST_TEMPLATES = {
         },
         { id: 'q5', label: 'Faz teste de mastite (CMT) periodico?', type: 'boolean' },
         {
-          id: 'q5b', label: 'Producao media por vaca/dia (litros)', type: 'number', unit: 'L/dia',
+          id: 'q_vacas_secas_pct', label: 'Percentual de vacas secas no rebanho (%)', type: 'number', unit: '%',
           ranges: [
-            { max: 15, score: 40 },
-            { max: 22, score: 65 },
-            { max: 30, score: 85 },
-            { max: 99999, score: 100 },
+            { max: 15, score: 100 },
+            { max: 20, score: 85 },
+            { max: 30, score: 65 },
+            { max: 99, score: 40 },
+          ]
+        },
+        {
+          id: 'q_del', label: 'DEL medio do rebanho (dias em lactacao)', type: 'number', unit: 'dias',
+          ranges: [
+            { max: 120, score: 100 },
+            { max: 160, score: 85 },
+            { max: 200, score: 65 },
+            { max: 99999, score: 40 },
           ]
         },
       ]
@@ -59,6 +78,19 @@ export const CHECKLIST_TEMPLATES = {
             { label: 'Nao suplementa', score: 0 },
           ]
         },
+        {
+          id: 'q_aditivos', label: 'Suplementos aditivos utilizados', type: 'multiselect',
+          options: [
+            { label: 'Tamponante', score: 25 },
+            { label: 'Adsorvente de micotoxinas', score: 25 },
+            { label: 'Leveduras', score: 25 },
+            { label: 'Nenhum', score: 0 },
+          ]
+        },
+        {
+          id: 'q_aditivos_marca', label: 'Marca de aditivo utilizada atualmente', type: 'text',
+          placeholder: 'Ex: Mycosorb, Diamond V, ...'
+        },
         { id: 'q7', label: 'Tem reserva de volumoso para o ano todo?', type: 'boolean' },
         { id: 'q8', label: 'Usa silagem ou feno?', type: 'boolean' },
         {
@@ -68,6 +100,37 @@ export const CHECKLIST_TEMPLATES = {
             { label: 'Eventual / cooperativa', score: 60 },
             { label: 'Nao tem', score: 20 },
           ]
+        },
+      ]
+    },
+    {
+      stage: 'sistema', title: 'Sistema de producao', icon: 'home',
+      questions: [
+        {
+          id: 'q_sistema', label: 'Sistema de criacao utilizado', type: 'select',
+          options: [
+            { label: 'Free stall', score: 100 },
+            { label: 'Compost barn', score: 100 },
+            { label: 'A pasto', score: 70 },
+          ]
+        },
+        {
+          id: 'q_cocho', label: 'Manejo de cocho (limpeza)', type: 'select',
+          options: [
+            { label: 'Diario', score: 100 },
+            { label: 'Semanal', score: 60 },
+            { label: 'Nao faz', score: 10 },
+          ]
+        },
+        {
+          id: 'q_preparto', label: 'Animais de pre-parto permanecem no galpao ou a pasto?', type: 'select',
+          options: [
+            { label: 'No galpao (confinados)', score: 100 },
+            { label: 'A pasto', score: 50 },
+          ]
+        },
+        {
+          id: 'q_dieta_seca', label: 'Faz dieta de periodo de seca e pre-parto?', type: 'boolean'
         },
       ]
     },
@@ -128,7 +191,7 @@ export const CHECKLIST_TEMPLATES = {
       ]
     },
     {
-      stage: 'conforto', title: 'Conforto e instalacoes', icon: 'home',
+      stage: 'conforto', title: 'Conforto e instalacoes', icon: 'armchair',
       questions: [
         { id: 'q17', label: 'Tem sombreamento na sala de espera?', type: 'boolean' },
         { id: 'q18', label: 'Tem ventiladores ou aspersores?', type: 'boolean' },
@@ -141,6 +204,16 @@ export const CHECKLIST_TEMPLATES = {
           ]
         },
         { id: 'q20', label: 'Faz limpeza de cocho regularmente?', type: 'boolean' },
+      ]
+    },
+    {
+      stage: 'obs', title: 'Observacoes gerais', icon: 'notes',
+      questions: [
+        {
+          id: 'q_obs', label: 'Observacoes e anotacoes livres', type: 'text',
+          placeholder: 'Anote aqui informacoes relevantes sobre a propriedade...',
+          optional: true,
+        },
       ]
     },
   ],
@@ -156,6 +229,10 @@ export const CHECKLIST_TEMPLATES = {
             { max: 300, score: 80 },
             { max: 99999, score: 100 },
           ]
+        },
+        {
+          id: 'q_tipo_pastagem', label: 'Tipo de pastagem utilizada', type: 'text',
+          placeholder: 'Ex: Brachiaria brizantha, Mombaça, Tanzânia, Tifton...'
         },
         {
           id: 'q1', label: 'Taxa de lotacao (UA/ha)', type: 'number', unit: 'UA/ha',
@@ -193,6 +270,15 @@ export const CHECKLIST_TEMPLATES = {
         },
         { id: 'q6', label: 'Faz confinamento ou semi-confinamento?', type: 'boolean' },
         {
+          id: 'q_conf_alimentacao', label: 'No confinamento, o gado consome:', type: 'select',
+          dependsOn: { id: 'q6', value: true },
+          options: [
+            { label: 'Somente racao completa (TMR)', score: 100 },
+            { label: 'Suplemento energetico + volumoso', score: 80 },
+            { label: 'Volumoso sem suplemento', score: 40 },
+          ]
+        },
+        {
           id: 'q7', label: 'Estrategia nas aguas (verao)', type: 'select',
           options: [
             { label: 'Suplemento mineral proteinado', score: 100 },
@@ -205,7 +291,6 @@ export const CHECKLIST_TEMPLATES = {
     {
       stage: 'sanidade', title: 'Sanidade do rebanho', icon: 'vaccine',
       questions: [
-        { id: 'q8', label: 'Vacinacao de aftosa em dia?', type: 'boolean' },
         { id: 'q9', label: 'Vermifugacao estrategica?', type: 'boolean' },
         {
           id: 'q10', label: 'Controle de ectoparasitas (carrapato, mosca)', type: 'select',
@@ -215,6 +300,7 @@ export const CHECKLIST_TEMPLATES = {
             { label: 'Nao faz controle', score: 10 },
           ]
         },
+        { id: 'q_vacinas_repro', label: 'Faz manejo de vacinas reprodutivas?', type: 'boolean' },
       ]
     },
     {
@@ -357,21 +443,49 @@ export const CHECKLIST_TEMPLATES = {
 
 // Calcula nota de uma etapa baseado nas respostas
 export function calculateStageScore(stage, answers) {
-  const scores = stage.questions.map(q => {
+  // Perguntas opcionais e de texto não entram na pontuação
+  const scorableQuestions = stage.questions.filter(q =>
+    q.type !== 'text' && !q.optional
+  )
+  if (scorableQuestions.length === 0) return 100
+
+  const scores = scorableQuestions.map(q => {
+    // Pergunta condicional: se a condição não foi atendida, pula com score neutro
+    if (q.dependsOn) {
+      const depAnswer = answers[q.dependsOn.id]
+      if (depAnswer !== q.dependsOn.value) return null
+    }
+
     const v = answers[q.id]
+
     if (q.type === 'boolean') return v === true ? 100 : 0
+
     if (q.type === 'select') {
       const opt = q.options[v]
       return opt ? opt.score : 0
     }
+
+    if (q.type === 'multiselect') {
+      if (!Array.isArray(v) || v.length === 0) return 0
+      // Se selecionou "Nenhum", score 0
+      const nenhum = q.options.findIndex(o => o.label === 'Nenhum')
+      if (nenhum !== -1 && v.includes(nenhum)) return 0
+      // Soma os scores das opções selecionadas, cap em 100
+      const total = v.reduce((acc, idx) => acc + (q.options[idx]?.score || 0), 0)
+      return Math.min(total, 100)
+    }
+
     if (q.type === 'number') {
       const num = parseFloat(v)
       if (isNaN(num) || !q.ranges) return 50
       const range = q.ranges.find(r => num <= r.max)
       return range ? range.score : 50
     }
+
     return 50
-  })
+  }).filter(s => s !== null)
+
+  if (scores.length === 0) return 100
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
 }
 
