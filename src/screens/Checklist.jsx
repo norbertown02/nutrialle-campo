@@ -119,6 +119,7 @@ export default function Checklist() {
   }
 
   const handleSave = () => {
+    console.log("handleSave chamado, allAnswered:", allAnswered, "total:", totalAnswered, "/", totalQuestions)
     if (!allAnswered) return
 
     const stageScores = {}
