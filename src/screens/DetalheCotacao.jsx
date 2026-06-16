@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
-import { IconFileText, IconCheck, IconX, IconEdit, IconDownload } from '@tabler/icons-react'
+import { IconFileText, IconCheck, IconX, IconEdit, IconDownload, IconBrandWhatsapp } from '@tabler/icons-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import logoB64 from '../assets/logo-b64.txt?raw'
@@ -93,7 +93,24 @@ export default function DetalheCotacao() {
     navigate('/vendas')
   }
 
-  async function gerarPDF() {
+  async function compartilharPDF() {
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4')
+      await buildPDF(doc)
+      const pdfBlob = doc.output('blob')
+      const nomeArq = `cotacoes/cotacao_${id}_${Date.now()}.pdf`
+      const { error: upErr } = await supabase.storage.from('cotacoes').upload(nomeArq, pdfBlob, { contentType: 'application/pdf', upsert: true })
+      if (upErr) { alert('Erro ao fazer upload: ' + upErr.message); return }
+      const { data } = supabase.storage.from('cotacoes').getPublicUrl(nomeArq)
+      const url = data.publicUrl
+      const msg = encodeURIComponent(`Olá! Segue a cotação da Nutrialle:\n\n${url}\n\nQualquer dúvida estou à disposição!`)
+      window.open(`https://wa.me/?text=${msg}`, '_blank')
+    } catch(e) {
+      alert('Erro ao compartilhar: ' + e.message)
+    }
+  }
+
+  async function buildPDF(doc) {
     const doc = new jsPDF('p', 'mm', 'a4')
     const W = 210, M = 16
     const OG = [240, 125, 26]
@@ -217,6 +234,12 @@ export default function DetalheCotacao() {
     doc.save(nomeArq)
   }
 
+  async function gerarPDF() {
+    const doc = new jsPDF('p', 'mm', 'a4')
+    await buildPDF(doc)
+    doc.save(`Cotacao_${farm?.name?.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`)
+  }
+
   if (loading) return <div style={{padding:40,textAlign:'center',color:'var(--text-faint)'}}>Carregando...</div>
   if (!quote) return <div style={{padding:40,textAlign:'center',color:'var(--text-faint)'}}>Cotação não encontrada</div>
 
@@ -296,7 +319,10 @@ export default function DetalheCotacao() {
           )}
 
           <button className="btn btn-ghost" onClick={gerarPDF} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-            <IconDownload size={15}/> Gerar PDF
+            <IconDownload size={15}/> Baixar PDF
+          </button>
+          <button className="btn btn-primary" onClick={compartilharPDF} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:'#25D366',borderColor:'#25D366'}}>
+            <IconBrandWhatsapp size={15}/> Compartilhar no WhatsApp
           </button>
 
           {quote.status === 'rascunho' && (
