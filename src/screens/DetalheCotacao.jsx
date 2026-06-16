@@ -90,7 +90,6 @@ export default function DetalheCotacao() {
 
     setQuote(prev => ({ ...prev, status: 'convertida' }))
     setAtualizando(false)
-    alert('Venda criada com sucesso!')
     navigate('/vendas')
   }
 
