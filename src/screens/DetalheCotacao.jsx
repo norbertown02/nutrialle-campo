@@ -202,7 +202,19 @@ export default function DetalheCotacao() {
     doc.setFont('helvetica', 'normal')
     doc.text(`Vendedor: ${user?.name || seller?.name || '—'}`, W - M, 292, { align: 'right' })
 
-    doc.save(`Cotacao_${farm?.name?.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`)
+    const nomeArq = `Cotacao_${farm?.name?.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`
+    const pdfBlob = doc.output('blob')
+    const pdfFile = new File([pdfBlob], nomeArq, { type: 'application/pdf' })
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
+    if (isMobile && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      try {
+        await navigator.share({ title: 'Cotação Nutrialle', files: [pdfFile] })
+        return
+      } catch(e) {
+        if (e.name === 'AbortError') return
+      }
+    }
+    doc.save(nomeArq)
   }
 
   if (loading) return <div style={{padding:40,textAlign:'center',color:'var(--text-faint)'}}>Carregando...</div>
