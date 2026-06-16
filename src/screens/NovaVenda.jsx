@@ -52,6 +52,7 @@ export default function NovaVenda() {
   const [saleDate, setSaleDate] = useState(todayISO())
   const [items, setItems] = useState([])
   const [paymentTermId, setPaymentTermId] = useState('pt1')
+  const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
@@ -122,6 +123,8 @@ export default function NovaVenda() {
       total: subtotal,
       paymentTermId,
       paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || "",
+      frete,
+      frete_label: frete === 'CIF' ? 'CIF - Frete por conta do vendedor' : 'FOB - Frete por conta do comprador',
       notes: notes.trim(),
       needsApproval: hasOverDiscount,
     })
@@ -326,6 +329,21 @@ export default function NovaVenda() {
             <option key={t.id} value={t.id}>{t.label}</option>
           ))}
         </select>
+      </div>
+
+      <div className="section-label">Modalidade de frete</div>
+      <div style={{display:'flex',gap:10,marginBottom:16}}>
+        {['CIF','FOB'].map(f=>(
+          <button key={f} onClick={()=>setFrete(f)} type="button"
+            style={{flex:1,padding:'10px 8px',borderRadius:10,cursor:'pointer',
+              border:'2px solid '+(frete===f?'var(--orange)':'var(--line)'),
+              background:frete===f?'var(--orange-bg)':'var(--surface-2)'}}>
+            <div style={{fontWeight:700,fontSize:14,color:frete===f?'var(--orange)':'var(--text)'}}>{f}</div>
+            <div style={{fontSize:10,color:'var(--text-faint)',marginTop:2}}>
+              {f==='CIF'?'Frete por conta do vendedor':'Frete por conta do comprador'}
+            </div>
+          </button>
+        ))}
       </div>
 
       <div className="section-label">Observacoes</div>
