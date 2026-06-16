@@ -111,7 +111,6 @@ export default function DetalheCotacao() {
   }
 
   async function buildPDF(doc) {
-    const doc = new jsPDF('p', 'mm', 'a4')
     const W = 210, M = 16
     const OG = [240, 125, 26]
     const BG = [18, 18, 18]
