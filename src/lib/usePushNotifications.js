@@ -13,7 +13,7 @@ function urlBase64ToUint8Array(base64String) {
 
 export function usePushNotifications() {
   const { user } = useAuth()
-  const [permission, setPermission] = useState(Notification.permission)
+  const [permission, setPermission] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'denied')
   const [subscribed, setSubscribed] = useState(false)
 
   useEffect(() => {
@@ -30,6 +30,7 @@ export function usePushNotifications() {
   }
 
   async function subscribe() {
+    if (typeof Notification === 'undefined') return false
     try {
       const perm = await Notification.requestPermission()
       setPermission(perm)
