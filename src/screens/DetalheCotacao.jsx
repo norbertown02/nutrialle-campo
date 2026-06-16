@@ -144,24 +144,31 @@ export default function DetalheCotacao() {
     // Tabela de produtos
     autoTable(doc, {
       startY: y,
-      head: [['Produto', 'Unid.', 'Qtd.', 'Preço Unit.', 'Subtotal']],
-      body: (quote.items || []).map(it => [
-        it.product_name,
-        it.unit || 'kg',
-        it.quantity,
-        `R$ ${fmt(it.unit_price)}`,
-        `R$ ${fmt(it.subtotal)}`,
-      ]),
+      head: [['Produto', 'Qtd.(sacos)', 'Total kg', 'R$/kg', 'R$/saco', 'Subtotal']],
+      body: (quote.items || []).map(it => {
+        const bagKg = it.bag_kg || 25
+        const totalKg = Number(it.quantity) * bagKg
+        const precoKg = it.unit_price ? (Number(it.unit_price) / bagKg) : 0
+        return [
+          it.product_name,
+          it.quantity,
+          `${totalKg} kg`,
+          `R$ ${fmt(precoKg)}`,
+          `R$ ${fmt(it.unit_price)}`,
+          `R$ ${fmt(it.subtotal)}`,
+        ]
+      }),
       theme: 'grid',
       headStyles: { fillColor: [35, 35, 35], textColor: OG, fontSize: 8, fontStyle: 'bold', lineColor: [50, 50, 50] },
       bodyStyles: { fontSize: 8, textColor: W1, fillColor: [22, 22, 22], lineColor: [38, 38, 38], cellPadding: 4 },
       alternateRowStyles: { fillColor: [28, 28, 28] },
       columnStyles: {
-        0: { cellWidth: 85 },
+        0: { cellWidth: 65 },
         1: { cellWidth: 18, halign: 'center' },
-        2: { cellWidth: 15, halign: 'center' },
-        3: { cellWidth: 32, halign: 'right' },
-        4: { cellWidth: 32, halign: 'right', fontStyle: 'bold', textColor: OG },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 22, halign: 'right' },
+        4: { cellWidth: 22, halign: 'right' },
+        5: { cellWidth: 25, halign: 'right', fontStyle: 'bold', textColor: OG },
       },
       margin: { left: M, right: M },
     })
@@ -299,12 +306,7 @@ export default function DetalheCotacao() {
             </button>
           )}
 
-          {quote.status !== 'convertida' && quote.status !== 'cancelada' && (
-            <button onClick={() => mudarStatus('cancelada')} disabled={atualizando}
-              style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:13,padding:'8px 0',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-              <IconX size={14}/> Cancelar cotação
-            </button>
-          )}
+
         </div>
       </div>
     </div>
