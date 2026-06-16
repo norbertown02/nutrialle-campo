@@ -1,5 +1,12 @@
-const CACHE = 'nutrialle-v5'
-const STATIC = ['/', '/index.html']
+const CACHE = 'nutrialle-v6'
+const STATIC = [
+  '/',
+  '/index.html',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
+  '/manifest.json'
+]
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)))
@@ -24,9 +31,9 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => {
       const network = fetch(e.request).then(res => {
-        caches.open(CACHE).then(c => c.put(e.request, res.clone()))
+        if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()))
         return res
-      })
+      }).catch(() => cached)
       return cached || network
     })
   )
@@ -53,5 +60,11 @@ self.addEventListener('push', e => {
     body: data.body || '',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
+    vibrate: [200, 100, 200]
   })
+})
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close()
+  e.waitUntil(clients.openWindow('/'))
 })
