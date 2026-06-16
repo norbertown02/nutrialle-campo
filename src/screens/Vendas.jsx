@@ -43,6 +43,7 @@ export default function Vendas() {
 
   const [filter, setFilter] = useState('todos')
   const [showCloseDay, setShowCloseDay] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(null) // null = todas selecionadas
   const [confirmSent, setConfirmSent] = useState(false)
 
   // Metricas
@@ -54,6 +55,8 @@ export default function Vendas() {
   const pending = sales.filter(s => s.status === 'pendente_envio')
   const needsApproval = sales.filter(s => s.needsApproval && s.status === 'pendente_envio')
   const pendingTotal = pending.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
+  const selectedSales = selectedIds === null ? pending : pending.filter(s => selectedIds.includes(s.id))
+  const selectedTotal = selectedSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
 
   // Lista filtrada
   let filtered = [...sales].sort((a, b) =>
@@ -65,26 +68,39 @@ export default function Vendas() {
 
   // Acoes do fechar dia
   const handleDownloadCSV = () => {
-    if (pending.length === 0) return
+    if (selectedSales.length === 0) return
 
     const rows = [
-      ['Data', 'Cliente', 'Cidade', 'Produto', 'Qtd', 'Preco Unit', 'Subtotal', 'Pagamento', 'Aprovacao']
+      ['Data', 'Cliente', 'CNPJ/CPF', 'CAD/PRO', 'Email', 'Telefone', 'CEP', 'Endereco', 'Cidade', 'Estado', 'Produto', 'Qtd Sacos', 'Total kg', 'Preco kg', 'Preco Saco', 'Subtotal', 'Total Venda', 'Pagamento', 'Frete', 'Aprovacao']
     ]
 
-    pending.forEach(s => {
+    selectedSales.forEach(s => {
       const farm = getFarm(s.farmId)
       const farmName = farm ? farm.name : '(fazenda removida)'
-      const city = farm ? farm.city : '-'
       s.items.forEach(it => {
+        const bagKg = it.bag_kg || 25
+        const totalKg = Number(it.quantity) * bagKg
+        const precoKg = it.unit_price ? (Number(it.unit_price) / bagKg) : (it.unitPrice ? Number(it.unitPrice) / bagKg : 0)
         rows.push([
           formatDate(s.saleDate),
           farmName,
-          city,
+          farm?.cpfCnpj || '-',
+          farm?.cadPro || '-',
+          farm?.email || '-',
+          farm?.phone || '-',
+          farm?.cep || '-',
+          farm ? [farm.street, farm.streetNumber].filter(Boolean).join(', ') : '-',
+          farm?.city || '-',
+          farm?.state || '-',
           it.productName,
           it.quantity,
+          totalKg + ' kg',
+          fmtBRL(precoKg),
           fmtBRL(it.unitPrice),
           fmtBRL(it.subtotal || it.quantity * it.unitPrice),
-          s.paymentTermLabel,
+          fmtBRL(s.total),
+          s.paymentTermLabel || '-',
+          s.frete || 'CIF',
           s.needsApproval ? 'PRECISA APROVACAO' : 'OK'
         ])
       })
@@ -105,7 +121,7 @@ export default function Vendas() {
     URL.revokeObjectURL(url)
 
     // Marca como enviadas
-    markAsSent(pending.map(s => s.id))
+    markAsSent(selectedSales.map(s => s.id))
     setShowCloseDay(false)
     setConfirmSent(true)
     setTimeout(() => setConfirmSent(false), 4000)
@@ -242,7 +258,7 @@ export default function Vendas() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginTop: 14 }}>
             <button
               className="btn btn-ghost"
-              onClick={() => setShowCloseDay(true)}
+              onClick={() => { setSelectedIds(null); setShowCloseDay(true) }}
               disabled={pending.length === 0}
               style={{ opacity: pending.length === 0 ? 0.4 : 1 }}
             >
@@ -409,14 +425,49 @@ export default function Vendas() {
 
             <div className="stat-grid" style={{ marginBottom: 14 }}>
               <div className="stat">
-                <div className="label">Pedidos</div>
-                <div className="value orange">{pending.length}</div>
+                <div className="label">Selecionados</div>
+                <div className="value orange">{selectedSales.length}</div>
               </div>
               <div className="stat">
-                <div className="label">Total</div>
-                <div className="value">{fmtBRL(pendingTotal)}</div>
+                <div className="label">Total selecionado</div>
+                <div className="value">{fmtBRL(selectedTotal)}</div>
               </div>
             </div>
+
+            {/* Lista de seleção */}
+            <div style={{marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                <div style={{fontSize:12,fontWeight:600,color:'var(--text-dim)'}}>Selecionar pedidos</div>
+                <button style={{fontSize:11,color:'var(--orange)',background:'none',border:'none',cursor:'pointer'}}
+                  onClick={()=>setSelectedIds(selectedIds===null?[]:null)}>
+                  {selectedIds===null?'Desmarcar todos':'Marcar todos'}
+                </button>
+              </div>
+              {pending.map(s=>{
+                const farm = getFarm(s.farmId)
+                const sel = selectedIds===null || selectedIds.includes(s.id)
+                return (
+                  <div key={s.id} onClick={()=>{
+                    if(selectedIds===null) setSelectedIds(pending.map(x=>x.id).filter(id=>id!==s.id))
+                    else setSelectedIds(prev=>prev.includes(s.id)?prev.filter(id=>id!==s.id):[...prev,s.id])
+                  }} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',
+                    borderRadius:8,marginBottom:4,cursor:'pointer',
+                    background:sel?'var(--orange-bg)':'var(--surface-2)',
+                    border:'1px solid '+(sel?'rgba(240,125,26,0.3)':'var(--line)')}}>
+                    <div style={{width:18,height:18,borderRadius:4,border:'2px solid '+(sel?'var(--orange)':'var(--line)'),
+                      background:sel?'var(--orange)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                      {sel && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{farm?.name||'—'}</div>
+                      <div style={{fontSize:10,color:'var(--text-faint)'}}>{s.items?.length} produtos · {fmtBRL(s.total)}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+
 
             {needsApproval.length > 0 ? (
               <div className="hint" style={{
