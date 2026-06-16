@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { saveFarmsCache, loadFarmsCache } from './offlineCache'
 import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
 

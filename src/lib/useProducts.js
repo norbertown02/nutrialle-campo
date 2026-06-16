@@ -1,3 +1,4 @@
+import { saveProductsCache, loadProductsCache } from './offlineCache'
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
