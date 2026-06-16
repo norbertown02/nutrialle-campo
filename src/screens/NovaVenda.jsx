@@ -126,7 +126,7 @@ export default function NovaVenda() {
       needsApproval: hasOverDiscount,
     })
 
-    navigate('/clientes/' + farmId)
+    navigate('/vendas')
   }
 
   return (
