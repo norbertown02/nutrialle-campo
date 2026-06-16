@@ -31,6 +31,9 @@ function fromDB(row) {
     owner:        row.owner,
     prospect:     row.prospect,
     notes:        row.notes,
+    email:        row.email,
+    email:        row.email,
+    email:        row.email,
     marcaAtual:   row.marca_atual,
   }
 }
@@ -62,6 +65,9 @@ function toDB(farm) {
     owner:         farm.owner,
     prospect:      farm.prospect,
     notes:         farm.notes,
+    email:         farm.email,
+    email:         farm.email,
+    email:         farm.email,
     marca_atual:   farm.marcaAtual,
   }
 }

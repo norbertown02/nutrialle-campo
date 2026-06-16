@@ -105,6 +105,8 @@ export default function NovaCotacao() {
         subtotal: it.subtotal,
       })),
       payment_term: pagamento,
+      frete,
+      frete_label: frete === 'CIF' ? 'CIF - Frete por conta do vendedor' : 'FOB - Frete por conta do comprador',
       payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
       total,
       status,

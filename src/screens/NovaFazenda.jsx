@@ -153,7 +153,7 @@ export default function NovaFazenda() {
   const { SEGMENT_OPTIONS, STATES, inferRegion } = useConfig()
 
   const [form, setForm] = useState({
-    name:'', owner:'', ownerRole:'Proprietário', phone:'',
+    name:'', owner:'', ownerRole:'Proprietário', phone:'', email:'',
     docTipo:'cpf', cpf:'', cnpj:'', cadpro1:'', cadpro2:'', cadpro3:'',
     segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'',
     herdSize:'', production:'', area:'', marcaAtual:'', marcaOutra:'',
@@ -189,7 +189,7 @@ export default function NovaFazenda() {
     if (!isValid) return
     addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
-      phone: form.phone.trim(), segment: form.segment,
+      phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
       doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
       cadpro_1: form.cadpro1||null, cadpro_2: form.cadpro2||null, cadpro_3: form.cadpro3||null,
       city: form.city.trim(), state: form.state,
@@ -231,6 +231,10 @@ export default function NovaFazenda() {
 
       <Field label="Telefone / WhatsApp">
         <input value={form.phone} onChange={e => setField('phone', e.target.value)} placeholder="(45) 99000-0000" inputMode="tel" />
+      </Field>
+
+      <Field label="E-mail">
+        <input value={form.email||''} onChange={e => setField('email', e.target.value)} placeholder="produtor@email.com" type="email" inputMode="email"/>
       </Field>
 
       <div className="section-label">Documentos</div>

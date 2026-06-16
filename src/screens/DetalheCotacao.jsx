@@ -286,6 +286,13 @@ export default function DetalheCotacao() {
           )}
 
           {(quote.status === 'rascunho' || quote.status === 'enviada') && (
+            <button style={{background:'var(--surface-2)',border:'1px solid var(--line)',borderRadius:10,
+              padding:'10px 16px',color:'var(--red)',fontWeight:600,cursor:'pointer',fontSize:13}}
+              onClick={()=>{ if(window.confirm('Cancelar esta cotação?')) mudarStatus('cancelada') }}>
+              Cancelar cotação
+            </button>
+          )}
+          {(quote.status === 'rascunho' || quote.status === 'enviada') && (
             <button className="btn btn-primary" onClick={converterEmVenda} disabled={atualizando}
               style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
               <IconCheck size={15}/> Converter em Venda
