@@ -163,12 +163,12 @@ export default function DetalheCotacao() {
       bodyStyles: { fontSize: 8, textColor: W1, fillColor: [22, 22, 22], lineColor: [38, 38, 38], cellPadding: 4 },
       alternateRowStyles: { fillColor: [28, 28, 28] },
       columnStyles: {
-        0: { cellWidth: 65 },
-        1: { cellWidth: 18, halign: 'center' },
-        2: { cellWidth: 18, halign: 'center' },
+        0: { cellWidth: 72 },
+        1: { cellWidth: 24, halign: 'center' },
+        2: { cellWidth: 22, halign: 'center' },
         3: { cellWidth: 22, halign: 'right' },
         4: { cellWidth: 22, halign: 'right' },
-        5: { cellWidth: 25, halign: 'right', fontStyle: 'bold', textColor: OG },
+        5: { cellWidth: 24, halign: 'right', fontStyle: 'bold', textColor: OG },
       },
       margin: { left: M, right: M },
     })
@@ -185,6 +185,7 @@ export default function DetalheCotacao() {
     // Condição de pagamento
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GY)
     doc.text(`Condição: ${quote.payment_term_label || '—'}`, M, y + 8)
+    doc.text(`Frete: ${quote.frete_label || quote.frete || 'CIF - Frete por conta do vendedor'}`, M, y + 15)
     doc.text(`Validade: ${new Date(quote.valid_until + 'T12:00:00').toLocaleDateString('pt-BR')}`, M, y + 14)
 
     if (quote.notes) {
