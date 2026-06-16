@@ -1,13 +1,8 @@
-const CACHE = 'nutrialle-v1'
-const STATIC = [
-  '/',
-  '/index.html',
-]
+const CACHE = 'nutrialle-v5'
+const STATIC = ['/', '/index.html']
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(STATIC))
-  )
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)))
   self.skipWaiting()
 })
 
@@ -21,26 +16,42 @@ self.addEventListener('activate', e => {
 })
 
 self.addEventListener('fetch', e => {
-  // Só cacheia GET
   if (e.request.method !== 'GET') return
-
-  // Supabase — sempre busca da rede, cai no cache se offline
   if (e.request.url.includes('supabase.co')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    )
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)))
     return
   }
-
-  // Assets estáticos — cache first
   e.respondWith(
     caches.match(e.request).then(cached => {
       const network = fetch(e.request).then(res => {
-        const clone = res.clone()
-        caches.open(CACHE).then(c => c.put(e.request, clone))
+        caches.open(CACHE).then(c => c.put(e.request, res.clone()))
         return res
       })
       return cached || network
     })
   )
+})
+
+self.addEventListener('sync', e => {
+  if (e.tag === 'sync-offline-data') {
+    e.waitUntil(self.clients.matchAll().then(clients =>
+      clients.forEach(c => c.postMessage({ type: 'SYNC_REQUESTED' }))
+    ))
+  }
+})
+
+self.addEventListener('periodicsync', e => {
+  if (e.tag === 'update-cache') {
+    e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)))
+  }
+})
+
+self.addEventListener('push', e => {
+  if (!e.data) return
+  const data = e.data.json()
+  self.registration.showNotification(data.title || 'Nutrialle', {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+  })
 })

@@ -2,14 +2,57 @@
   "id": "/",
   "name": "Nutrialle Campo",
   "short_name": "Nutrialle",
-  "description": "App de vendas e checklists para representantes Nutrialle",
+  "description": "App de vendas e checklists para representantes de campo Nutrialle",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#121212",
   "theme_color": "#F07D1A",
   "orientation": "portrait",
   "lang": "pt-BR",
+  "dir": "ltr",
   "categories": ["business", "productivity"],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+nutrialle",
+      "url": "/?url=%s"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova Cotação",
+      "url": "/prospeccao/nova",
+      "description": "Criar nova cotação",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Nova Fazenda",
+      "url": "/clientes/novo",
+      "description": "Cadastrar nova fazenda",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tabela de Preços",
+      "url": "/precos",
+      "description": "Ver tabela de preços",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -37,6 +80,13 @@
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Tela inicial do Nutrialle Campo"
+    },
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard Nutrialle Campo"
     }
   ]
 }
