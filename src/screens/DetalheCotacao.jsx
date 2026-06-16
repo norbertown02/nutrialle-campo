@@ -71,6 +71,8 @@ export default function DetalheCotacao() {
       items: quote.items,
       payment_term: quote.payment_term,
       payment_term_label: quote.payment_term_label,
+      frete: quote.frete || 'CIF',
+      frete_label: quote.frete_label || 'CIF - Frete por conta do vendedor',
       total: quote.total,
       needs_approval: false,
       status: 'pendente_envio',
@@ -186,7 +188,7 @@ export default function DetalheCotacao() {
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(...GY)
     doc.text(`Condição: ${quote.payment_term_label || '—'}`, M, y + 8)
     doc.text(`Frete: ${quote.frete_label || quote.frete || 'CIF - Frete por conta do vendedor'}`, M, y + 15)
-    doc.text(`Validade: ${new Date(quote.valid_until + 'T12:00:00').toLocaleDateString('pt-BR')}`, M, y + 14)
+    doc.text(`Validade: ${new Date(quote.valid_until + 'T12:00:00').toLocaleDateString('pt-BR')}`, M, y + 22)
 
     if (quote.notes) {
       y += 26

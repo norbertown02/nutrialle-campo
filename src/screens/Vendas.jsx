@@ -127,31 +127,66 @@ export default function Vendas() {
     setTimeout(() => setConfirmSent(false), 4000)
   }
 
-  const handleSendWhatsApp = () => {
-    if (pending.length === 0) return
+  const handleSendWhatsApp = async () => {
+    if (selectedSales.length === 0) return
 
-    let txt = '*Vendas Nutrialle - ' + formatDate(today) + '*%0A'
-    txt += pending.length + ' pedidos - Total: ' + fmtBRL(pendingTotal) + '%0A%0A'
-
-    pending.forEach((s, idx) => {
+    // Gera CSV igual ao download
+    const rows = [
+      ['Data', 'Cliente', 'CNPJ/CPF', 'CAD/PRO', 'Email', 'Telefone', 'CEP', 'Endereco', 'Cidade', 'Estado', 'Produto', 'Qtd Sacos', 'Total kg', 'Preco kg', 'Preco Saco', 'Subtotal', 'Total Venda', 'Pagamento', 'Frete', 'Aprovacao']
+    ]
+    selectedSales.forEach(s => {
       const farm = getFarm(s.farmId)
       const farmName = farm ? farm.name : '(fazenda removida)'
-      const city = farm ? farm.city : '-'
-      txt += '*' + (idx + 1) + '. ' + farmName + '* (' + city + ')%0A'
       s.items.forEach(it => {
-        txt += '  - ' + it.productName + ': ' + it.quantity + 'x ' + fmtBRL(it.unitPrice) + '%0A'
+        const bagKg = it.bag_kg || 25
+        const totalKg = Number(it.quantity) * bagKg
+        const precoKg = it.unitPrice ? Number(it.unitPrice) / bagKg : 0
+        rows.push([
+          formatDate(s.saleDate), farmName,
+          farm?.cpfCnpj || '-', farm?.cadPro || '-',
+          farm?.email || '-', farm?.phone || '-',
+          farm?.cep || '-',
+          farm ? [farm.street, farm.streetNumber].filter(Boolean).join(', ') : '-',
+          farm?.city || '-', farm?.state || '-',
+          it.productName, it.quantity, totalKg + ' kg',
+          fmtBRL(precoKg), fmtBRL(it.unitPrice),
+          fmtBRL(it.subtotal || it.quantity * it.unitPrice),
+          fmtBRL(s.total), s.paymentTermLabel || '-',
+          s.frete || 'CIF',
+          s.needsApproval ? 'PRECISA APROVACAO' : 'OK'
+        ])
       })
-      txt += '  Pagamento: ' + s.paymentTermLabel + '%0A'
-      txt += '  Total: *' + fmtBRL(s.total) + '*'
-      if (s.needsApproval) txt += ' [PRECISA APROVACAO]'
-      txt += '%0A%0A'
     })
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
+    const file = new File([blob], 'vendas_nutrialle_' + today + '.csv', { type: 'text/csv' })
 
-    txt += 'Para lancamento no Ultra Sistemas.'
+    // Tenta compartilhar via Web Share API (funciona no celular)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: 'Vendas Nutrialle - ' + formatDate(today),
+          text: selectedSales.length + ' pedidos - Total: ' + fmtBRL(selectedTotal),
+          files: [file]
+        })
+        markAsSent(selectedSales.map(s => s.id))
+        setShowCloseDay(false)
+        setConfirmSent(true)
+        setTimeout(() => setConfirmSent(false), 4000)
+        return
+      } catch(e) {
+        // Se cancelou o share, não faz nada
+        if (e.name === 'AbortError') return
+      }
+    }
 
-    window.open('https://wa.me/' + ADMIN_WHATSAPP + '?text=' + txt, '_blank')
-
-    // Marca como enviadas
+    // Fallback: baixa o arquivo e abre WhatsApp
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'vendas_nutrialle_' + today + '.csv'
+    document.body.appendChild(a); a.click()
+    document.body.removeChild(a); URL.revokeObjectURL(url)
+    setTimeout(() => { window.open('https://wa.me/5519982435583', '_blank') }, 500)
     markAsSent(pending.map(s => s.id))
     setShowCloseDay(false)
     setConfirmSent(true)
