@@ -145,6 +145,10 @@ export default function Home() {
           <IconClipboardList size={21} />
           Checklist
         </button>
+        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/visitas/nova')}>
+          <IconMapPin size={16}/>
+          Registrar Visita
+        </button>
         <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/agenda/novo')}>
           <IconSend size={21} />
           Agendar Visita
