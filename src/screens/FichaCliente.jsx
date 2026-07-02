@@ -241,7 +241,7 @@ export default function FichaCliente() {
       setEditando(false)
       // Atualiza localmente
       Object.assign(farm, editForm)
-      window.location.reload()
+      setEditando(false)
     } else {
       alert('Erro ao salvar: ' + error.message)
     }
