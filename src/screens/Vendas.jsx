@@ -194,6 +194,10 @@ export default function Vendas() {
   }
 
   return (
+    <>
+    <button className="fab" onClick={() => navigate('/vendas/nova')} title="Nova Venda">
+      <IconPlus size={24}/>
+    </button>
     <div className="content">
       <div className="page-head">
         <div className="eyebrow">Controle comercial</div>
@@ -251,13 +255,20 @@ export default function Vendas() {
           }}>
             Acesse a ficha de um cliente e registre o primeiro pedido.
           </p>
-          <button
-            className="btn btn-primary"
-            style={{ maxWidth: 240, margin: '0 auto' }}
-            onClick={() => navigate('/clientes')}
-          >
-            Ir para clientes
-          </button>
+          <div style={{display:'flex',flexDirection:'column',gap:10,maxWidth:240,margin:'0 auto'}}>
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/vendas/nova')}
+            >
+              <IconPlus size={16}/> Nova Venda
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => navigate('/clientes')}
+            >
+              Ir para clientes
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -567,5 +578,6 @@ export default function Vendas() {
         </div>
       ) : null}
     </div>
+    </>
   )
 }
