@@ -11,23 +11,6 @@
   flex-direction: column;
 }
 
-.statusbar {
-  height: 36px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 0 22px 6px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.statusbar .icons {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
-
 .appbar {
   background: #0A0A0A;
   border-bottom: 1px solid #1E1E1E;

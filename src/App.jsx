@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/useAuth.jsx'
-import StatusBar from './components/StatusBar'
 import AppBar from './components/AppBar'
 import TabBar from './components/TabBar'
 import Login from './screens/Login'
@@ -34,7 +33,6 @@ function AppContent() {
 
   return (
     <div className="phone">
-      <StatusBar />
       <AppBar title="Nutrialle Campo" />
       <div className="screen">
         <Routes>
