@@ -312,35 +312,34 @@ export default function DetalheCotacao() {
         <div style={{display:'flex',flexDirection:'column',gap:10,paddingBottom:40}}>
           {(quote.status === 'rascunho' || quote.status === 'enviada') && (
             <button className="btn btn-ghost" onClick={() => navigate(`/prospeccao/${id}/editar`)}
-              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,padding:'12px 16px'}}>
               <IconEdit size={15}/> Editar Cotação
             </button>
           )}
 
-          <button className="btn btn-ghost" onClick={gerarPDF} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+          <button className="btn btn-ghost" onClick={gerarPDF} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,padding:'12px 16px'}}>
             <IconDownload size={15}/> Baixar PDF
           </button>
-          <button className="btn btn-primary" onClick={compartilharPDF} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:'#25D366',borderColor:'#25D366'}}>
+          <button className="btn btn-primary" onClick={compartilharPDF} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,padding:'12px 16px',background:'#0d2e1a',color:'#25D366',border:'1px solid #1a4a28'}}>
             <IconBrandWhatsapp size={15}/> Compartilhar no WhatsApp
           </button>
 
           {quote.status === 'rascunho' && (
             <button className="btn btn-ghost" onClick={() => mudarStatus('enviada')} disabled={atualizando}
-              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,padding:'12px 16px'}}>
               <IconFileText size={15}/> Marcar como Enviada
             </button>
           )}
 
           {(quote.status === 'rascunho' || quote.status === 'enviada') && (
-            <button style={{background:'var(--surface-2)',border:'1px solid var(--line)',borderRadius:10,
-              padding:'10px 16px',color:'var(--red)',fontWeight:600,cursor:'pointer',fontSize:13}}
+            <button className="btn btn-ghost" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,padding:'12px 16px',color:'var(--red)'}}
               onClick={()=>{ if(window.confirm('Cancelar esta cotação?')) mudarStatus('cancelada') }}>
               Cancelar cotação
             </button>
           )}
           {(quote.status === 'rascunho' || quote.status === 'enviada') && (
             <button className="btn btn-primary" onClick={converterEmVenda} disabled={atualizando}
-              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontSize:14,padding:'12px 16px'}}>
               <IconCheck size={15}/> Converter em Venda
             </button>
           )}
