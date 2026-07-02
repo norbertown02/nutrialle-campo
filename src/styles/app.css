@@ -173,8 +173,8 @@
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   padding: 16px;
 }
 
@@ -190,20 +190,19 @@
   width: 100%;
   padding: 14px;
   border-radius: 10px;
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
-  font-size: 16px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 0.2px;
   cursor: pointer;
   border: none;
   transition: 0.15s;
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, var(--orange-bright), var(--orange));
-  color: #1a0d00;
-  box-shadow: 0 4px 14px rgba(240, 125, 26, 0.3);
+  background: var(--orange);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(232,119,34,.25);
 }
 
 .btn-primary:active {
@@ -211,8 +210,8 @@
 }
 
 .btn-ghost {
-  background: var(--surface-2);
-  color: var(--silver);
+  background: transparent;
+  color: var(--text-dim);
   border: 1px solid var(--line);
 }
 
@@ -239,12 +238,12 @@
 .pill-silver { background: var(--surface-3); color: var(--silver-dim); }
 
 .section-label {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: var(--silver-dim);
+  color: var(--text-faint);
   margin: 20px 0 10px;
   display: flex;
   align-items: center;
@@ -300,8 +299,8 @@
 
 .row-item {
   background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 14px;
   cursor: pointer;
   transition: 0.15s;
@@ -323,9 +322,9 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(180deg, var(--orange-bright), var(--orange));
+  background: var(--orange);
   border: none;
-  color: #1a0d00;
+  color: #fff;
   font-size: 24px;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(240, 125, 26, 0.45);
@@ -388,7 +387,7 @@ textarea {
   border-radius: 10px;
   padding: 12px;
   color: var(--text);
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   outline: none;
   transition: 0.15s;
@@ -414,260 +413,86 @@ textarea {
   min-height: 80px;
   font-family: inherit;
 }
-/* ============ DESKTOP RESPONSIVO (≥768px) ============ */
+
+/* ============ DESKTOP (>=768px) ============ */
 
 @media (min-width: 768px) {
 
-  body {
-    background: #080808;
-  }
+  body { background: #080808; }
 
-  .phone {
-    max-width: 100%;
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "sidebar appbar"
-      "sidebar screen";
-  }
+  .phone { max-width:100%; min-height:100vh; display:flex; }
 
-  .appbar {
-    grid-area: appbar;
-    position: sticky;
-    top: 0;
-  }
-
-  .statusbar {
-    display: none;
-  }
-
-  .screen {
-    grid-area: screen;
-    overflow-y: auto;
-    min-height: calc(100vh - 60px);
-  }
-
-  .content {
-    max-width: 800px;
-    padding: 24px 32px 60px;
-  }
+  .statusbar { display:none; }
 
   .tabbar {
-    grid-area: sidebar;
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 220px;
+    width: 240px; flex-shrink:0;
     height: 100vh;
-    max-width: 220px;
-    transform: none;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0;
-    border-top: none;
-    border-right: 1px solid var(--line-soft);
-    background: #0a0a0a;
-    overflow-y: auto;
+    position: fixed; top:0; left:0; bottom:0;
+    max-width: 240px; transform:none;
+    flex-direction: column; align-items:stretch;
+    padding: 0; border-top:none;
+    border-right: 1px solid var(--line);
+    background: var(--surface);
+    overflow-y: auto; z-index:60;
   }
 
   .tabbar::before {
     content: 'NUTRIALLE';
-    display: block;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--orange);
-    padding: 24px 20px 20px;
-    border-bottom: 1px solid var(--line-soft);
-  }
-
-  .tab {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 12px;
-    padding: 14px 20px;
-    border-radius: 0;
-    font-size: 13px;
-    border-bottom: 1px solid var(--line-soft);
-    color: var(--text-dim);
-  }
-
-  .tab i, .tab svg {
-    width: 20px;
-    height: 20px;
-    font-size: 20px;
+    display: flex; align-items: center;
+    height: 64px; padding: 0 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px; font-weight: 800;
+    letter-spacing: 3px; color: var(--orange);
+    border-bottom: 1px solid var(--line);
     flex-shrink: 0;
-  }
-
-  .tab span {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: none;
-  }
-
-  .tab.active {
-    background: rgba(240, 125, 26, 0.1);
-    color: var(--orange);
-    border-left: 3px solid var(--orange);
-  }
-
-  .tab:active {
-    transform: none;
-    background: var(--surface-2);
-  }
-
-  .fab {
-    right: 32px;
-    bottom: 32px;
-  }
-
-  .stat-grid {
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-  }
-
-  .screen-content {
-    max-width: 800px;
-    padding: 24px 32px 60px;
-  }
-}
-
-@media (min-width: 1200px) {
-  .content,
-  .screen-content {
-    max-width: 1000px;
-  }
-}
-
-/* ============ DESKTOP RESPONSIVO (≥768px) ============ */
-
-@media (min-width: 768px) {
-
-  body {
-    background: #080808;
-  }
-
-  .phone {
-    max-width: 100%;
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "sidebar appbar"
-      "sidebar screen";
   }
 
   .appbar {
-    grid-area: appbar;
-    position: sticky;
-    top: 0;
+    position: fixed; top:0; left:240px; right:0;
+    z-index: 50;
+    background: rgba(10,10,10,.92);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--line);
+    height: 56px; padding: 0 28px;
   }
 
-  .statusbar {
-    display: none;
+  .appbar h1 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700; font-size: 14px;
+    letter-spacing: 0; text-transform: none;
   }
 
   .screen {
-    grid-area: screen;
-    overflow-y: auto;
-    min-height: calc(100vh - 60px);
+    margin-left: 240px; margin-top: 56px;
+    flex: 1; overflow-y: auto;
+    min-height: calc(100vh - 56px);
+    width: calc(100vw - 240px);
   }
 
-  .content {
-    max-width: 800px;
-    padding: 24px 32px 60px;
-  }
-
-  .tabbar {
-    grid-area: sidebar;
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 220px;
-    height: 100vh;
-    max-width: 220px;
-    transform: none;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0;
-    border-top: none;
-    border-right: 1px solid var(--line-soft);
-    background: #0a0a0a;
-    overflow-y: auto;
-  }
-
-  .tabbar::before {
-    content: 'NUTRIALLE';
-    display: block;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--orange);
-    padding: 24px 20px 20px;
-    border-bottom: 1px solid var(--line-soft);
+  .content, .screen-content {
+    max-width: 900px;
+    padding: 28px 36px 60px;
   }
 
   .tab {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 12px;
-    padding: 14px 20px;
-    border-radius: 0;
-    font-size: 13px;
-    border-bottom: 1px solid var(--line-soft);
+    flex-direction: row; justify-content: flex-start;
+    gap: 12px; padding: 11px 20px;
+    border-radius: 0; font-size: 13px; font-weight: 500;
     color: var(--text-dim);
+    border-bottom: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    transition: all .12s;
   }
 
-  .tab i, .tab svg {
-    width: 20px;
-    height: 20px;
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-
-  .tab span {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: none;
-  }
-
-  .tab.active {
-    background: rgba(240, 125, 26, 0.1);
-    color: var(--orange);
-    border-left: 3px solid var(--orange);
-  }
-
-  .tab:active {
-    transform: none;
-    background: var(--surface-2);
-  }
-
-  .fab {
-    right: 32px;
-    bottom: 32px;
-  }
-
-  .stat-grid {
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-  }
-
-  .screen-content {
-    max-width: 800px;
-    padding: 24px 32px 60px;
-  }
+  .tab i, .tab svg { width:18px; height:18px; font-size:18px; flex-shrink:0; }
+  .tab span { font-size:13px; font-weight:500; letter-spacing:0; text-transform:none; }
+  .tab:hover { background:var(--surface-2); color:var(--text); }
+  .tab.active { background:rgba(232,119,34,.08); color:var(--orange); border-left:3px solid var(--orange); font-weight:600; }
+  .tab:active { transform:none; }
+  .fab { right:32px; bottom:32px; }
+  .stat-grid { grid-template-columns:repeat(4,1fr); }
 }
 
 @media (min-width: 1200px) {
-  .content,
-  .screen-content {
-    max-width: 1000px;
-  }
+  .content, .screen-content { max-width:1100px; }
 }

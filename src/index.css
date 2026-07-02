@@ -1,43 +1,29 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg: #0a0a0b;
-  --surface: #161618;
-  --surface-2: #1f1f22;
-  --surface-3: #2a2a2e;
-  --line: #323236;
-  --line-soft: #252528;
-  --orange: #F07D1A;
-  --orange-bright: #FF8C2A;
-  --orange-deep: #C25E0C;
-  --silver: #C8C9CC;
-  --silver-dim: #8A8B8F;
-  --text: #EDEDEF;
-  --text-dim: #9B9C9F;
-  --text-faint: #6B6C70;
-  --green: #5BAE4A;
-  --green-bg: #16240f;
-  --amber: #E0A52E;
-  --amber-bg: #2a2212;
-  --red: #D9534F;
-  --red-bg: #2a1717;
-  --blue: #5B97C8;
+  --bg:           #0A0A0A;
+  --surface:      #111111;
+  --surface-2:    #1A1A1A;
+  --surface-3:    #222222;
+  --line:         #2A2A2A;
+  --line-soft:    #1E1E1E;
+  --orange:       #E87722;
+  --orange-bright:#F59332;
+  --orange-deep:  #C25E0C;
+  --silver:       #CCCCCC;
+  --silver-dim:   #888888;
+  --text:         #F2F2F2;
+  --text-dim:     #999999;
+  --text-faint:   #555555;
+  --green:        #10B981;
+  --green-bg:     rgba(16,185,129,.08);
+  --amber:        #F59E0B;
+  --amber-bg:     rgba(245,158,11,.08);
+  --red:          #EF4444;
+  --red-bg:       rgba(239,68,68,.08);
+  --blue:         #6366F1;
 }
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-html, body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Barlow', system-ui, -apple-system, sans-serif;
-}
-
-#root {
-  min-height: 100vh;
-}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; background:var(--bg); color:var(--text); font-family:'Inter',system-ui,-apple-system,sans-serif; }
+#root { min-height:100vh; }
