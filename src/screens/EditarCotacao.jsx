@@ -26,7 +26,6 @@ export default function EditarCotacao() {
   const [notes, setNotes] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [segFiltro, setSegFiltro] = useState('todos')
 
   useEffect(() => { carregar() }, [])
 
@@ -43,18 +42,15 @@ export default function EditarCotacao() {
       setItems(q.items || [])
       setPagamento(q.payment_term || 'a_vista')
       setNotes(q.notes || '')
-      setSegFiltro(q.segment || 'todos')
     }
     setFarms(rFarms.data || [])
     setProducts(rProducts.data || [])
     setLoading(false)
   }
 
-  const prodsFiltrados = products.filter(p => {
-    const matchNome = p.name?.toLowerCase().includes(buscaProd.toLowerCase())
-    const matchSeg = segFiltro === 'todos' || p.segment === segFiltro || !p.segment
-    return matchNome && matchSeg
-  }).slice(0, 10)
+  const prodsFiltrados = products.filter(p =>
+    p.name?.toLowerCase().includes(buscaProd.toLowerCase())
+  ).slice(0, 10)
 
   function addItem(prod) {
     if (items.find(i => i.product_id === prod.id)) return
@@ -102,7 +98,6 @@ export default function EditarCotacao() {
         discount: Number(it.discount),
         subtotal: it.subtotal,
       })),
-      segment: segFiltro === 'todos' ? null : segFiltro,
       payment_term: pagamento,
       payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
       total,
@@ -131,27 +126,6 @@ export default function EditarCotacao() {
             <div style={{fontSize:11,color:'var(--text-faint)',textTransform:'capitalize'}}>{farm?.segment} {farm?.prospect ? '· Prospecto' : '· Cliente ativo'}</div>
           </div>
         </div>
-
-        {/* Segmento */}
-        <div style={{fontWeight:600,marginBottom:8}}>Segmento da cotação</div>
-        <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
-          {[
-            {value:'todos',  label:'Todos'},
-            {value:'leite',  label:'Leite'},
-            {value:'corte',  label:'Corte'},
-            {value:'suinos', label:'Suínos'},
-            {value:'loja',   label:'Loja'},
-          ].map(s=>(
-            <button key={s.value} onClick={()=>setSegFiltro(s.value)} style={{
-              flex:'1 1 auto',padding:'10px 8px',borderRadius:10,
-              border:'1px solid '+(segFiltro===s.value?'var(--orange)':'var(--line)'),
-              background:segFiltro===s.value?'rgba(240,125,26,0.08)':'var(--surface-2)',
-              color:segFiltro===s.value?'var(--orange)':'var(--text-dim)',
-              fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer'
-            }}>{s.label}</button>
-          ))}
-        </div>
-
         {/* Busca produtos */}
         <div style={{fontWeight:600,marginBottom:10}}>Produtos</div>
         <div style={{position:'relative',marginBottom:8}}>
