@@ -1,10 +1,9 @@
 import {
   IconClipboardList, IconReceipt, IconUserPlus,
-  IconSend, IconMapPin, IconClock, IconCalendar, IconFileText
+  IconSend, IconMapPin, IconClock, IconCalendar
 } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/useAuth.jsx'
-import { usePushNotifications } from '../lib/usePushNotifications'
 import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
 import { useSales } from '../lib/useSales'
@@ -44,16 +43,15 @@ export default function Home() {
   const primeiroNome = user?.name?.split(' ')[0] || 'Vendedor'
 
   // Stats reais
-  const visitasAgendadasHoje = appointments.filter(a => a.appointmentDate === hoje() && (a.kind === 'visita' || !a.kind) && a.status === 'agendado').length
-  const visitasHoje  = visits.filter(v => v.visitDate === hoje()).length + visitasAgendadasHoje
+  const visitasHoje  = visits.filter(v => v.visitDate === hoje()).length
   const visitasMes   = visits.filter(v => v.visitDate?.startsWith(mesAtual())).length
   const vendasMes    = sales.filter(s => s.saleDate?.startsWith(mesAtual())).reduce((a, s) => a + (Number(s.total) || 0), 0)
   const novosClientes = farms.filter(f => f.createdAt?.startsWith(mesAtual())).length
 
   // Próximos compromissos — hoje e futuros, ordenados
   const proximosCompromissos = appointments
-    .filter(a => a.status === 'agendado' && a.appointmentDate >= hoje())
-    .sort((a, b) => (a.appointmentDate||'').localeCompare(b.appointmentDate||'') || (a.appointmentTime || '').localeCompare(b.appointmentTime || ''))
+    .filter(a => a.status === 'agendado' && a.date >= hoje())
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))
     .slice(0, 3)
 
   return (
@@ -96,7 +94,7 @@ export default function Home() {
       ) : (
         proximosCompromissos.map(apt => {
           const farm = farms.find(f => f.id === apt.farmId)
-          const isHoje = apt.appointmentDate === hoje()
+          const isHoje = apt.date === hoje()
           return (
             <div key={apt.id} className="row-item" onClick={() => navigate('/agenda')} style={{ cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -133,25 +131,21 @@ export default function Home() {
       {/* Atalhos */}
       <div className="section-label">Atalhos</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-        <button className="btn btn-primary" style={atalhoStyle} onClick={() => navigate('/prospeccao/nova')}>
-          <IconFileText size={21} />
-          Nova Cotação
-        </button>
         <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/clientes/novo')}>
           <IconUserPlus size={21} />
-          Nova Fazenda
+          Novo cliente
         </button>
         <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/checklist')}>
           <IconClipboardList size={21} />
           Checklist
         </button>
-        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/visitas/nova')}>
-          <IconMapPin size={16}/>
-          Registrar Visita
+        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/vendas/nova')}>
+          <IconReceipt size={21} />
+          Venda
         </button>
-        <button className="btn btn-ghost" style={atalhoStyle} onClick={() => navigate('/agenda/novo')}>
+        <button className="btn btn-primary" style={atalhoStyle} onClick={() => navigate('/vendas')}>
           <IconSend size={21} />
-          Agendar Visita
+          Fechar dia
         </button>
       </div>
     </div>
