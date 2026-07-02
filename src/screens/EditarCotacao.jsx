@@ -26,7 +26,6 @@ export default function EditarCotacao() {
   const [notes, setNotes] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [segmento, setSegmento] = useState('leite')
   const [segFiltro, setSegFiltro] = useState('todos')
 
   useEffect(() => { carregar() }, [])
@@ -44,7 +43,6 @@ export default function EditarCotacao() {
       setItems(q.items || [])
       setPagamento(q.payment_term || 'a_vista')
       setNotes(q.notes || '')
-      setSegmento(q.segment || 'leite')
       setSegFiltro(q.segment || 'todos')
     }
     setFarms(rFarms.data || [])
@@ -105,7 +103,6 @@ export default function EditarCotacao() {
         subtotal: it.subtotal,
       })),
       segment: segFiltro === 'todos' ? null : segFiltro,
-      segment: segmento,
       payment_term: pagamento,
       payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
       total,
@@ -150,25 +147,6 @@ export default function EditarCotacao() {
               border:'1px solid '+(segFiltro===s.value?'var(--orange)':'var(--line)'),
               background:segFiltro===s.value?'rgba(240,125,26,0.08)':'var(--surface-2)',
               color:segFiltro===s.value?'var(--orange)':'var(--text-dim)',
-              fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer'
-            }}>{s.label}</button>
-          ))}
-        </div>
-
-        {/* Segmento */}
-        <div style={{fontWeight:600,marginBottom:8}}>Segmento</div>
-        <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
-          {[
-            {value:'leite',  label:'Leite'},
-            {value:'corte',  label:'Corte'},
-            {value:'suinos', label:'Suínos'},
-            {value:'loja',   label:'Loja'},
-          ].map(s=>(
-            <button key={s.value} onClick={()=>setSegmento(s.value)} style={{
-              flex:'1 1 auto',padding:'10px 8px',borderRadius:10,
-              border:'1px solid '+(segmento===s.value?'var(--orange)':'var(--line)'),
-              background:segmento===s.value?'rgba(240,125,26,0.08)':'var(--surface-2)',
-              color:segmento===s.value?'var(--orange)':'var(--text-dim)',
               fontFamily:'inherit',fontSize:12,fontWeight:600,cursor:'pointer'
             }}>{s.label}</button>
           ))}

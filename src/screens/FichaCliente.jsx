@@ -13,6 +13,7 @@ import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
 import { CHECKLIST_TEMPLATES } from '../data/checklists'
 import { useSales } from '../lib/useSales'
 import { useConfig } from '../lib/useConfig'
+import { supabase } from '../lib/supabase'
 
 function initials(name) {
   return (name || '')
@@ -149,7 +150,7 @@ export default function FichaCliente() {
   const checklistsHook = useChecklists()
   const getChecklistsByFarm = checklistsHook.getChecklistsByFarm
   const salesHook = useSales()
-  const { SEGMENTS, SEGMENT_COLORS } = useConfig()
+  const { SEGMENTS, SEGMENT_COLORS, SEGMENT_OPTIONS } = useConfig()
   const getSalesByFarm = salesHook.getSalesByFarm
 
   const [tab, setTab] = useState('visitas')
@@ -214,6 +215,7 @@ export default function FichaCliente() {
       cpfCnpj:      farm.cpfCnpj || '',
       cadPro:       farm.cadPro || '',
       notes:        farm.notes || '',
+      segment:      farm.segment || 'leite',
     })
     setEditando(true)
   }
@@ -232,6 +234,7 @@ export default function FichaCliente() {
       cpf_cnpj:      editForm.cpfCnpj,
       cad_pro:       editForm.cadPro,
       notes:         editForm.notes,
+      segment:       editForm.segment,
     }
     const { error } = await supabase.from('farms').update(payload).eq('id', farm.id)
     if (!error) {
@@ -265,6 +268,21 @@ export default function FichaCliente() {
           <input value={editForm[f.key]||''} onChange={e=>setEditForm(p=>({...p,[f.key]:e.target.value}))} />
         </div>
       ))}
+
+      <div className="section-label">Segmento</div>
+      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
+        {(SEGMENT_OPTIONS||[]).map(opt => (
+          <button key={opt.value} type="button" onClick={()=>setEditForm(p=>({...p,segment:opt.value}))} style={{
+            flex:'1 1 auto', padding:'12px 8px', borderRadius:10,
+            border:'1px solid '+(editForm.segment===opt.value?'var(--orange)':'var(--line)'),
+            background:editForm.segment===opt.value?'rgba(240,125,26,0.08)':'var(--surface-2)',
+            color:editForm.segment===opt.value?'var(--orange)':'var(--text-dim)',
+            fontFamily:'inherit', fontSize:12, fontWeight:600, cursor:'pointer'
+          }}>
+            {opt.label.replace('Bovinos · ','')}
+          </button>
+        ))}
+      </div>
 
       <div className="section-label">Documentos</div>
       {[
