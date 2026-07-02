@@ -1,28 +1,31 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Barlow+Condensed:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  --bg:           #0A0A0A;
-  --surface:      #111111;
-  --surface-2:    #1A1A1A;
-  --surface-3:    #222222;
-  --line:         #2A2A2A;
-  --line-soft:    #1E1E1E;
-  --orange:       #E87722;
-  --orange-bright:#F59332;
-  --orange-deep:  #C25E0C;
-  --silver:       #CCCCCC;
-  --silver-dim:   #888888;
-  --text:         #F2F2F2;
-  --text-dim:     #999999;
-  --text-faint:   #555555;
-  --green:        #10B981;
-  --green-bg:     rgba(16,185,129,.08);
-  --amber:        #F59E0B;
-  --amber-bg:     rgba(245,158,11,.08);
-  --red:          #EF4444;
-  --red-bg:       rgba(239,68,68,.08);
-  --blue:         #6366F1;
+  --bg:            #F4F4F6;
+  --surface:       #FFFFFF;
+  --surface-2:     #F4F4F6;
+  --surface-3:     #EBEBEE;
+  --line:          #E2E2E8;
+  --line-soft:     #EBEBEE;
+  --orange:        #E87722;
+  --orange-bright: #F59332;
+  --orange-deep:   #C25E0C;
+  --orange-soft:   rgba(232,119,34,.08);
+  --orange-border: rgba(232,119,34,.2);
+  --black:         #0A0A0A;
+  --silver:        #555555;
+  --silver-dim:    #888888;
+  --text:          #0A0A0A;
+  --text-dim:      #666666;
+  --text-faint:    #999999;
+  --green:         #059669;
+  --green-bg:      rgba(5,150,105,.07);
+  --amber:         #D97706;
+  --amber-bg:      rgba(217,119,6,.07);
+  --red:           #DC2626;
+  --red-bg:        rgba(220,38,38,.07);
+  --blue:          #4F46E5;
 }
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 html, body { height:100%; background:var(--bg); color:var(--text); font-family:'Inter',system-ui,-apple-system,sans-serif; }

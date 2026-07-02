@@ -29,8 +29,8 @@
 }
 
 .appbar {
-  background: linear-gradient(180deg, #000 0%, #0d0d0e 100%);
-  border-bottom: 1px solid var(--line-soft);
+  background: var(--black);
+  border-bottom: 1px solid rgba(255,255,255,.08);
   padding: 12px 18px;
   display: flex;
   align-items: center;
@@ -104,10 +104,10 @@
 }
 
 .page-head h2 {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 600;
-  font-size: 26px;
-  letter-spacing: 0.3px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: -0.5px;
   line-height: 1.1;
   color: var(--text);
 }
@@ -126,9 +126,9 @@
   width: 100%;
   max-width: 430px;
   height: 78px;
-  background: rgba(13, 13, 14, 0.96);
+  background: rgba(255,255,255,.96);
   backdrop-filter: blur(20px);
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
   display: flex;
   align-items: flex-start;
   padding: 8px 6px 0;
@@ -265,8 +265,8 @@
 
 .stat {
   background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 14px;
 }
 
@@ -279,9 +279,10 @@
 }
 
 .stat .value {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-weight: 700;
-  font-size: 28px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -1px;
   line-height: 1.1;
   margin-top: 4px;
   color: var(--text);
@@ -382,7 +383,7 @@ input:not([type]),
 select,
 textarea {
   width: 100%;
-  background: var(--surface-2);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px;
@@ -418,12 +419,12 @@ textarea {
 
 @media (min-width: 768px) {
 
-  body { background: #080808; }
+  body { background: #EFEFEF; }
 
   .phone { max-width:100%; min-height:100vh; display:flex; }
-
   .statusbar { display:none; }
 
+  /* Sidebar preta */
   .tabbar {
     width: 240px; flex-shrink:0;
     height: 100vh;
@@ -431,8 +432,8 @@ textarea {
     max-width: 240px; transform:none;
     flex-direction: column; align-items:stretch;
     padding: 0; border-top:none;
-    border-right: 1px solid var(--line);
-    background: var(--surface);
+    border-right: 1px solid #1E1E1E;
+    background: #0A0A0A;
     overflow-y: auto; z-index:60;
   }
 
@@ -442,17 +443,18 @@ textarea {
     height: 64px; padding: 0 20px;
     font-family: 'Inter', sans-serif;
     font-size: 15px; font-weight: 800;
-    letter-spacing: 3px; color: var(--orange);
-    border-bottom: 1px solid var(--line);
+    letter-spacing: 3px; color: #E87722;
+    border-bottom: 1px solid #1E1E1E;
     flex-shrink: 0;
   }
 
+  /* AppBar branca */
   .appbar {
     position: fixed; top:0; left:240px; right:0;
     z-index: 50;
-    background: rgba(10,10,10,.92);
+    background: rgba(255,255,255,.95);
     backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid #E2E2E8;
     height: 56px; padding: 0 28px;
   }
 
@@ -460,6 +462,7 @@ textarea {
     font-family: 'Inter', sans-serif;
     font-weight: 700; font-size: 14px;
     letter-spacing: 0; text-transform: none;
+    color: #0A0A0A;
   }
 
   .screen {
@@ -467,6 +470,7 @@ textarea {
     flex: 1; overflow-y: auto;
     min-height: calc(100vh - 56px);
     width: calc(100vw - 240px);
+    background: #F4F4F6;
   }
 
   .content, .screen-content {
@@ -474,21 +478,25 @@ textarea {
     padding: 28px 36px 60px;
   }
 
+  /* Tabs na sidebar — estilo portal */
   .tab {
     flex-direction: row; justify-content: flex-start;
     gap: 12px; padding: 11px 20px;
     border-radius: 0; font-size: 13px; font-weight: 500;
-    color: var(--text-dim);
-    border-bottom: 1px solid var(--line);
+    color: rgba(255,255,255,.4);
+    border-bottom: 1px solid #1E1E1E;
     border-left: 3px solid transparent;
     transition: all .12s;
   }
 
-  .tab i, .tab svg { width:18px; height:18px; font-size:18px; flex-shrink:0; }
+  .tab i, .tab svg { width:18px; height:18px; font-size:18px; flex-shrink:0; color:rgba(255,255,255,.3); }
   .tab span { font-size:13px; font-weight:500; letter-spacing:0; text-transform:none; }
-  .tab:hover { background:var(--surface-2); color:var(--text); }
-  .tab.active { background:rgba(232,119,34,.08); color:var(--orange); border-left:3px solid var(--orange); font-weight:600; }
+  .tab:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.8); }
+  .tab:hover svg, .tab:hover i { color:rgba(255,255,255,.6); }
+  .tab.active { background:rgba(232,119,34,.1); color:#E87722; border-left:3px solid #E87722; font-weight:600; }
+  .tab.active svg, .tab.active i { color:#E87722; }
   .tab:active { transform:none; }
+
   .fab { right:32px; bottom:32px; }
   .stat-grid { grid-template-columns:repeat(4,1fr); }
 }
