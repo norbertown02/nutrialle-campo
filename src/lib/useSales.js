@@ -52,7 +52,25 @@ export function useSales() {
       seller_id:          user && user.id,
     }
     const { error } = await supabase.from('sales').insert(item)
-    if (!error) setSales(prev => [fromDB(item), ...prev])
+    if (!error) {
+      setSales(prev => [fromDB(item), ...prev])
+      // Disparar e-mail automático com os dados do pedido
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          fetch('https://kruldbtjyhfiswmwmoyz.supabase.co/functions/v1/enviar-pedido-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ sale_id: item.id }),
+          }).catch(e => console.warn('Email nao enviado:', e))
+        }
+      } catch(e) {
+        console.warn('Erro ao disparar email:', e)
+      }
+    }
   }, [])
 
   const removeSale = useCallback(async (id) => {
