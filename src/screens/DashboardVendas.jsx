@@ -7,7 +7,7 @@ import {
   IconTrendingUp,
   IconFileText,
   IconChecklist,
-  IconTargetArrow,
+  IconTarget,
   IconReceipt2,
   IconUsers,
   IconBulb,
@@ -95,7 +95,33 @@ function getFarmName(farmsById, farmId) {
 
 function getFarmSegment(farmsById, farmId) {
   const segment = farmsById[farmId]?.segment || 'outros'
-  return String(segment).charAt(0).toUpperCase() + String(segment).slice(1)
+
+  const mapa = {
+    leite: 'Leite',
+    corte: 'Corte',
+    loja: 'Loja',
+    suinos: 'Suínos',
+    aves: 'Aves',
+    outros: 'Outros',
+  }
+
+  return mapa[segment] || String(segment).charAt(0).toUpperCase() + String(segment).slice(1)
+}
+
+function pertenceAoVendedor(row, farmsById, userId) {
+  if (!userId) return true
+
+  if (row?.seller_id) {
+    return row.seller_id === userId
+  }
+
+  const farm = farmsById[row?.farm_id]
+
+  if (farm?.seller_id) {
+    return farm.seller_id === userId
+  }
+
+  return true
 }
 
 function MiniLineChart({ data, dataPrev }) {
@@ -103,17 +129,23 @@ function MiniLineChart({ data, dataPrev }) {
   const height = 180
   const padding = 18
 
-  const valores = [...data.map(d => d.value), ...dataPrev.map(d => d.value)]
+  const valores = [
+    ...data.map(d => d.value),
+    ...dataPrev.map(d => d.value),
+  ]
+
   const max = Math.max(...valores, 1)
 
   function pontos(lista) {
     if (lista.length <= 1) return ''
 
-    return lista.map((d, i) => {
-      const x = padding + (i / (lista.length - 1)) * (width - padding * 2)
-      const y = height - padding - (d.value / max) * (height - padding * 2)
-      return `${x},${y}`
-    }).join(' ')
+    return lista
+      .map((d, i) => {
+        const x = padding + (i / (lista.length - 1)) * (width - padding * 2)
+        const y = height - padding - (d.value / max) * (height - padding * 2)
+        return `${x},${y}`
+      })
+      .join(' ')
   }
 
   return (
@@ -151,6 +183,14 @@ function MiniLineChart({ data, dataPrev }) {
 function DonutSimples({ items, total }) {
   const soma = items.reduce((acc, item) => acc + Number(item.value || 0), 0)
 
+  if (!items.length) {
+    return (
+      <div className="dash-empty-small">
+        Sem dados no período
+      </div>
+    )
+  }
+
   return (
     <div className="dash-donut-wrap">
       <div className="dash-donut">
@@ -181,10 +221,25 @@ function FunilConversao({ emitidas, enviadas, negociacao, convertidas }) {
   return (
     <div className="dash-funnel">
       <div className="dash-funnel-info">
-        <span>Cotações emitidas <strong>{numero(emitidas)}</strong></span>
-        <span>Cotações enviadas <strong>{numero(enviadas)}</strong></span>
-        <span>Em negociação <strong>{numero(negociacao)}</strong></span>
-        <span>Convertidas em venda <strong>{numero(convertidas)}</strong></span>
+        <span>
+          Cotações emitidas
+          <strong>{numero(emitidas)}</strong>
+        </span>
+
+        <span>
+          Cotações enviadas
+          <strong>{numero(enviadas)}</strong>
+        </span>
+
+        <span>
+          Em negociação
+          <strong>{numero(negociacao)}</strong>
+        </span>
+
+        <span>
+          Convertidas em venda
+          <strong>{numero(convertidas)}</strong>
+        </span>
       </div>
 
       <div className="dash-funnel-bars">
@@ -203,26 +258,68 @@ function BarRanking({ items }) {
   return (
     <div className="dash-ranking">
       {items.length === 0 ? (
-        <div className="dash-empty-small">Sem vendas no período</div>
-      ) : items.map((item, index) => (
-        <div className="dash-ranking-row" key={index}>
-          <span className="dash-rank-number">{index + 1}</span>
+        <div className="dash-empty-small">
+          Sem vendas no período
+        </div>
+      ) : (
+        items.map((item, index) => (
+          <div className="dash-ranking-row" key={index}>
+            <span className="dash-rank-number">{index + 1}</span>
 
-          <div className="dash-rank-body">
-            <div className="dash-rank-title">
-              <strong>{item.label}</strong>
-              <span>{moeda(item.value)}</span>
-            </div>
+            <div className="dash-rank-body">
+              <div className="dash-rank-title">
+                <strong>{item.label}</strong>
+                <span>{moeda(item.value)}</span>
+              </div>
 
-            <div className="dash-rank-track">
-              <div
-                className="dash-rank-fill"
-                style={{ width: `${Math.max(4, (item.value / max) * 100)}%` }}
-              />
+              <div className="dash-rank-track">
+                <div
+                  className="dash-rank-fill"
+                  style={{ width: `${Math.max(4, (item.value / max) * 100)}%` }}
+                />
+              </div>
             </div>
           </div>
+        ))
+      )}
+    </div>
+  )
+}
+
+function RankingProdutos({ items }) {
+  const max = Math.max(...items.map(i => i.value), 1)
+
+  return (
+    <div className="dash-ranking">
+      {items.length === 0 ? (
+        <div className="dash-empty-small">
+          Sem produtos vendidos no período
         </div>
-      ))}
+      ) : (
+        items.map((item, index) => (
+          <div className="dash-ranking-row" key={index}>
+            <span className="dash-rank-number">{index + 1}</span>
+
+            <div className="dash-rank-body">
+              <div className="dash-rank-title">
+                <strong>{item.label}</strong>
+                <span>{moeda(item.value)}</span>
+              </div>
+
+              <div className="dash-rank-track">
+                <div
+                  className="dash-rank-fill"
+                  style={{ width: `${Math.max(4, (item.value / max) * 100)}%` }}
+                />
+              </div>
+
+              <div style={{ marginTop: 4, fontSize: 11, color: '#8D867E', fontWeight: 700 }}>
+                {numero(item.quantity)} sacos
+              </div>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   )
 }
@@ -276,17 +373,8 @@ export default function DashboardVendas() {
   const dados = useMemo(() => {
     const farmsById = Object.fromEntries(farms.map(f => [f.id, f]))
 
-    const salesUsuario = sales.filter(s => {
-      if (!user?.id) return true
-      if (!s.seller_id) return true
-      return s.seller_id === user.id
-    })
-
-    const quotesUsuario = quotes.filter(q => {
-      if (!user?.id) return true
-      if (!q.seller_id) return true
-      return q.seller_id === user.id
-    })
+    const salesUsuario = sales.filter(s => pertenceAoVendedor(s, farmsById, user?.id))
+    const quotesUsuario = quotes.filter(q => pertenceAoVendedor(q, farmsById, user?.id))
 
     const vendaNoPeriodo = (s, ini, fim) => {
       const d = getSaleDate(s)
@@ -313,14 +401,29 @@ export default function DashboardVendas() {
     const cotacoesConvertidas = quotesAtual.filter(q => statusQuote(q.status) === 'convertida').length
     const cotacoesConvertidasAnterior = quotesAnterior.filter(q => statusQuote(q.status) === 'convertida').length
 
-    const cotacoesEnviadas = quotesAtual.filter(q => ['enviada', 'convertida'].includes(statusQuote(q.status))).length
-    const cotacoesNegociacao = quotesAtual.filter(q => statusQuote(q.status) === 'enviada').length
+    const cotacoesEnviadas = quotesAtual.filter(q =>
+      ['enviada', 'convertida'].includes(statusQuote(q.status))
+    ).length
 
-    const taxaConversao = cotacoesEmitidas > 0 ? (cotacoesConvertidas / cotacoesEmitidas) * 100 : 0
-    const taxaConversaoAnterior = cotacoesEmitidasAnterior > 0 ? (cotacoesConvertidasAnterior / cotacoesEmitidasAnterior) * 100 : 0
+    const cotacoesNegociacao = quotesAtual.filter(q =>
+      statusQuote(q.status) === 'enviada'
+    ).length
 
-    const ticketMedio = salesAtual.length > 0 ? vendasTotal / salesAtual.length : 0
-    const ticketMedioAnterior = salesAnterior.length > 0 ? vendasAnterior / salesAnterior.length : 0
+    const taxaConversao = cotacoesEmitidas > 0
+      ? (cotacoesConvertidas / cotacoesEmitidas) * 100
+      : 0
+
+    const taxaConversaoAnterior = cotacoesEmitidasAnterior > 0
+      ? (cotacoesConvertidasAnterior / cotacoesEmitidasAnterior) * 100
+      : 0
+
+    const ticketMedio = salesAtual.length > 0
+      ? vendasTotal / salesAtual.length
+      : 0
+
+    const ticketMedioAnterior = salesAnterior.length > 0
+      ? vendasAnterior / salesAnterior.length
+      : 0
 
     const clientesAtendidos = new Set(salesAtual.map(s => s.farm_id).filter(Boolean)).size
     const clientesAtendidosAnterior = new Set(salesAnterior.map(s => s.farm_id).filter(Boolean)).size
@@ -366,6 +469,33 @@ export default function DashboardVendas() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 5)
 
+    const porProdutoMap = {}
+
+    salesAtual.forEach(s => {
+      const items = Array.isArray(s.items) ? s.items : []
+
+      items.forEach(item => {
+        const nome = item.product_name || item.name || 'Produto sem nome'
+        const subtotal = Number(item.subtotal || 0)
+        const quantity = Number(item.quantity || 0)
+
+        if (!porProdutoMap[nome]) {
+          porProdutoMap[nome] = {
+            label: nome,
+            value: 0,
+            quantity: 0,
+          }
+        }
+
+        porProdutoMap[nome].value += subtotal
+        porProdutoMap[nome].quantity += quantity
+      })
+    })
+
+    const topProdutos = Object.values(porProdutoMap)
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5)
+
     const porSegmentoMap = {}
 
     salesAtual.forEach(s => {
@@ -392,11 +522,14 @@ export default function DashboardVendas() {
 
     const progressoMeta = metaMensal > 0 ? (vendasTotal / metaMensal) * 100 : 0
 
-    const insights = []
-
     const varVendas = diferencaPercentual(vendasTotal, vendasAnterior)
-    const varConversao = taxaConversao - taxaConversaoAnterior
+    const varCotacoes = diferencaPercentual(cotacoesEmitidas, cotacoesEmitidasAnterior)
+    const varConvertidas = diferencaPercentual(cotacoesConvertidas, cotacoesConvertidasAnterior)
+    const varTaxa = taxaConversao - taxaConversaoAnterior
     const varTicket = diferencaPercentual(ticketMedio, ticketMedioAnterior)
+    const varClientes = diferencaPercentual(clientesAtendidos, clientesAtendidosAnterior)
+
+    const insights = []
 
     if (varVendas > 0) {
       insights.push(`Suas vendas cresceram ${pct(varVendas)} em relação ao mês anterior.`)
@@ -406,16 +539,18 @@ export default function DashboardVendas() {
       insights.push('Suas vendas estão estáveis em relação ao mês anterior.')
     }
 
-    if (varConversao > 0) {
-      insights.push(`A taxa de conversão melhorou ${varConversao.toFixed(1).replace('.', ',')} p.p.`)
-    } else if (varConversao < 0) {
-      insights.push(`A taxa de conversão caiu ${Math.abs(varConversao).toFixed(1).replace('.', ',')} p.p.`)
+    if (varTaxa > 0) {
+      insights.push(`A taxa de conversão melhorou ${varTaxa.toFixed(1).replace('.', ',')} p.p.`)
+    } else if (varTaxa < 0) {
+      insights.push(`A taxa de conversão caiu ${Math.abs(varTaxa).toFixed(1).replace('.', ',')} p.p.`)
     } else {
       insights.push('A taxa de conversão ficou estável no período.')
     }
 
     if (varTicket > 0) {
       insights.push(`O ticket médio está ${pct(varTicket)} maior que no mês anterior.`)
+    } else if (varTicket < 0) {
+      insights.push(`O ticket médio está ${pct(Math.abs(varTicket))} menor que no mês anterior.`)
     }
 
     if (progressoMeta >= 100) {
@@ -426,35 +561,49 @@ export default function DashboardVendas() {
       insights.push('Há espaço para acelerar as vendas até o fim do mês.')
     }
 
+    if (topProdutos[0]) {
+      insights.push(`${topProdutos[0].label} é o produto com maior faturamento no mês.`)
+    }
+
     return {
-      farmsById,
       vendasTotal,
       vendasAnterior,
+
       cotacoesEmitidas,
       cotacoesEmitidasAnterior,
+
       cotacoesConvertidas,
       cotacoesConvertidasAnterior,
+
       cotacoesEnviadas,
       cotacoesNegociacao,
+
       taxaConversao,
       taxaConversaoAnterior,
+
       ticketMedio,
       ticketMedioAnterior,
+
       clientesAtendidos,
       clientesAtendidosAnterior,
+
       evolucaoAcumuladaAtual,
       evolucaoAcumuladaAnterior,
+
       topFazendas,
+      topProdutos,
       porSegmento,
       porPagamento,
+
       progressoMeta,
       insights,
+
       varVendas,
-      varCotacoes: diferencaPercentual(cotacoesEmitidas, cotacoesEmitidasAnterior),
-      varConvertidas: diferencaPercentual(cotacoesConvertidas, cotacoesConvertidasAnterior),
-      varTaxa: taxaConversao - taxaConversaoAnterior,
+      varCotacoes,
+      varConvertidas,
+      varTaxa,
       varTicket,
-      varClientes: diferencaPercentual(clientesAtendidos, clientesAtendidosAnterior),
+      varClientes,
     }
   }, [sales, quotes, farms, user?.id])
 
@@ -463,7 +612,9 @@ export default function DashboardVendas() {
   if (loading) {
     return (
       <div className="dash-page">
-        <div className="dash-loading">Carregando dashboard...</div>
+        <div className="dash-loading">
+          Carregando dashboard...
+        </div>
       </div>
     )
   }
@@ -472,10 +623,20 @@ export default function DashboardVendas() {
     <main className="dash-page">
       <section className="dash-hero">
         <div className="dash-hero__glow" />
+
         <div className="dash-hero__brand-shape" aria-hidden="true">
           <svg viewBox="0 0 260 220" fill="none">
-            <path d="M79 181C47 139 39 96 61 47C91 76 108 110 105 157C104 170 96 178 79 181Z" stroke="currentColor" strokeWidth="2" />
-            <path d="M77 175C78 132 75 99 66 68" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path
+              d="M79 181C47 139 39 96 61 47C91 76 108 110 105 157C104 170 96 178 79 181Z"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M77 175C78 132 75 99 66 68"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
             <circle cx="184" cy="60" r="36" stroke="currentColor" strokeWidth="2" />
             <circle cx="202" cy="151" r="35" stroke="currentColor" strokeWidth="2" />
             <circle cx="118" cy="160" r="34" stroke="currentColor" strokeWidth="2" />
@@ -511,7 +672,10 @@ export default function DashboardVendas() {
       <section className="dash-panel">
         <div className="dash-kpi-grid">
           <article className="dash-kpi">
-            <span className="dash-kpi__icon dash-green"><IconTrendingUp size={24} /></span>
+            <span className="dash-kpi__icon dash-green">
+              <IconTrendingUp size={24} />
+            </span>
+
             <div>
               <small>Vendas totais</small>
               <strong>{moeda(dados.vendasTotal)}</strong>
@@ -522,7 +686,10 @@ export default function DashboardVendas() {
           </article>
 
           <article className="dash-kpi">
-            <span className="dash-kpi__icon dash-orange"><IconFileText size={24} /></span>
+            <span className="dash-kpi__icon dash-orange">
+              <IconFileText size={24} />
+            </span>
+
             <div>
               <small>Cotações emitidas</small>
               <strong>{numero(dados.cotacoesEmitidas)}</strong>
@@ -533,7 +700,10 @@ export default function DashboardVendas() {
           </article>
 
           <article className="dash-kpi">
-            <span className="dash-kpi__icon dash-purple"><IconChecklist size={24} /></span>
+            <span className="dash-kpi__icon dash-purple">
+              <IconChecklist size={24} />
+            </span>
+
             <div>
               <small>Cotações convertidas</small>
               <strong>{numero(dados.cotacoesConvertidas)}</strong>
@@ -544,7 +714,10 @@ export default function DashboardVendas() {
           </article>
 
           <article className="dash-kpi">
-            <span className="dash-kpi__icon dash-green"><IconTargetArrow size={24} /></span>
+            <span className="dash-kpi__icon dash-green">
+              <IconTarget size={24} />
+            </span>
+
             <div>
               <small>Taxa de conversão</small>
               <strong>{pct(dados.taxaConversao)}</strong>
@@ -555,7 +728,10 @@ export default function DashboardVendas() {
           </article>
 
           <article className="dash-kpi dash-kpi-wide">
-            <span className="dash-kpi__icon dash-yellow"><IconReceipt2 size={24} /></span>
+            <span className="dash-kpi__icon dash-yellow">
+              <IconReceipt2 size={24} />
+            </span>
+
             <div>
               <small>Ticket médio</small>
               <strong>{moeda(dados.ticketMedio)}</strong>
@@ -582,8 +758,15 @@ export default function DashboardVendas() {
           />
 
           <div className="dash-chart-legend">
-            <span><i className="legend-current" /> Este mês</span>
-            <span><i className="legend-prev" /> Mês anterior</span>
+            <span>
+              <i className="legend-current" />
+              Este mês
+            </span>
+
+            <span>
+              <i className="legend-prev" />
+              Mês anterior
+            </span>
           </div>
         </div>
 
@@ -617,7 +800,7 @@ export default function DashboardVendas() {
 
           <div className="dash-compare-table">
             <div className="dash-compare-head">
-              <span></span>
+              <span />
               <span>Mês anterior</span>
               <span>Este mês</span>
               <span>Variação</span>
@@ -658,8 +841,10 @@ export default function DashboardVendas() {
                   <i>{row.icon}</i>
                   {row.label}
                 </strong>
+
                 <span>{row.anterior}</span>
                 <span>{row.atual}</span>
+
                 <em className={row.variacao >= 0 ? 'dash-up' : 'dash-down'}>
                   {row.variacao >= 0 ? '↑' : '↓'} {pct(Math.abs(row.variacao))}
                 </em>
@@ -671,13 +856,28 @@ export default function DashboardVendas() {
         <div className="dash-grid-2">
           <div className="dash-card">
             <div className="dash-card-head">
-              <h2>Top Fazendas</h2>
-              <p>Este mês</p>
+              <div>
+                <h2>Top Fazendas</h2>
+                <p>Clientes com maior faturamento no mês</p>
+              </div>
             </div>
 
             <BarRanking items={dados.topFazendas} />
           </div>
 
+          <div className="dash-card">
+            <div className="dash-card-head">
+              <div>
+                <h2>Top Produtos</h2>
+                <p>Produtos com maior faturamento no mês</p>
+              </div>
+            </div>
+
+            <RankingProdutos items={dados.topProdutos} />
+          </div>
+        </div>
+
+        <div className="dash-grid-2">
           <div className="dash-card">
             <div className="dash-card-head">
               <h2>Meta Mensal</h2>
@@ -710,19 +910,22 @@ export default function DashboardVendas() {
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="dash-card">
-          <div className="dash-card-head">
-            <h2>Vendas por Forma de Pagamento</h2>
+          <div className="dash-card">
+            <div className="dash-card-head">
+              <h2>Forma de Pagamento</h2>
+            </div>
+
+            <DonutSimples items={dados.porPagamento} total={dados.vendasTotal} />
           </div>
-
-          <DonutSimples items={dados.porPagamento} total={dados.vendasTotal} />
         </div>
 
         <div className="dash-card dash-insights">
           <div className="dash-card-head">
-            <h2><IconBulb size={19} /> Insights</h2>
+            <h2>
+              <IconBulb size={19} />
+              Insights
+            </h2>
           </div>
 
           {dados.insights.map((insight, index) => (
@@ -733,7 +936,11 @@ export default function DashboardVendas() {
           ))}
         </div>
 
-        <button type="button" className="dash-floating-action" onClick={() => navigate('/vendas')}>
+        <button
+          type="button"
+          className="dash-floating-action"
+          onClick={() => navigate('/vendas')}
+        >
           <IconChartBar size={19} />
           Ver vendas
         </button>
