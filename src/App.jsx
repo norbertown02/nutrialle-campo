@@ -38,7 +38,21 @@ import FazendaDados from './screens/FazendaDados'
 function AppContent() {
   const { user, showSplash } = useAuth()
 
-  if (showSplash) return <Splash />
+if (loading) {
+  return (
+    <div className="app-loading">
+      <div className="app-loading-card">
+        <div className="app-loading-logo">NUTRIALLE</div>
+
+        <div className="app-loading-line">
+          <span />
+        </div>
+
+        <p>Carregando aplicativo...</p>
+      </div>
+    </div>
+  )
+}
   if (!user) return <Login />
 
   return (

@@ -28,17 +28,30 @@ function escolherNomeProfile(profile, authUser) {
   )
 }
 
+function comTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise,
+    new Promise(resolve => {
+      setTimeout(() => resolve(fallback), ms)
+    }),
+  ])
+}
+
 async function montarUsuario(authUser) {
   if (!authUser) return null
 
   let profile = null
 
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .maybeSingle()
+    const { data, error } = await comTimeout(
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle(),
+      5000,
+      { timeout: true }
+    )
 
     if (!error && data) {
       profile = data
@@ -54,7 +67,7 @@ async function montarUsuario(authUser) {
     role:
       profile?.role ||
       profile?.cargo ||
-      authUser.user_metadata?.role ||
+      authUser?.user_metadata?.role ||
       'vendedor',
     profile,
   }
@@ -70,30 +83,84 @@ export function AuthProvider({ children }) {
     let ativo = true
 
     async function carregarSessao() {
-      const { data: { session } } = await supabase.auth.getSession()
+      setLoading(true)
 
-      if (session?.user) {
-        const usuario = await montarUsuario(session.user)
-        if (ativo) setUser(usuario)
+      try {
+        const resultado = await comTimeout(
+          supabase.auth.getSession(),
+          5000,
+          { timeout: true }
+        )
+
+        if (!ativo) return
+
+        if (resultado?.timeout) {
+          console.warn('Supabase getSession demorou demais. Liberando tela.')
+          setUser(null)
+          return
+        }
+
+        const session = resultado?.data?.session
+
+        if (session?.user) {
+          const usuario = await montarUsuario(session.user)
+
+          if (ativo) {
+            setUser(usuario)
+          }
+        } else {
+          if (ativo) {
+            setUser(null)
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar sessão:', err)
+
+        if (ativo) {
+          setUser(null)
+        }
+      } finally {
+        if (ativo) {
+          setLoading(false)
+        }
       }
-
-      if (ativo) setLoading(false)
     }
 
     carregarSessao()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const usuario = await montarUsuario(session.user)
-        if (ativo) setUser(usuario)
-      } else {
-        if (ativo) setUser(null)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!ativo) return
+
+      try {
+        if (session?.user) {
+          const usuario = await montarUsuario(session.user)
+
+          if (ativo) {
+            setUser(usuario)
+          }
+        } else {
+          if (ativo) {
+            setUser(null)
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao atualizar sessão:', err)
+
+        if (ativo) {
+          setUser(null)
+        }
+      } finally {
+        if (ativo) {
+          setLoading(false)
+        }
       }
     })
 
     return () => {
       ativo = false
-      subscription.unsubscribe()
+      subscription?.unsubscribe()
     }
   }, [])
 
@@ -101,39 +168,65 @@ export function AuthProvider({ children }) {
     setLoading(true)
     setError(null)
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setError('E-mail ou senha incorretos')
+      if (error) {
+        setError('E-mail ou senha incorretos')
+        setUser(null)
+        setLoading(false)
+        return false
+      }
+
+      setShowSplash(true)
+
+      const usuario = await montarUsuario(data.user)
+
+      setUser(usuario)
       setLoading(false)
+
+      setTimeout(() => {
+        setShowSplash(false)
+      }, 1200)
+
+      return true
+    } catch (err) {
+      console.error('Erro ao fazer login:', err)
+      setError('Erro ao entrar. Tente novamente.')
+      setUser(null)
+      setLoading(false)
+      setShowSplash(false)
       return false
     }
-
-    setShowSplash(true)
-
-    const usuario = await montarUsuario(data.user)
-
-    setTimeout(() => {
-      setUser(usuario)
-      setShowSplash(false)
-    }, 2200)
-
-    setLoading(false)
-    return true
   }, [])
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut()
-    setUser(null)
+    try {
+      setLoading(true)
+      await supabase.auth.signOut()
+      setUser(null)
+    } catch (err) {
+      console.error('Erro ao sair:', err)
+      setUser(null)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  if (loading) return null
-
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout, showSplash }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        error,
+        login,
+        logout,
+        showSplash,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
