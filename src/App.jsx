@@ -4,7 +4,6 @@ import AppBar from './components/AppBar'
 import TabBar from './components/TabBar'
 
 import Login from './screens/Login'
-import Splash from './screens/Splash'
 import Home from './screens/Home'
 
 import Clientes from './screens/Clientes'
@@ -36,23 +35,24 @@ import DashboardVendas from './screens/DashboardVendas'
 import FazendaDados from './screens/FazendaDados'
 
 function AppContent() {
-  const { user, showSplash } = useAuth()
+  const { user, loading, showSplash } = useAuth()
 
-if (loading) {
-  return (
-    <div className="app-loading">
-      <div className="app-loading-card">
-        <div className="app-loading-logo">NUTRIALLE</div>
+  if (loading || showSplash) {
+    return (
+      <div className="app-loading">
+        <div className="app-loading-card">
+          <div className="app-loading-logo">NUTRIALLE</div>
 
-        <div className="app-loading-line">
-          <span />
+          <div className="app-loading-line">
+            <span />
+          </div>
+
+          <p>Carregando aplicativo...</p>
         </div>
-
-        <p>Carregando aplicativo...</p>
       </div>
-    </div>
-  )
-}
+    )
+  }
+
   if (!user) return <Login />
 
   return (
