@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/useAuth.jsx'
 import AppBar from './components/AppBar'
 import TabBar from './components/TabBar'
+import SplashScreen from './components/SplashScreen'
 
 import Login from './screens/Login'
 import Home from './screens/Home'
@@ -38,19 +39,7 @@ function AppContent() {
   const { user, loading, showSplash } = useAuth()
 
   if (loading || showSplash) {
-    return (
-      <div className="app-loading">
-        <div className="app-loading-card">
-          <div className="app-loading-logo">NUTRIALLE</div>
-
-          <div className="app-loading-line">
-            <span />
-          </div>
-
-          <p>Carregando aplicativo...</p>
-        </div>
-      </div>
-    )
+    return <SplashScreen />
   }
 
   if (!user) return <Login />

@@ -15,6 +15,7 @@ function fromDB(row) {
     frete:            row.frete,
     frete_label:      row.frete_label,
     needsApproval:    row.needs_approval,
+    comissaoPct:      Number(row.comissao_pct || 0),
     status:           row.status,
     sentAt:           row.sent_at,
     createdAt:        row.created_at,

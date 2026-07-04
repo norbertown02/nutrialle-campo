@@ -24,28 +24,95 @@ Deno.serve(async (req: Request) => {
     const items = sale.items || []
     const date = new Date(sale.sale_date + 'T12:00:00').toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' })
     const fmtBRL = (n: number) => 'R$ ' + Number(n||0).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 })
+    const parseNumero = (value: any) => {
+      if (value === null || value === undefined || value === '') return 0
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+
+      const clean = String(value)
+        .trim()
+        .replace('%', '')
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '')
+
+      const parsed = Number(clean)
+      return Number.isFinite(parsed) ? parsed : 0
+    }
 
     // Comissão
     // Prioridade: comissão definida na venda. Fallback: comissão padrão do perfil do vendedor.
-    const pctComissao = Number(sale?.comissao_pct ?? seller?.comissao_pct ?? 0)
+    const pctComissao = parseNumero(sale?.comissao_pct ?? seller?.comissao_pct ?? 0)
     const pctComissaoFmt = pctComissao.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
     const vlComissao = Number(sale.total || 0) * pctComissao / 100
 
+    const firstValue = (...values: any[]) => {
+      const found = values.find(v => v !== null && v !== undefined && String(v).trim() !== '')
+      return found === undefined ? '' : String(found).trim()
+    }
+
     // Documento fiscal
-    const docFiscal = farm?.cnpj || farm?.cpf_cnpj || farm?.cpf || '—'
-    const ieNum     = farm?.ie || '—'
-    const cadPro    = [farm?.cad_pro, farm?.cadpro_1, farm?.cadpro_2, farm?.cadpro_3].filter(Boolean).join(' / ') || '—'
+    const docFiscal = firstValue(farm?.cnpj, farm?.cpf_cnpj, farm?.cpf) || '—'
+    const ieNum = firstValue(farm?.ie, farm?.inscricao_estadual, farm?.state_registration) || '—'
+    const cadPro = [
+      farm?.cad_pro,
+      farm?.cadpro,
+      farm?.cadpro_1,
+      farm?.cadpro_2,
+      farm?.cadpro_3,
+      farm?.cadastro_produtor,
+    ].filter(Boolean).join(' / ') || '—'
 
     // Endereço completo
+    // Mantém compatibilidade com nomes diferentes de colunas usados no app / Supabase.
+    const rua = firstValue(
+      farm?.street,
+      farm?.rua,
+      farm?.logradouro,
+      farm?.address,
+      farm?.endereco,
+      farm?.endereco_rua,
+      farm?.address_street,
+    )
+
+    const numero = firstValue(
+      farm?.street_number,
+      farm?.number,
+      farm?.numero,
+      farm?.address_number,
+      farm?.numero_endereco,
+      farm?.endereco_numero,
+    )
+
+    const bairro = firstValue(
+      farm?.bairro,
+      farm?.neighborhood,
+      farm?.district,
+      farm?.address_neighborhood,
+      farm?.endereco_bairro,
+    )
+
+    const complemento = firstValue(
+      farm?.complemento,
+      farm?.complement,
+      farm?.address_complement,
+      farm?.endereco_complemento,
+    )
+
+    const cidade = firstValue(farm?.city, farm?.cidade)
+    const estado = firstValue(farm?.state, farm?.uf, farm?.estado)
+    const cep = firstValue(farm?.cep, farm?.zip, farm?.postal_code, farm?.codigo_postal)
+
+    const cidadeUf = cidade && estado ? `${cidade} / ${estado}` : (cidade || estado)
+    const ruaNumero = rua && numero ? `${rua}, ${numero}` : (rua || numero)
+
     const endereco = [
-      farm?.street ? `${farm.street}${farm?.street_number ? ', ' + farm.street_number : ''}` : '',
-      farm?.complemento || '',
-      farm?.bairro || '',
-      farm?.city && farm?.state ? `${farm.city} / ${farm.state}` : (farm?.city || ''),
-      farm?.cep ? `CEP: ${farm.cep}` : '',
+      ruaNumero,
+      bairro ? `Bairro: ${bairro}` : '',
+      complemento ? `Complemento: ${complemento}` : '',
+      cidadeUf,
+      cep ? `CEP: ${cep}` : '',
     ].filter(Boolean).join(' — ') || '—'
 
     const itensHtml = items.map((it: any) => {
@@ -96,9 +163,15 @@ Deno.serve(async (req: Request) => {
     ${row('CNPJ / CPF', docFiscal)}
     ${row('Inscrição Estadual', ieNum)}
     ${row('Cad. Produtor', cadPro)}
-    ${row('Telefone', farm?.phone || '—')}
+    ${row('Telefone', firstValue(farm?.phone, farm?.telefone, farm?.celular) || '—')}
     ${row('E-mail', farm?.email || '—')}
-    ${row('Endereço', endereco)}
+    ${row('Rua / Logradouro', rua || '—')}
+    ${row('Número', numero || '—')}
+    ${row('Bairro', bairro || '—')}
+    ${row('Complemento', complemento || '—')}
+    ${row('Cidade / UF', cidadeUf || '—')}
+    ${row('CEP', cep || '—')}
+    ${row('Endereço completo', endereco)}
     ${row('Segmento', farm?.segment || '—')}
     ${row('Código do cliente', farm?.client_code || '—')}
   </table>
@@ -125,7 +198,7 @@ Deno.serve(async (req: Request) => {
   <table width="100%" cellpadding="0" cellspacing="0">
     <tr><td style="padding:6px 12px;text-align:right;font-size:12px;color:#999">Frete: <strong style="color:#0A0A0A">${sale.frete_label || sale.frete || '—'}</strong></td></tr>
     <tr><td style="padding:6px 12px;text-align:right;font-size:12px;color:#999">Pagamento: <strong style="color:#0A0A0A">${sale.payment_term_label || '—'}</strong></td></tr>
-    ${pctComissao > 0 ? `<tr><td style="padding:6px 12px;text-align:right;font-size:12px;color:#999">Comissão do representante (${pctComissaoFmt}%): <strong style="color:#0A0A0A">${fmtBRL(vlComissao)}</strong></td></tr>` : ''}
+    <tr><td style="padding:6px 12px;text-align:right;font-size:12px;color:#999">Comissão do representante: <strong style="color:#0A0A0A">${pctComissaoFmt}% · ${fmtBRL(vlComissao)}</strong></td></tr>
     <tr><td style="padding:12px 12px 4px;text-align:right;border-top:2px solid #0A0A0A;margin-top:8px">
       <span style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px">TOTAL DO PEDIDO </span>
       <span style="font-size:24px;font-weight:800;color:#E87722;letter-spacing:-1px">${fmtBRL(sale.total)}</span>
@@ -141,7 +214,7 @@ Deno.serve(async (req: Request) => {
   <table width="100%" cellpadding="0" cellspacing="0">
     ${row('Nome', seller?.name || '—')}
     ${row('E-mail', seller?.email || '—')}
-    ${pctComissao > 0 ? row('Comissão da venda', `${pctComissaoFmt}% = ${fmtBRL(vlComissao)}`, true) : ''}
+    ${row('Comissão da venda', `${pctComissaoFmt}% = ${fmtBRL(vlComissao)}`, true)}
   </table>
 </td></tr>
 
