@@ -154,8 +154,8 @@ export default function NovaFazenda() {
 
   const [form, setForm] = useState({
     name:'', owner:'', ownerRole:'Proprietário', phone:'', email:'',
-    docTipo:'cpf', cpf:'', cnpj:'', cadpro1:'', cadpro2:'', cadpro3:'',
-    segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'',
+    docTipo:'cpf', cpf:'', cnpj:'', cnpjIE:'', cadpro1:'', cadpro2:'', cadpro3:'',
+    segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'', bairro:'', complemento:'', ie:'',
     herdSize:'', production:'', area:'', marcaAtual:'', marcaOutra:'',
   })
 
@@ -192,8 +192,10 @@ export default function NovaFazenda() {
       phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
       doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
       cadpro_1: form.cadpro1||null, cadpro_2: form.cadpro2||null, cadpro_3: form.cadpro3||null,
+      ie: form.cnpjIE?.trim()||null,
       city: form.city.trim(), state: form.state,
       cep: form.cep?.trim(), street: form.street?.trim(), street_number: form.street_number?.trim(),
+      bairro: form.bairro?.trim()||null, complemento: form.complemento?.trim()||null, ie: form.ie?.trim()||null,
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
     })
@@ -267,6 +269,9 @@ export default function NovaFazenda() {
           <Field label="CAD/PRO 3 (opcional)">
             <input value={form.cadpro3} onChange={e=>setField('cadpro3',e.target.value)} placeholder="Número do CAD/PRO"/>
           </Field>
+          <Field label="Inscrição Estadual (IE)">
+            <input value={form.cnpjIE||''} onChange={e=>setField('cnpjIE',e.target.value)} placeholder="Ex.: 123.456.789-0"/>
+          </Field>
         </>
       ) : (
         <Field label="CNPJ">
@@ -329,6 +334,12 @@ export default function NovaFazenda() {
 
       <Field label="Número">
         <input value={form.street_number||''} onChange={e => setField('street_number', e.target.value)} placeholder="Ex.: 123"/>
+      </Field>
+      <Field label="Bairro">
+        <input value={form.bairro||''} onChange={e => setField('bairro', e.target.value)} placeholder="Ex.: Centro" />
+      </Field>
+      <Field label="Complemento">
+        <input value={form.complemento||''} onChange={e => setField('complemento', e.target.value)} placeholder="Ex.: Sala 2, Galpão B" />
       </Field>
 
 

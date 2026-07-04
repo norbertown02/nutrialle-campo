@@ -54,6 +54,7 @@ export default function NovaVenda() {
   const [paymentTermId, setPaymentTermId] = useState('pt1')
   const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
+  const [comissao, setComissao] = useState('')
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
 
@@ -123,6 +124,7 @@ export default function NovaVenda() {
       paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || "",
       frete,
       frete_label: frete === 'CIF' ? 'CIF - Frete por conta do vendedor' : 'FOB - Frete por conta do comprador',
+      comissaoPct: parseFloat(comissao)||0,
       notes: notes.trim(),
       needsApproval: hasOverDiscount,
     })
@@ -342,6 +344,24 @@ export default function NovaVenda() {
             </div>
           </button>
         ))}
+      </div>
+
+      <div className="section-label">Comissão do representante</div>
+      <div style={{display:'flex',alignItems:'center',gap:10,background:'var(--surface)',border:'1px solid var(--line)',borderRadius:10,padding:'12px 14px',marginBottom:8}}>
+        <input
+          type="number"
+          value={comissao}
+          onChange={e => setComissao(e.target.value)}
+          placeholder="0"
+          min="0" max="100" step="0.5"
+          style={{flex:1,background:'none',border:'none',outline:'none',fontSize:16,fontWeight:600,color:'var(--text)',fontFamily:'inherit'}}
+        />
+        <span style={{fontSize:14,color:'var(--text-dim)',fontWeight:600}}>%</span>
+        {parseFloat(comissao||0) > 0 && total > 0 && (
+          <span style={{fontSize:13,color:'var(--orange)',fontWeight:600}}>
+            {'= R$ ' + (total * parseFloat(comissao||0) / 100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+          </span>
+        )}
       </div>
 
       <div className="section-label">Observacoes</div>

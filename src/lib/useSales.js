@@ -48,6 +48,7 @@ export function useSales() {
       frete:              saleData.frete || 'CIF',
       frete_label:        saleData.frete_label,
       needs_approval:     saleData.needsApproval ?? false,
+      comissao_pct:       saleData.comissaoPct ?? 0,
       status:             'pendente_envio',
       seller_id:          user && user.id,
     }
