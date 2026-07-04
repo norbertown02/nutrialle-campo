@@ -57,9 +57,7 @@ export default function NovaVenda() {
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
 
-  const availableProducts = selectedFarm
-    ? products.filter(p => p.segment === selectedFarm.segment || p.segment === 'todos')
-    : products
+  const availableProducts = products
 
   const addItem = () => {
     if (availableProducts.length === 0) return
