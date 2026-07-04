@@ -13,7 +13,6 @@ import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
 import { CHECKLIST_TEMPLATES } from '../data/checklists'
 import { useSales } from '../lib/useSales'
 import { useConfig } from '../lib/useConfig'
-import { supabase } from '../lib/supabase'
 
 function initials(name) {
   return (name || '')
@@ -145,6 +144,7 @@ export default function FichaCliente() {
   const farmsHook = useFarms()
   const getFarm = farmsHook.getFarm
   const removeFarm = farmsHook.removeFarm
+  const updateFarm = farmsHook.updateFarm
   const visitsHook = useVisits()
   const getVisitsByFarm = visitsHook.getVisitsByFarm
   const checklistsHook = useChecklists()
@@ -204,43 +204,72 @@ export default function FichaCliente() {
 
   const handleEditar = () => {
     setEditForm({
-      name:         farm.name || '',
-      owner:        farm.owner || farm.ownerName || '',
-      phone:        farm.phone || '',
-      city:         farm.city || '',
-      state:        farm.state || '',
-      cep:          farm.cep || '',
-      street:       farm.street || '',
-      streetNumber: farm.streetNumber || '',
-      cpfCnpj:      farm.cpfCnpj || '',
-      cadPro:       farm.cadPro || '',
-      notes:        farm.notes || '',
-      segment:      farm.segment || 'leite',
+      clientCode:    farm.clientCode || '',
+      name:          farm.name || '',
+      owner:         farm.owner || farm.ownerName || '',
+      ownerRole:     farm.ownerRole || 'Proprietário',
+      phone:         farm.phone || '',
+      email:         farm.email || '',
+
+      city:          farm.city || '',
+      state:         farm.state || '',
+      region:        farm.region || '',
+      cep:           farm.cep || '',
+      street:        farm.street || '',
+      streetNumber:  farm.streetNumber || '',
+      bairro:        farm.bairro || '',
+      complemento:   farm.complemento || '',
+
+      cpfCnpj:       farm.cpfCnpj || '',
+      ie:            farm.ie || '',
+      cadPro:        farm.cadPro || '',
+
+      herdSize:      farm.herdSize || '',
+      production:    farm.production || '',
+      area:          farm.area || '',
+      marcaAtual:    farm.marcaAtual || '',
+
+      notes:         farm.notes || '',
+      segment:       farm.segment || 'leite',
     })
     setEditando(true)
   }
 
   async function salvarEdicao() {
-    const payload = {
-      name:          editForm.name,
-      owner:         editForm.owner,
-      owner_name:    editForm.owner,
-      phone:         editForm.phone,
-      city:          editForm.city,
-      state:         editForm.state,
-      cep:           editForm.cep,
-      street:        editForm.street,
-      street_number: editForm.streetNumber,
-      cpf_cnpj:      editForm.cpfCnpj,
-      cad_pro:       editForm.cadPro,
+    const changes = {
+      clientCode:    editForm.clientCode?.trim(),
+      name:          editForm.name?.trim(),
+      owner:         editForm.owner?.trim(),
+      ownerName:     editForm.owner?.trim(),
+      ownerRole:     editForm.ownerRole?.trim(),
+      phone:         editForm.phone?.trim(),
+      email:         editForm.email?.trim(),
+
+      city:          editForm.city?.trim(),
+      state:         editForm.state?.trim(),
+      region:        editForm.region?.trim(),
+      cep:           editForm.cep?.trim(),
+      street:        editForm.street?.trim(),
+      streetNumber:  editForm.streetNumber?.trim(),
+      bairro:        editForm.bairro?.trim(),
+      complemento:   editForm.complemento?.trim(),
+
+      cpfCnpj:       editForm.cpfCnpj?.trim(),
+      ie:            editForm.ie?.trim(),
+      cadPro:        editForm.cadPro?.trim(),
+
+      herdSize:      editForm.herdSize,
+      production:    editForm.production,
+      area:          editForm.area,
+      marcaAtual:    editForm.marcaAtual?.trim(),
+
       notes:         editForm.notes,
       segment:       editForm.segment,
     }
-    const { error } = await supabase.from('farms').update(payload).eq('id', farm.id)
+
+    const { error } = await updateFarm(farm.id, changes)
+
     if (!error) {
-      setEditando(false)
-      // Atualiza localmente
-      Object.assign(farm, editForm)
       setEditando(false)
     } else {
       alert('Erro ao salvar: ' + error.message)
@@ -255,65 +284,94 @@ export default function FichaCliente() {
       <div className="page-head">
         <div className="eyebrow">Editar dados</div>
         <h2>{farm.name}</h2>
+        <p>Atualize todos os dados cadastrais, fiscais, endereço e operação do cliente.</p>
       </div>
 
       <div className="section-label">Dados principais</div>
       {[
-        {label:'Nome da fazenda', key:'name'},
-        {label:'Produtor', key:'owner'},
-        {label:'Telefone / WhatsApp', key:'phone'},
+        { label: 'Código do cliente', key: 'clientCode' },
+        { label: 'Nome da fazenda / cliente', key: 'name' },
+        { label: 'Produtor / responsável', key: 'owner' },
+        { label: 'Cargo / função', key: 'ownerRole' },
+        { label: 'Telefone / WhatsApp', key: 'phone' },
+        { label: 'E-mail', key: 'email', type: 'email' },
       ].map(f => (
-        <div key={f.key} style={{marginBottom:12}}>
-          <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--text-dim)',marginBottom:4}}>{f.label}</label>
-          <input value={editForm[f.key]||''} onChange={e=>setEditForm(p=>({...p,[f.key]:e.target.value}))} />
+        <div key={f.key} style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>{f.label}</label>
+          <input
+            type={f.type || 'text'}
+            value={editForm[f.key] || ''}
+            onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+          />
         </div>
       ))}
 
       <div className="section-label">Segmento</div>
-      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
-        {(SEGMENT_OPTIONS||[]).map(opt => (
-          <button key={opt.value} type="button" onClick={()=>setEditForm(p=>({...p,segment:opt.value}))} style={{
-            flex:'1 1 auto', padding:'12px 8px', borderRadius:10,
-            border:'1px solid '+(editForm.segment===opt.value?'var(--orange)':'var(--line)'),
-            background:editForm.segment===opt.value?'rgba(240,125,26,0.08)':'var(--surface-2)',
-            color:editForm.segment===opt.value?'var(--orange)':'var(--text-dim)',
-            fontFamily:'inherit', fontSize:12, fontWeight:600, cursor:'pointer'
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {(SEGMENT_OPTIONS || []).map(opt => (
+          <button key={opt.value} type="button" onClick={() => setEditForm(p => ({ ...p, segment: opt.value }))} style={{
+            flex: '1 1 auto', padding: '12px 8px', borderRadius: 10,
+            border: '1px solid ' + (editForm.segment === opt.value ? 'var(--orange)' : 'var(--line)'),
+            background: editForm.segment === opt.value ? 'rgba(240,125,26,0.08)' : 'var(--surface-2)',
+            color: editForm.segment === opt.value ? 'var(--orange)' : 'var(--text-dim)',
+            fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer'
           }}>
-            {opt.label.replace('Bovinos · ','')}
+            {opt.label.replace('Bovinos · ', '')}
           </button>
         ))}
       </div>
 
       <div className="section-label">Documentos</div>
       {[
-        {label:'CPF / CNPJ', key:'cpfCnpj'},
-        {label:'CAD/PRO', key:'cadPro'},
+        { label: 'CPF / CNPJ', key: 'cpfCnpj' },
+        { label: 'Inscrição Estadual', key: 'ie' },
+        { label: 'CAD/PRO', key: 'cadPro' },
       ].map(f => (
-        <div key={f.key} style={{marginBottom:12}}>
-          <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--text-dim)',marginBottom:4}}>{f.label}</label>
-          <input value={editForm[f.key]||''} onChange={e=>setEditForm(p=>({...p,[f.key]:e.target.value}))} />
+        <div key={f.key} style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>{f.label}</label>
+          <input value={editForm[f.key] || ''} onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))} />
         </div>
       ))}
 
-      <div className="section-label">Endereço</div>
+      <div className="section-label">Endereço completo</div>
       {[
-        {label:'CEP', key:'cep'},
-        {label:'Rua / Logradouro', key:'street'},
-        {label:'Número', key:'streetNumber'},
-        {label:'Cidade', key:'city'},
-        {label:'Estado', key:'state'},
+        { label: 'CEP', key: 'cep' },
+        { label: 'Rua / Logradouro', key: 'street' },
+        { label: 'Número', key: 'streetNumber' },
+        { label: 'Bairro', key: 'bairro' },
+        { label: 'Complemento', key: 'complemento' },
+        { label: 'Cidade', key: 'city' },
+        { label: 'Estado / UF', key: 'state' },
+        { label: 'Região', key: 'region' },
       ].map(f => (
-        <div key={f.key} style={{marginBottom:12}}>
-          <label style={{display:'block',fontSize:12,fontWeight:600,color:'var(--text-dim)',marginBottom:4}}>{f.label}</label>
-          <input value={editForm[f.key]||''} onChange={e=>setEditForm(p=>({...p,[f.key]:e.target.value}))} />
+        <div key={f.key} style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>{f.label}</label>
+          <input value={editForm[f.key] || ''} onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))} />
+        </div>
+      ))}
+
+      <div className="section-label">Operação / produção</div>
+      {[
+        { label: 'Rebanho', key: 'herdSize' },
+        { label: 'Produção', key: 'production' },
+        { label: 'Área', key: 'area' },
+        { label: 'Marca atual', key: 'marcaAtual' },
+      ].map(f => (
+        <div key={f.key} style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>{f.label}</label>
+          <input value={editForm[f.key] || ''} onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))} />
         </div>
       ))}
 
       <div className="section-label">Observações</div>
-      <textarea value={editForm.notes||''} onChange={e=>setEditForm(p=>({...p,notes:e.target.value}))}
-        style={{width:'100%',minHeight:80,marginBottom:20}} placeholder="Observações sobre o cliente..."/>
+      <textarea
+        value={editForm.notes || ''}
+        onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))}
+        style={{ width: '100%', minHeight: 80, marginBottom: 20 }}
+        placeholder="Observações sobre o cliente..."
+      />
 
-      <button className="btn btn-primary" style={{width:'100%'}} onClick={salvarEdicao}>
+      <button className="btn btn-primary" style={{ width: '100%' }} onClick={salvarEdicao}>
         Salvar alterações
       </button>
     </div>

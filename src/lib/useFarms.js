@@ -12,9 +12,17 @@ function fromDB(row) {
     ownerName:    row.owner_name,
     ownerRole:    row.owner_role,
     phone:        row.phone,
+    email:        row.email,
+
     city:         row.city,
     state:        row.state,
     region:       row.region,
+    cep:          row.cep,
+    street:       row.street,
+    streetNumber: row.street_number,
+    bairro:       row.bairro,
+    complemento:  row.complemento,
+
     segment:      row.segment,
     herdSize:     row.herd_size,
     production:   row.production,
@@ -24,17 +32,14 @@ function fromDB(row) {
     clientSince:  row.client_since,
     createdAt:    row.created_at,
     updatedAt:    row.updated_at,
+
     cpfCnpj:      row.cpf_cnpj,
+    ie:           row.ie,
     cadPro:       row.cad_pro,
-    cep:          row.cep,
-    street:       row.street,
-    streetNumber: row.street_number,
+
     owner:        row.owner,
     prospect:     row.prospect,
     notes:        row.notes,
-    email:        row.email,
-    email:        row.email,
-    email:        row.email,
     marcaAtual:   row.marca_atual,
   }
 }
@@ -47,9 +52,17 @@ function toDB(farm) {
     owner_name:    farm.ownerName,
     owner_role:    farm.ownerRole,
     phone:         farm.phone,
+    email:         farm.email,
+
     city:          farm.city,
     state:         farm.state,
     region:        farm.region,
+    cep:           farm.cep,
+    street:        farm.street,
+    street_number: farm.streetNumber,
+    bairro:        farm.bairro,
+    complemento:   farm.complemento,
+
     segment:       farm.segment,
     herd_size:     farm.herdSize,
     production:    farm.production,
@@ -58,17 +71,14 @@ function toDB(farm) {
     has_checklist: farm.hasChecklist ?? false,
     client_since:  farm.clientSince,
     seller_id:     farm.sellerId,
+
     cpf_cnpj:      farm.cpfCnpj,
+    ie:            farm.ie,
     cad_pro:       farm.cadPro,
-    cep:           farm.cep,
-    street:        farm.street,
-    street_number: farm.streetNumber,
+
     owner:         farm.owner,
     prospect:      farm.prospect,
     notes:         farm.notes,
-    email:         farm.email,
-    email:         farm.email,
-    email:         farm.email,
     marca_atual:   farm.marcaAtual,
   }
 }
@@ -121,15 +131,24 @@ export function useFarms() {
 
   const updateFarm = useCallback(async (id, changes) => {
     const updatedAt = new Date().toISOString()
+    const payload = toDB(changes)
+
+    Object.keys(payload).forEach(key => {
+      if (payload[key] === undefined) delete payload[key]
+    })
+
     const { error } = await supabase
       .from('farms')
-      .update({ ...toDB(changes), updated_at: updatedAt })
+      .update({ ...payload, updated_at: updatedAt })
       .eq('id', id)
+
     if (!error) {
       setFarms(prev => prev.map(f =>
         f.id === id ? { ...f, ...changes, updatedAt } : f
       ))
     }
+
+    return { error }
   }, [])
 
   const removeFarm = useCallback(async (id) => {
