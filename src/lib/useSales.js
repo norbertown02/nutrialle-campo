@@ -44,7 +44,7 @@ export function useSales() {
       sale_date:          saleData.saleDate,
       items:              saleData.items,
       total:              saleData.total,
-      payment_term:       saleData.paymentTerm,
+      payment_term:       saleData.paymentTermId,
       payment_term_label: saleData.paymentTermLabel,
       frete:              saleData.frete || 'CIF',
       frete_label:        saleData.frete_label,
