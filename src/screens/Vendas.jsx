@@ -43,7 +43,6 @@ export default function Vendas() {
 
   const [filter, setFilter] = useState('todos')
   const [showCloseDay, setShowCloseDay] = useState(false)
-  const [selectedIds, setSelectedIds] = useState(null) // null = todas selecionadas
   const [confirmSent, setConfirmSent] = useState(false)
 
   // Metricas
@@ -55,8 +54,6 @@ export default function Vendas() {
   const pending = sales.filter(s => s.status === 'pendente_envio')
   const needsApproval = sales.filter(s => s.needsApproval && s.status === 'pendente_envio')
   const pendingTotal = pending.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
-  const selectedSales = selectedIds === null ? pending : pending.filter(s => selectedIds.includes(s.id))
-  const selectedTotal = selectedSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
 
   // Lista filtrada
   let filtered = [...sales].sort((a, b) =>
@@ -68,39 +65,26 @@ export default function Vendas() {
 
   // Acoes do fechar dia
   const handleDownloadCSV = () => {
-    if (selectedSales.length === 0) return
+    if (pending.length === 0) return
 
     const rows = [
-      ['Data', 'Cliente', 'CNPJ/CPF', 'CAD/PRO', 'Email', 'Telefone', 'CEP', 'Endereco', 'Cidade', 'Estado', 'Produto', 'Qtd Sacos', 'Total kg', 'Preco kg', 'Preco Saco', 'Subtotal', 'Total Venda', 'Pagamento', 'Frete', 'Aprovacao']
+      ['Data', 'Cliente', 'Cidade', 'Produto', 'Qtd', 'Preco Unit', 'Subtotal', 'Pagamento', 'Aprovacao']
     ]
 
-    selectedSales.forEach(s => {
+    pending.forEach(s => {
       const farm = getFarm(s.farmId)
       const farmName = farm ? farm.name : '(fazenda removida)'
+      const city = farm ? farm.city : '-'
       s.items.forEach(it => {
-        const bagKg = it.bag_kg || 25
-        const totalKg = Number(it.quantity) * bagKg
-        const precoKg = it.unit_price ? (Number(it.unit_price) / bagKg) : (it.unitPrice ? Number(it.unitPrice) / bagKg : 0)
         rows.push([
           formatDate(s.saleDate),
           farmName,
-          farm?.cpfCnpj || '-',
-          farm?.cadPro || '-',
-          farm?.email || '-',
-          farm?.phone || '-',
-          farm?.cep || '-',
-          farm ? [farm.street, farm.streetNumber].filter(Boolean).join(', ') : '-',
-          farm?.city || '-',
-          farm?.state || '-',
+          city,
           it.productName,
           it.quantity,
-          totalKg + ' kg',
-          fmtBRL(precoKg),
           fmtBRL(it.unitPrice),
           fmtBRL(it.subtotal || it.quantity * it.unitPrice),
-          fmtBRL(s.total),
-          s.paymentTermLabel || '-',
-          s.frete || 'CIF',
+          s.paymentTermLabel,
           s.needsApproval ? 'PRECISA APROVACAO' : 'OK'
         ])
       })
@@ -121,72 +105,37 @@ export default function Vendas() {
     URL.revokeObjectURL(url)
 
     // Marca como enviadas
-    markAsSent(selectedSales.map(s => s.id))
+    markAsSent(pending.map(s => s.id))
     setShowCloseDay(false)
     setConfirmSent(true)
     setTimeout(() => setConfirmSent(false), 4000)
   }
 
-  const handleSendWhatsApp = async () => {
-    if (selectedSales.length === 0) return
+  const handleSendWhatsApp = () => {
+    if (pending.length === 0) return
 
-    // Gera CSV igual ao download
-    const rows = [
-      ['Data', 'Cliente', 'CNPJ/CPF', 'CAD/PRO', 'Email', 'Telefone', 'CEP', 'Endereco', 'Cidade', 'Estado', 'Produto', 'Qtd Sacos', 'Total kg', 'Preco kg', 'Preco Saco', 'Subtotal', 'Total Venda', 'Pagamento', 'Frete', 'Aprovacao']
-    ]
-    selectedSales.forEach(s => {
+    let txt = '*Vendas Nutrialle - ' + formatDate(today) + '*%0A'
+    txt += pending.length + ' pedidos - Total: ' + fmtBRL(pendingTotal) + '%0A%0A'
+
+    pending.forEach((s, idx) => {
       const farm = getFarm(s.farmId)
       const farmName = farm ? farm.name : '(fazenda removida)'
+      const city = farm ? farm.city : '-'
+      txt += '*' + (idx + 1) + '. ' + farmName + '* (' + city + ')%0A'
       s.items.forEach(it => {
-        const bagKg = it.bag_kg || 25
-        const totalKg = Number(it.quantity) * bagKg
-        const precoKg = it.unitPrice ? Number(it.unitPrice) / bagKg : 0
-        rows.push([
-          formatDate(s.saleDate), farmName,
-          farm?.cpfCnpj || '-', farm?.cadPro || '-',
-          farm?.email || '-', farm?.phone || '-',
-          farm?.cep || '-',
-          farm ? [farm.street, farm.streetNumber].filter(Boolean).join(', ') : '-',
-          farm?.city || '-', farm?.state || '-',
-          it.productName, it.quantity, totalKg + ' kg',
-          fmtBRL(precoKg), fmtBRL(it.unitPrice),
-          fmtBRL(it.subtotal || it.quantity * it.unitPrice),
-          fmtBRL(s.total), s.paymentTermLabel || '-',
-          s.frete || 'CIF',
-          s.needsApproval ? 'PRECISA APROVACAO' : 'OK'
-        ])
+        txt += '  - ' + it.productName + ': ' + it.quantity + 'x ' + fmtBRL(it.unitPrice) + '%0A'
       })
+      txt += '  Pagamento: ' + s.paymentTermLabel + '%0A'
+      txt += '  Total: *' + fmtBRL(s.total) + '*'
+      if (s.needsApproval) txt += ' [PRECISA APROVACAO]'
+      txt += '%0A%0A'
     })
-    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
-    const file = new File([blob], 'vendas_nutrialle_' + today + '.csv', { type: 'text/csv' })
 
-    // Tenta compartilhar via Web Share API (funciona no celular)
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          title: 'Vendas Nutrialle - ' + formatDate(today),
-          text: selectedSales.length + ' pedidos - Total: ' + fmtBRL(selectedTotal),
-          files: [file]
-        })
-        markAsSent(selectedSales.map(s => s.id))
-        setShowCloseDay(false)
-        setConfirmSent(true)
-        setTimeout(() => setConfirmSent(false), 4000)
-        return
-      } catch(e) {
-        // Se cancelou o share, não faz nada
-        if (e.name === 'AbortError') return
-      }
-    }
+    txt += 'Para lancamento no Ultra Sistemas.'
 
-    // Fallback: baixa o arquivo e abre WhatsApp
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = 'vendas_nutrialle_' + today + '.csv'
-    document.body.appendChild(a); a.click()
-    document.body.removeChild(a); URL.revokeObjectURL(url)
-    setTimeout(() => { window.open('https://wa.me/5519982435583', '_blank') }, 500)
+    window.open('https://wa.me/' + ADMIN_WHATSAPP + '?text=' + txt, '_blank')
+
+    // Marca como enviadas
     markAsSent(pending.map(s => s.id))
     setShowCloseDay(false)
     setConfirmSent(true)
@@ -194,10 +143,6 @@ export default function Vendas() {
   }
 
   return (
-    <>
-    <button className="fab" onClick={() => navigate('/vendas/nova')} title="Nova Venda">
-      <IconPlus size={24}/>
-    </button>
     <div className="content">
       <div className="page-head">
         <div className="eyebrow">Controle comercial</div>
@@ -255,20 +200,13 @@ export default function Vendas() {
           }}>
             Acesse a ficha de um cliente e registre o primeiro pedido.
           </p>
-          <div style={{display:'flex',flexDirection:'column',gap:10,maxWidth:240,margin:'0 auto'}}>
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate('/vendas/nova')}
-            >
-              <IconPlus size={16}/> Nova Venda
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={() => navigate('/clientes')}
-            >
-              Ir para clientes
-            </button>
-          </div>
+          <button
+            className="btn btn-primary"
+            style={{ maxWidth: 240, margin: '0 auto' }}
+            onClick={() => navigate('/clientes')}
+          >
+            Ir para clientes
+          </button>
         </div>
       ) : (
         <>
@@ -304,7 +242,7 @@ export default function Vendas() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginTop: 14 }}>
             <button
               className="btn btn-ghost"
-              onClick={() => { setSelectedIds(null); setShowCloseDay(true) }}
+              onClick={() => setShowCloseDay(true)}
               disabled={pending.length === 0}
               style={{ opacity: pending.length === 0 ? 0.4 : 1 }}
             >
@@ -366,7 +304,7 @@ export default function Vendas() {
                 <div
                   key={s.id}
                   className="row-item"
-                  onClick={() => navigate('/vendas/' + s.id)}
+                  onClick={() => farm ? navigate('/clientes/' + farm.id) : null}
                   style={{ cursor: farm ? 'pointer' : 'default' }}
                 >
                   <div style={{
@@ -471,49 +409,14 @@ export default function Vendas() {
 
             <div className="stat-grid" style={{ marginBottom: 14 }}>
               <div className="stat">
-                <div className="label">Selecionados</div>
-                <div className="value orange">{selectedSales.length}</div>
+                <div className="label">Pedidos</div>
+                <div className="value orange">{pending.length}</div>
               </div>
               <div className="stat">
-                <div className="label">Total selecionado</div>
-                <div className="value">{fmtBRL(selectedTotal)}</div>
+                <div className="label">Total</div>
+                <div className="value">{fmtBRL(pendingTotal)}</div>
               </div>
             </div>
-
-            {/* Lista de seleção */}
-            <div style={{marginBottom:14}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                <div style={{fontSize:12,fontWeight:600,color:'var(--text-dim)'}}>Selecionar pedidos</div>
-                <button style={{fontSize:11,color:'var(--orange)',background:'none',border:'none',cursor:'pointer'}}
-                  onClick={()=>setSelectedIds(selectedIds===null?[]:null)}>
-                  {selectedIds===null?'Desmarcar todos':'Marcar todos'}
-                </button>
-              </div>
-              {pending.map(s=>{
-                const farm = getFarm(s.farmId)
-                const sel = selectedIds===null || selectedIds.includes(s.id)
-                return (
-                  <div key={s.id} onClick={()=>{
-                    if(selectedIds===null) setSelectedIds(pending.map(x=>x.id).filter(id=>id!==s.id))
-                    else setSelectedIds(prev=>prev.includes(s.id)?prev.filter(id=>id!==s.id):[...prev,s.id])
-                  }} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',
-                    borderRadius:8,marginBottom:4,cursor:'pointer',
-                    background:sel?'var(--orange-bg)':'var(--surface-2)',
-                    border:'1px solid '+(sel?'rgba(240,125,26,0.3)':'var(--line)')}}>
-                    <div style={{width:18,height:18,borderRadius:4,border:'2px solid '+(sel?'var(--orange)':'var(--line)'),
-                      background:sel?'var(--orange)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                      {sel && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{farm?.name||'—'}</div>
-                      <div style={{fontSize:10,color:'var(--text-faint)'}}>{s.items?.length} produtos · {fmtBRL(s.total)}</div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-
 
             {needsApproval.length > 0 ? (
               <div className="hint" style={{
@@ -578,6 +481,5 @@ export default function Vendas() {
         </div>
       ) : null}
     </div>
-    </>
   )
 }
