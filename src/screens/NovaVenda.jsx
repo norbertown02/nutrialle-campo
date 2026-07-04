@@ -14,10 +14,24 @@ function todayISO() {
 }
 
 function fmtBRL(n) {
-  return 'R$ ' + Number(n).toLocaleString('pt-BR', {
+  const value = Number(n || 0)
+
+  return 'R$ ' + value.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
+}
+
+function parsePercent(value) {
+  if (value === null || value === undefined || value === '') return 0
+
+  const clean = String(value)
+    .replace(',', '.')
+    .replace(/[^\d.]/g, '')
+
+  const number = Number(clean)
+
+  return Number.isFinite(number) ? number : 0
 }
 
 const backBtnStyle = {
@@ -96,6 +110,9 @@ export default function NovaVenda() {
   const subtotal = items.reduce((sum, it) =>
     sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0)
 
+  const comissaoPct = parsePercent(comissao)
+  const valorComissao = subtotal * (comissaoPct / 100)
+
   const hasOverDiscount = items.some(it => {
     if (!it.tablePrice || it.tablePrice === 0) return false
     const discount = (it.tablePrice - it.unitPrice) / it.tablePrice * 100
@@ -124,7 +141,7 @@ export default function NovaVenda() {
       paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || "",
       frete,
       frete_label: frete === 'CIF' ? 'CIF - Frete por conta do vendedor' : 'FOB - Frete por conta do comprador',
-      comissaoPct: parseFloat(comissao)||0,
+      comissaoPct: comissaoPct,
       notes: notes.trim(),
       needsApproval: hasOverDiscount,
     })
@@ -357,9 +374,9 @@ export default function NovaVenda() {
           style={{flex:1,background:'none',border:'none',outline:'none',fontSize:16,fontWeight:600,color:'var(--text)',fontFamily:'inherit'}}
         />
         <span style={{fontSize:14,color:'var(--text-dim)',fontWeight:600}}>%</span>
-        {parseFloat(comissao||0) > 0 && total > 0 && (
+        {comissaoPct > 0 && subtotal > 0 && (
           <span style={{fontSize:13,color:'var(--orange)',fontWeight:600}}>
-            {'= R$ ' + (total * parseFloat(comissao||0) / 100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+            {'= ' + fmtBRL(valorComissao)}
           </span>
         )}
       </div>
