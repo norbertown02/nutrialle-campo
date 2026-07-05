@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IconMail, IconLock, IconEye, IconEyeOff } from '@tabler/icons-react'
+import { IconMail, IconLock, IconEye, IconEyeOff, IconArrowRight, IconTruck, IconMapPin, IconClipboardCheck } from '@tabler/icons-react'
 import { useAuth } from '../lib/useAuth.jsx'
 import logo from '../assets/logo-nutrialle.jpg'
 
@@ -18,120 +18,113 @@ export default function Login() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      background: 'var(--bg)', padding: '24px 24px 48px',
-    }}>
+    <main className="login-page">
+      <section className="login-shell">
+        <div className="login-brand">
+          <div className="login-ring-2" />
 
-      {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
-        <img
-          src={logo}
-          alt="Nutrialle"
-          style={{ width: 90, height: 90, borderRadius: 22, objectFit: 'cover', marginBottom: 16, display: 'block', margin: '0 auto 16px' }}
-        />
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: 1 }}>
-          NUTRIALLE
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 4 }}>
-          Campo · Acesso do vendedor
-        </div>
-      </div>
-
-      {/* Card de login */}
-      <div style={{
-        width: '100%', maxWidth: 380,
-        background: 'var(--surface)', border: '1px solid var(--line)',
-        borderRadius: 18, padding: '28px 24px',
-      }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-          {/* E-mail */}
           <div>
-            <label style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, display: 'block', marginBottom: 6 }}>
-              E-mail
-            </label>
-            <div style={{ position: 'relative' }}>
-              <IconMail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)' }} />
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="seu@email.com.br"
-                required
-                autoComplete="email"
-                style={{
-                  width: '100%', padding: '11px 12px 11px 36px',
-                  background: 'var(--surface-2)', border: '1px solid var(--line)',
-                  borderRadius: 10, color: 'var(--text)', fontSize: 14,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
+            <img src={logo} alt="Nutrialle" className="login-logo" />
+
+            <h1>Sua carteira de campo, sempre à mão.</h1>
+
+            <p>
+              Cadastre fazendas, registre visitas e feche vendas direto do
+              celular, conectado em tempo real com a operação Nutrialle.
+            </p>
           </div>
 
-          {/* Senha */}
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-dim)', fontWeight: 500, display: 'block', marginBottom: 6 }}>
-              Senha
-            </label>
-            <div style={{ position: 'relative' }}>
-              <IconLock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)' }} />
-              <input
-                type={showPw ? 'text' : 'password'}
-                value={senha}
-                onChange={e => setSenha(e.target.value)}
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-                style={{
-                  width: '100%', padding: '11px 40px 11px 36px',
-                  background: 'var(--surface-2)', border: '1px solid var(--line)',
-                  borderRadius: 10, color: 'var(--text)', fontSize: 14,
-                  boxSizing: 'border-box',
-                }}
-              />
+          <div className="login-brand-footer">
+            <div className="login-mini">
+              <IconTruck size={18} />
+              <strong>Vendas</strong>
+              <span>Direto do campo</span>
+            </div>
+
+            <div className="login-mini">
+              <IconMapPin size={18} />
+              <strong>Fazendas</strong>
+              <span>Carteira completa</span>
+            </div>
+
+            <div className="login-mini">
+              <IconClipboardCheck size={18} />
+              <strong>Visitas</strong>
+              <span>Checklists</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="login-form-side">
+          <div className="login-form-inner">
+            <div className="login-form-head">
+              <div className="login-kicker">Bem-vindo de volta</div>
+              <h2>Acesso do vendedor</h2>
+              <p>Entre com seu e-mail e senha para continuar.</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="login-form">
+              <div>
+                <label>E-mail</label>
+                <div className="login-input-wrap">
+                  <IconMail size={16} />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="seu@email.com.br"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label>Senha</label>
+                <div className="login-input-wrap">
+                  <IconLock size={16} />
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    value={senha}
+                    onChange={e => setSenha(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    autoComplete="current-password"
+                    style={{ paddingRight: 44 }}
+                  />
+                  <button
+                    type="button"
+                    className="login-password-btn"
+                    onClick={() => setShowPw(p => !p)}
+                    aria-label={showPw ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {showPw ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {error && <div className="login-error">{error}</div>}
+
               <button
-                type="button"
-                onClick={() => setShowPw(p => !p)}
-                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-faint)', padding: 4 }}
+                type="submit"
+                className="login-submit"
+                disabled={loading || !email || !senha}
               >
-                {showPw ? <IconEyeOff size={15} /> : <IconEye size={15} />}
+                {loading ? 'Entrando...' : (
+                  <>
+                    Entrar
+                    <IconArrowRight size={16} />
+                  </>
+                )}
               </button>
+            </form>
+
+            <div className="login-note">
+              Nutrialle Campo v1.0 · Acesso restrito
             </div>
           </div>
-
-          {/* Erro */}
-          {error && (
-            <div style={{ background: 'var(--red-bg)', border: '1px solid rgba(217,83,79,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: 'var(--red)' }}>
-              {error}
-            </div>
-          )}
-
-          {/* Botão */}
-          <button
-            type="submit"
-            disabled={loading || !email || !senha}
-            style={{
-              width: '100%', padding: '13px',
-              background: loading || !email || !senha ? 'var(--surface-3)' : 'var(--orange)',
-              color: loading || !email || !senha ? 'var(--text-faint)' : '#1a0d00',
-              border: 'none', borderRadius: 12, cursor: loading ? 'default' : 'pointer',
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontWeight: 700, fontSize: 16, letterSpacing: 0.8,
-              textTransform: 'uppercase', marginTop: 4,
-              transition: 'background 0.2s',
-            }}
-          >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
-      </div>
-
-      <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 32, textAlign: 'center' }}>
-        Nutrialle Campo v1.0 · Acesso restrito
-      </p>
-    </div>
+        </div>
+      </section>
+    </main>
   )
 }
