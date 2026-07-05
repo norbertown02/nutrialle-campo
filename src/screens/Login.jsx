@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconMail, IconLock, IconEye, IconEyeOff, IconArrowRight, IconTruck, IconMapPin, IconClipboardCheck } from '@tabler/icons-react'
 import { useAuth } from '../lib/useAuth.jsx'
-import logo from '../assets/logo-nutrialle.jpg'
+import logo from '../assets/logo-nutrialle.png'
 
 export default function Login() {
   const navigate            = useNavigate()
