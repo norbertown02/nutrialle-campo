@@ -304,8 +304,8 @@ export default function Vendas() {
                 <div
                   key={s.id}
                   className="row-item"
-                  onClick={() => farm ? navigate('/clientes/' + farm.id) : null}
-                  style={{ cursor: farm ? 'pointer' : 'default' }}
+                  onClick={() => navigate('/vendas/' + s.id)}
+                  style={{ cursor: 'pointer' }}
                 >
                   <div style={{
                     display: 'flex', justifyContent: 'space-between',

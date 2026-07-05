@@ -31,7 +31,6 @@ import EditarCotacao from './screens/EditarCotacao'
 import Precos from './screens/Precos'
 import Mercado from './screens/Mercado'
 
-import Dados from './screens/Dados'
 import DashboardVendas from './screens/DashboardVendas'
 import FazendaDados from './screens/FazendaDados'
 
@@ -78,7 +77,6 @@ function AppContent() {
 
           <Route path="/dashboard-vendas" element={<DashboardVendas />} />
 
-          <Route path="/dados" element={<Dados />} />
           <Route path="/fazenda-dados/:id" element={<FazendaDados />} />
         </Routes>
       </div>

@@ -124,6 +124,29 @@ function pertenceAoVendedor(row, farmsById, userId) {
   return true
 }
 
+function smoothPath(points) {
+  if (!points.length) return ''
+  if (points.length === 1) return `M ${points[0][0]} ${points[0][1]}`
+
+  let d = `M ${points[0][0]} ${points[0][1]}`
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i === 0 ? i : i - 1]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[i + 2 < points.length ? i + 2 : i + 1]
+
+    const cp1x = p1[0] + (p2[0] - p0[0]) / 6
+    const cp1y = p1[1] + (p2[1] - p0[1]) / 6
+    const cp2x = p2[0] - (p3[0] - p1[0]) / 6
+    const cp2y = p2[1] - (p3[1] - p1[1]) / 6
+
+    d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2[0]} ${p2[1]}`
+  }
+
+  return d
+}
+
 function MiniLineChart({ data, dataPrev }) {
   const width = 620
   const height = 180
@@ -137,19 +160,28 @@ function MiniLineChart({ data, dataPrev }) {
   const max = Math.max(...valores, 1)
 
   function pontos(lista) {
-    if (lista.length <= 1) return ''
+    if (lista.length <= 1) return []
 
-    return lista
-      .map((d, i) => {
-        const x = padding + (i / (lista.length - 1)) * (width - padding * 2)
-        const y = height - padding - (d.value / max) * (height - padding * 2)
-        return `${x},${y}`
-      })
-      .join(' ')
+    return lista.map((d, i) => {
+      const x = padding + (i / (lista.length - 1)) * (width - padding * 2)
+      const y = height - padding - (d.value / max) * (height - padding * 2)
+      return [x, y]
+    })
   }
+
+  const pontosAtual = pontos(data)
+  const pontosPrev = pontos(dataPrev)
+  const ultimo = pontosAtual[pontosAtual.length - 1]
 
   return (
     <svg className="dash-line-chart" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="dashStrokeGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#C8500F" />
+          <stop offset="100%" stopColor="#FF8A3D" />
+        </linearGradient>
+      </defs>
+
       {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
         const y = padding + p * (height - padding * 2)
 
@@ -165,19 +197,49 @@ function MiniLineChart({ data, dataPrev }) {
         )
       })}
 
-      <polyline
-        points={pontos(dataPrev)}
+      <path
+        d={smoothPath(pontosPrev)}
         fill="none"
         className="dash-line-prev"
       />
 
-      <polyline
-        points={pontos(data)}
+      <path
+        d={smoothPath(pontosAtual)}
         fill="none"
         className="dash-line-current"
       />
+
+      {ultimo && (
+        <circle
+          cx={ultimo[0]}
+          cy={ultimo[1]}
+          r={5}
+          className="dash-line-current-dot"
+        />
+      )}
     </svg>
   )
+}
+
+const DONUT_COLORS = ['#E87722', '#F3922E', '#C65300', '#141414', '#A9A29A']
+
+function conicGradientReal(items, soma) {
+  if (soma <= 0) {
+    return `conic-gradient(${DONUT_COLORS[0]} 0 100%)`
+  }
+
+  let acumulado = 0
+
+  const stops = items.map((item, index) => {
+    const inicio = acumulado
+    const valor = Number(item.value || 0)
+    acumulado += (valor / soma) * 100
+
+    const color = DONUT_COLORS[index % DONUT_COLORS.length]
+    return `${color} ${inicio}% ${acumulado}%`
+  })
+
+  return `conic-gradient(${stops.join(', ')})`
 }
 
 function DonutSimples({ items, total }) {
@@ -193,7 +255,7 @@ function DonutSimples({ items, total }) {
 
   return (
     <div className="dash-donut-wrap">
-      <div className="dash-donut">
+      <div className="dash-donut" style={{ background: conicGradientReal(items, soma) }}>
         <div className="dash-donut-center">
           <strong>{moeda(total)}</strong>
           <span>Total</span>
@@ -218,6 +280,12 @@ function DonutSimples({ items, total }) {
 }
 
 function FunilConversao({ emitidas, enviadas, negociacao, convertidas }) {
+  const base = Math.max(emitidas, 1)
+  const larguraEmitidas = 100
+  const larguraEnviadas = Math.max(4, Math.min(100, (enviadas / base) * 100))
+  const larguraNegociacao = Math.max(4, Math.min(100, (negociacao / base) * 100))
+  const larguraConvertidas = Math.max(4, Math.min(100, (convertidas / base) * 100))
+
   return (
     <div className="dash-funnel">
       <div className="dash-funnel-info">
@@ -243,10 +311,10 @@ function FunilConversao({ emitidas, enviadas, negociacao, convertidas }) {
       </div>
 
       <div className="dash-funnel-bars">
-        <div className="dash-funnel-bar dash-funnel-1" />
-        <div className="dash-funnel-bar dash-funnel-2" />
-        <div className="dash-funnel-bar dash-funnel-3" />
-        <div className="dash-funnel-bar dash-funnel-4" />
+        <div className="dash-funnel-bar dash-funnel-1" style={{ width: `${larguraEmitidas}%` }} />
+        <div className="dash-funnel-bar dash-funnel-2" style={{ width: `${larguraEnviadas}%` }} />
+        <div className="dash-funnel-bar dash-funnel-3" style={{ width: `${larguraNegociacao}%` }} />
+        <div className="dash-funnel-bar dash-funnel-4" style={{ width: `${larguraConvertidas}%` }} />
       </div>
     </div>
   )
