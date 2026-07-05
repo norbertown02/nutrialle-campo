@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   IconArrowLeft, IconCheck, IconPlus, IconTrash,
@@ -65,10 +65,16 @@ export default function NovaVenda() {
   const [farmId, setFarmId] = useState(preselectedFarmId || '')
   const [saleDate, setSaleDate] = useState(todayISO())
   const [items, setItems] = useState([])
-  const [paymentTermId, setPaymentTermId] = useState('pt1')
+  const [paymentTermId, setPaymentTermId] = useState('')
   const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
   const [comissao, setComissao] = useState('')
+
+  useEffect(() => {
+    if (!paymentTerms.length) return
+    const aindaValido = paymentTerms.some(t => t.id === paymentTermId)
+    if (!aindaValido) setPaymentTermId(paymentTerms[0].id)
+  }, [paymentTerms])
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
 
@@ -119,7 +125,7 @@ export default function NovaVenda() {
     return discount > MAX_DISCOUNT_PERCENT
   })
 
-  const isValid = farmId && items.length > 0 && items.every(it =>
+  const isValid = farmId && items.length > 0 && !!paymentTermId && items.every(it =>
     it.quantity > 0 && it.unitPrice >= 0
   )
 
