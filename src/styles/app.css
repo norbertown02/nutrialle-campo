@@ -3,7 +3,9 @@
 .phone {
   width: 100%;
   max-width: 430px;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* viewport dinamico no mobile - evita o container crescer alem da tela visivel */
+  overflow: hidden; /* so o .screen rola por dentro; sem isso o body inteiro (appbar incluso) rolava junto */
   background: var(--bg);
   margin: 0 auto;
   position: relative;
