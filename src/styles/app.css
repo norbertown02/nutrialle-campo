@@ -63,7 +63,9 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain; /* impede que o "estouro" do scroll no fim do conteudo vaze para o body e arraste o appbar */
   position: relative;
+  -webkit-overflow-scrolling: touch;
 }
 
 .screen::-webkit-scrollbar {

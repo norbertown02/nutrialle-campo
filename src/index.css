@@ -28,5 +28,15 @@
   --blue:          #4F46E5;
 }
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; background:var(--bg); color:var(--text); font-family:'Inter',system-ui,-apple-system,sans-serif; }
-#root { min-height:100vh; }
+html, body {
+  height:100%;
+  overflow:hidden; /* impede que o body inteiro role/arraste em elastic bounce no mobile - so .screen deve rolar */
+  overscroll-behavior:none;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+}
+#root {
+  height:100%;
+  overflow:hidden; /* mesmo motivo acima - sem isso o #root podia crescer alem da viewport e arrastar o appbar junto */
+}
