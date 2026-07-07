@@ -606,12 +606,12 @@ export default function FichaCliente() {
                 <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                   {jaTemAcesso
                     ? 'O cliente já pode entrar no Nutrialle Conecta.'
-                    : 'Cliente ainda não acessa o Nutrialle Conecta.'}
+                    : 'Assim que o cadastro tiver um e-mail, o acesso é criado sozinho.'}
                 </div>
               </div>
             </div>
             <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={abrirAcesso}>
-              <IconLock size={16} /> {jaTemAcesso ? 'Reenviar link de acesso' : 'Criar acesso'}
+              <IconLock size={16} /> Gerar link para enviar
             </button>
           </>
         ) : null}
