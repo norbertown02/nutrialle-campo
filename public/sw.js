@@ -1,4 +1,4 @@
-const CACHE = 'nutrialle-v9'
+const CACHE = 'nutrialle-v10'
 const STATIC = [
   '/',
   '/index.html',
