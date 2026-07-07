@@ -4,9 +4,11 @@ import {
   IconArrowLeft, IconPhone, IconBrandWhatsapp, IconMapPin,
   IconEdit, IconTrash, IconClipboardList, IconCalendarPlus,
   IconReceipt, IconUser, IconBuildingWarehouse,
-  IconChecklist, IconRoute, IconCash, IconChartBar, IconDownload
+  IconChecklist, IconRoute, IconCash, IconChartBar, IconDownload,
+  IconLock, IconCopy
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
+import { criarAcessoCliente } from '../lib/clienteAcesso'
 import { useVisits } from '../lib/useVisits'
 import { useChecklists } from '../lib/useChecklists'
 import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
@@ -164,6 +166,15 @@ export default function FichaCliente() {
   const [editando, setEditando] = useState(false)
   const [editForm, setEditForm] = useState({})
 
+  const [acesso, setAcesso] = useState({
+    aberto: false,
+    email: farm?.email || '',
+    loading: false,
+    error: null,
+    resultado: null,
+    copiado: false,
+  })
+
   if (!farm) {
     return (
       <div className="content">
@@ -274,6 +285,42 @@ export default function FichaCliente() {
     } else {
       alert('Erro ao salvar: ' + error.message)
     }
+  }
+
+  const jaTemAcesso = !!farm.authUserId
+
+  function abrirAcesso() {
+    setAcesso(a => ({ ...a, aberto: true, error: null, resultado: null, email: a.email || farm.email || '' }))
+  }
+
+  function fecharAcesso() {
+    setAcesso(a => ({ ...a, aberto: false, error: null }))
+  }
+
+  async function enviarCriarAcesso() {
+    const email = (acesso.email || '').trim()
+    if (!email || !email.includes('@')) {
+      setAcesso(a => ({ ...a, error: 'Informe um e-mail válido.' }))
+      return
+    }
+    setAcesso(a => ({ ...a, loading: true, error: null }))
+    try {
+      const resultado = await criarAcessoCliente({ farmId: farm.id, email })
+      setAcesso(a => ({ ...a, loading: false, resultado }))
+      if (email !== farm.email) {
+        updateFarm(farm.id, { email })
+      }
+    } catch (err) {
+      setAcesso(a => ({ ...a, loading: false, error: err.message || 'Erro ao criar acesso.' }))
+    }
+  }
+
+  function copiarLink() {
+    if (!acesso.resultado?.link) return
+    navigator.clipboard.writeText(acesso.resultado.link).then(() => {
+      setAcesso(a => ({ ...a, copiado: true }))
+      setTimeout(() => setAcesso(a => ({ ...a, copiado: false })), 2000)
+    })
   }
 
   if (editando) return (
@@ -532,6 +579,124 @@ export default function FichaCliente() {
               <IconBrandWhatsapp size={16} /> WhatsApp
             </a>
           </div>
+        ) : null}
+      </div>
+
+      <div className="section-label">Acesso ao Conecta</div>
+      <div className="card">
+        {!acesso.aberto && !acesso.resultado ? (
+          <>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 11,
+                background: jaTemAcesso ? 'rgba(91,174,74,0.12)' : 'var(--surface-2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: jaTemAcesso ? '#5BAE4A' : 'var(--text-dim)'
+              }}>
+                <IconLock size={18} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>
+                  {jaTemAcesso ? 'Acesso já configurado' : 'Sem acesso ao portal'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                  {jaTemAcesso
+                    ? 'O cliente já pode entrar no Nutrialle Conecta.'
+                    : 'Cliente ainda não acessa o Nutrialle Conecta.'}
+                </div>
+              </div>
+            </div>
+            <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={abrirAcesso}>
+              <IconLock size={16} /> {jaTemAcesso ? 'Reenviar link de acesso' : 'Criar acesso'}
+            </button>
+          </>
+        ) : null}
+
+        {acesso.aberto && !acesso.resultado ? (
+          <>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>
+              E-mail do cliente
+            </label>
+            <input
+              type="email"
+              value={acesso.email}
+              onChange={e => setAcesso(a => ({ ...a, email: e.target.value }))}
+              placeholder="email@exemplo.com"
+            />
+            {acesso.error ? (
+              <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{acesso.error}</div>
+            ) : null}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+              <button className="btn btn-ghost" onClick={fecharAcesso} disabled={acesso.loading}>
+                Cancelar
+              </button>
+              <button className="btn btn-primary" onClick={enviarCriarAcesso} disabled={acesso.loading}>
+                {acesso.loading ? 'Gerando...' : 'Gerar link'}
+              </button>
+            </div>
+          </>
+        ) : null}
+
+        {acesso.resultado ? (
+          <>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>
+              Link {acesso.resultado.reused ? 'de redefinição' : 'de primeiro acesso'} gerado para {acesso.resultado.email}. Envie para o cliente:
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: 'var(--text-faint)',
+              background: 'var(--surface-2)',
+              borderRadius: 8,
+              padding: '8px 10px',
+              wordBreak: 'break-all',
+              marginBottom: 10
+            }}>
+              {acesso.resultado.link}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: farm.phone ? '1fr 1fr' : '1fr', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={copiarLink}>
+                <IconCopy size={16} /> {acesso.copiado ? 'Copiado!' : 'Copiar link'}
+              </button>
+              {farm.phone ? (
+                <a
+                  href={'https://wa.me/55' + onlyDigits(farm.phone) + '?text=' + encodeURIComponent(
+                    'Olá! Aqui está o link para você acessar o Nutrialle Conecta e acompanhar seus pedidos e planos: ' + acesso.resultado.link
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: '#1e4a2e',
+                    color: '#5BAE4A',
+                    textDecoration: 'none',
+                    borderRadius: 10,
+                    padding: '10px',
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    letterSpacing: 0.6,
+                    textTransform: 'uppercase',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <IconBrandWhatsapp size={16} /> Enviar
+                </a>
+              ) : null}
+            </div>
+            <button
+              className="btn btn-ghost"
+              style={{ width: '100%', marginTop: 8, fontSize: 12 }}
+              onClick={() => setAcesso(a => ({ ...a, aberto: false, resultado: null }))}
+            >
+              Fechar
+            </button>
+          </>
         ) : null}
       </div>
 

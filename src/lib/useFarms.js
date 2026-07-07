@@ -13,6 +13,7 @@ function fromDB(row) {
     ownerRole:    row.owner_role,
     phone:        row.phone,
     email:        row.email,
+    authUserId:   row.auth_user_id,
 
     city:         row.city,
     state:        row.state,
