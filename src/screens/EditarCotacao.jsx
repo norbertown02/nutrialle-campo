@@ -37,14 +37,24 @@ export default function EditarCotacao() {
       supabase.from('products').select('*').eq('active', true).order('name'),
     ])
     const q = rQuote.data
+    const prods = rProducts.data || []
     if (q) {
       setFarmSel(q.farm_id)
-      setItems(q.items || [])
+      // Itens de cotações antigas podem não ter bag_kg/price_kg salvos.
+      // Preenchemos a partir do cadastro do produto para manter a
+      // precificação sempre em R$/kg.
+      setItems((q.items || []).map(it => {
+        if (it.bag_kg && it.price_kg) return it
+        const produto = prods.find(p => p.id === it.product_id)
+        const bagKg = it.bag_kg || produto?.bag_kg || 25
+        const priceKg = it.price_kg || produto?.price_kg || (bagKg ? Number(it.unit_price || 0) / bagKg : 0)
+        return calcItem({ ...it, bag_kg: bagKg, price_kg: priceKg })
+      }))
       setPagamento(q.payment_term || 'a_vista')
       setNotes(q.notes || '')
     }
     setFarms(rFarms.data || [])
-    setProducts(rProducts.data || [])
+    setProducts(prods)
     setLoading(false)
   }
 
@@ -52,30 +62,40 @@ export default function EditarCotacao() {
     p.name?.toLowerCase().includes(buscaProd.toLowerCase())
   ).slice(0, 10)
 
+  // A precificação é sempre feita em R$/kg. O preço do saco é sempre
+  // derivado da fórmula: R$/kg * kg do saco. Nunca editamos unit_price
+  // diretamente — ele é sempre recalculado a partir de price_kg e bag_kg.
+  function calcItem(it) {
+    const bagKg = Number(it.bag_kg || 0)
+    const priceKg = Number(it.price_kg || 0)
+    const qty = Number(it.quantity || 0)
+    const disc = Number(it.discount || 0)
+    const unitPrice = priceKg * bagKg
+    const subtotal = unitPrice * qty * (1 - disc / 100)
+    return { ...it, unit_price: unitPrice, subtotal }
+  }
+
   function addItem(prod) {
     if (items.find(i => i.product_id === prod.id)) return
-    setItems(prev => [...prev, {
+    const bagKg = prod.bag_kg || 25
+    const priceKg = prod.price_kg || (prod.price && bagKg ? prod.price / bagKg : 0)
+    setItems(prev => [...prev, calcItem({
       product_id: prod.id,
       product_name: prod.name,
-      unit: prod.unit || 'kg',
-      unit_price: prod.price || 0,
+      unit: prod.unit || 'saco',
+      bag_kg: bagKg,
+      price_kg: priceKg,
       max_discount: prod.max_discount || 10,
       quantity: 1,
       discount: 0,
-      subtotal: prod.price || 0,
-    }])
+    })])
     setBuscaProd('')
   }
 
   function updateItem(idx, field, value) {
     setItems(prev => prev.map((it, i) => {
       if (i !== idx) return it
-      const updated = { ...it, [field]: value }
-      const price = Number(updated.unit_price)
-      const qty = Number(updated.quantity)
-      const disc = Number(updated.discount)
-      updated.subtotal = price * qty * (1 - disc / 100)
-      return updated
+      return calcItem({ ...it, [field]: value })
     }))
   }
 
@@ -94,6 +114,8 @@ export default function EditarCotacao() {
         product_name: it.product_name,
         unit: it.unit,
         unit_price: Number(it.unit_price),
+        bag_kg: it.bag_kg || 25,
+        price_kg: it.price_kg || 0,
         quantity: Number(it.quantity),
         discount: Number(it.discount),
         subtotal: it.subtotal,
@@ -145,7 +167,7 @@ export default function EditarCotacao() {
                     <div style={{fontSize:11,color:'var(--text-faint)'}}>{p.unit || 'kg'}</div>
                   </div>
                   <div style={{textAlign:'right'}}>
-                    <div style={{fontSize:13,fontWeight:600,color:'var(--orange)'}}>R$ {fmt(p.price)}</div>
+                    <div style={{fontSize:13,fontWeight:600,color:'var(--orange)'}}>R$ {fmt(p.price_kg)}/kg</div>
                     <div style={{fontSize:10,color:'var(--text-faint)'}}>desc. máx {p.max_discount || 10}%</div>
                   </div>
                 </div>
@@ -175,9 +197,9 @@ export default function EditarCotacao() {
                       style={{width:'100%',padding:'6px 8px',fontSize:13}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:10,color:'var(--text-faint)',marginBottom:4}}>Preço unit.</div>
-                    <input type="number" value={it.unit_price} min="0" step="0.01"
-                      onChange={e => updateItem(idx, 'unit_price', e.target.value)}
+                    <div style={{fontSize:10,color:'var(--text-faint)',marginBottom:4}}>R$/kg</div>
+                    <input type="number" value={it.price_kg} min="0" step="0.01"
+                      onChange={e => updateItem(idx, 'price_kg', e.target.value)}
                       style={{width:'100%',padding:'6px 8px',fontSize:13}}/>
                   </div>
                   <div>
@@ -189,8 +211,13 @@ export default function EditarCotacao() {
                       style={{width:'100%',padding:'6px 8px',fontSize:13,borderColor: Number(it.discount)>10 ? 'var(--amber)' : undefined}}/>
                   </div>
                 </div>
-                <div style={{textAlign:'right',marginTop:8,fontSize:13,fontWeight:600,color:'var(--orange)'}}>
-                  R$ {fmt(it.subtotal)}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
+                  <div style={{fontSize:11,color:'var(--text-faint)'}}>
+                    {(Number(it.quantity||0) * Number(it.bag_kg||0)).toLocaleString('pt-BR')} kg total · R$ {fmt(it.unit_price)}/saco ({it.bag_kg}kg)
+                  </div>
+                  <div style={{fontSize:13,fontWeight:600,color:'var(--orange)'}}>
+                    R$ {fmt(it.subtotal)}
+                  </div>
                 </div>
               </div>
             ))}
