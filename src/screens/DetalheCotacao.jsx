@@ -94,6 +94,7 @@ export default function DetalheCotacao() {
 
   const [quote, setQuote] = useState(null)
   const [farm, setFarm] = useState(null)
+  const [produtosPorId, setProdutosPorId] = useState({})
   const [loading, setLoading] = useState(true)
   const [atualizando, setAtualizando] = useState(false)
 
@@ -120,6 +121,21 @@ export default function DetalheCotacao() {
         .single()
 
       setFarm(f)
+
+      // Cotações antigas podem ter itens salvos sem bag_kg/price_kg.
+      // Buscamos os produtos para preencher esses dados na hora de montar o PDF.
+      const productIds = [...new Set((q.items || []).map(it => it.product_id).filter(Boolean))]
+
+      if (productIds.length > 0) {
+        const { data: prods } = await supabase
+          .from('products')
+          .select('id,bag_kg,price_kg')
+          .in('id', productIds)
+
+        const mapa = {}
+        for (const p of prods || []) mapa[p.id] = p
+        setProdutosPorId(mapa)
+      }
     }
 
     setLoading(false)
@@ -340,15 +356,18 @@ export default function DetalheCotacao() {
         'Subtotal',
       ]],
       body: items.map(item => {
+        const produto = produtosPorId[item.product_id]
         const quantidade = Number(item.quantity || 0)
-        const bagKg = Number(item.bag_kg || 25)
+        const bagKg = Number(item.bag_kg || produto?.bag_kg || 25)
         const totalKg = quantidade * bagKg
         const valorSaco = Number(item.unit_price || 0)
         const valorKg = item.price_kg
           ? Number(item.price_kg)
-          : bagKg > 0
-            ? valorSaco / bagKg
-            : 0
+          : produto?.price_kg
+            ? Number(produto.price_kg)
+            : bagKg > 0
+              ? valorSaco / bagKg
+              : 0
 
         return [
           item.product_name || '—',
