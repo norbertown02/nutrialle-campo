@@ -11,6 +11,12 @@ const PAGAMENTOS = [
   {value:'30_60_90',   label:'30/60/90 dias'},
 ]
 
+const FRETES = [
+  {value:'CIF', label:'CIF', desc:'Frete por conta do vendedor'},
+  {value:'FOB', label:'FOB', desc:'Frete por conta do comprador'},
+  {value:'EXW', label:'EXW', desc:'Ex Works - retirada na fábrica pelo comprador'},
+]
+
 function fmt(n) { return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) }
 
 export default function EditarCotacao() {
@@ -23,6 +29,7 @@ export default function EditarCotacao() {
   const [buscaProd, setBuscaProd] = useState('')
   const [items, setItems] = useState([])
   const [pagamento, setPagamento] = useState('a_vista')
+  const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -51,6 +58,7 @@ export default function EditarCotacao() {
         return calcItem({ ...it, bag_kg: bagKg, price_kg: priceKg })
       }))
       setPagamento(q.payment_term || 'a_vista')
+      setFrete(q.frete || 'CIF')
       setNotes(q.notes || '')
     }
     setFarms(rFarms.data || [])
@@ -122,6 +130,8 @@ export default function EditarCotacao() {
       })),
       payment_term: pagamento,
       payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
+      frete,
+      frete_label: (() => { const f = FRETES.find(f => f.value === frete); return f ? `${f.label} - ${f.desc}` : frete })(),
       total,
       notes,
     }
@@ -229,6 +239,22 @@ export default function EditarCotacao() {
         <select value={pagamento} onChange={e=>setPagamento(e.target.value)} style={{width:'100%',marginBottom:16}}>
           {PAGAMENTOS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
+
+        {/* Frete */}
+        <div style={{fontWeight:600,marginBottom:8}}>Modalidade de frete</div>
+        <div style={{display:'flex',gap:10,marginBottom:16}}>
+          {FRETES.map(f=>(
+            <button key={f.value} onClick={()=>setFrete(f.value)} type="button"
+              style={{flex:1,padding:'10px 8px',borderRadius:10,cursor:'pointer',
+                border:'2px solid '+(frete===f.value?'var(--orange)':'var(--line)'),
+                background:frete===f.value?'var(--orange-bg)':'var(--surface-2)'}}>
+              <div style={{fontWeight:700,fontSize:14,color:frete===f.value?'var(--orange)':'var(--text)'}}>{f.label}</div>
+              <div style={{fontSize:10,color:'var(--text-faint)',marginTop:2}}>
+                {f.desc}
+              </div>
+            </button>
+          ))}
+        </div>
 
         {/* Observações */}
         <div style={{fontWeight:600,marginBottom:8}}>Observações</div>
