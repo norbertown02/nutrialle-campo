@@ -1,4 +1,4 @@
-const CACHE = 'nutrialle-v10'
+const CACHE = 'nutrialle-v11'
 const STATIC = [
   '/',
   '/index.html',
@@ -25,7 +25,21 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
   if (e.request.url.includes('supabase.co')) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)))
+    // Rede primeiro; se der certo, guarda a resposta no cache para poder
+    // servir essa mesma consulta offline depois. Se a rede falhar, usa
+    // o que tiver em cache (a fonte principal de dados offline é o
+    // IndexedDB do app, isso aqui é só uma camada extra de segurança).
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          if (res.ok) {
+            const resClone = res.clone()
+            caches.open(CACHE).then(c => c.put(e.request, resClone))
+          }
+          return res
+        })
+        .catch(() => caches.match(e.request))
+    )
     return
   }
   e.respondWith(

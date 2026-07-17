@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
-import { IconPlus, IconFileText, IconClock } from '@tabler/icons-react'
+import { useFarms } from '../lib/useFarms'
+import { db } from '../lib/db'
+import { IconPlus, IconFileText, IconClock, IconCloudUpload } from '@tabler/icons-react'
 
 const STATUS_CFG = {
   rascunho:   { label: 'Rascunho',   color: 'var(--text-faint)', bg: 'var(--surface-2)' },
@@ -17,8 +19,8 @@ function fmtK(n) { if(n>=1000000) return `R$ ${(n/1000000).toFixed(1)}M`; if(n>=
 export default function Prospeccao() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { farms } = useFarms()
   const [quotes, setQuotes] = useState([])
-  const [farms, setFarms] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('todos')
 
@@ -26,13 +28,28 @@ export default function Prospeccao() {
 
   async function carregar() {
     setLoading(true)
-    const [rQuotes, rFarms] = await Promise.all([
-      supabase.from('quotes').select('*').eq('seller_id', user.id).order('created_at', {ascending: false}),
-      supabase.from('farms').select('id,name,segment,prospect'),
-    ])
+    const { data, error } = await supabase
+      .from('quotes')
+      .select('*')
+      .eq('seller_id', user.id)
+      .order('created_at', {ascending: false})
 
-    setQuotes(rQuotes.data || [])
-    setFarms(rFarms.data || [])
+    if (!error && data) {
+      // Mantém visíveis cotações criadas/editadas offline que ainda não
+      // confirmaram no servidor, igual fazemos com fazendas.
+      const pendentes = await db.outbox.where('entity').equals('quote').toArray()
+      const idsPendentes = new Set(pendentes.map(p => p.entity_id))
+      const cacheAtual = await db.quotes_cache.toArray()
+      const somenteLocais = cacheAtual.filter(q => idsPendentes.has(q.id) && !data.some(d => d.id === q.id))
+
+      const merged = [...somenteLocais.map(q => ({ ...q, _pending: true })), ...data]
+      await db.quotes_cache.clear()
+      await db.quotes_cache.bulkPut(merged)
+      setQuotes(merged)
+    } else {
+      const cached = await db.quotes_cache.toArray()
+      setQuotes(cached.filter(q => q.seller_id === user.id))
+    }
     setLoading(false)
   }
 
@@ -105,9 +122,16 @@ export default function Prospeccao() {
                       {farm?.segment} · {farm?.prospect ? 'Prospecto' : 'Cliente ativo'}
                     </div>
                   </div>
-                  <span style={{background:cfg.bg,color:cfg.color,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:600,flexShrink:0}}>
-                    {cfg.label}
-                  </span>
+                  <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4,flexShrink:0}}>
+                    {q._pending && (
+                      <span style={{background:'var(--amber-bg)',color:'var(--amber)',borderRadius:20,padding:'2px 8px',fontSize:10,fontWeight:600,display:'flex',alignItems:'center',gap:3}}>
+                        <IconCloudUpload size={10}/> sincronizando
+                      </span>
+                    )}
+                    <span style={{background:cfg.bg,color:cfg.color,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:600}}>
+                      {cfg.label}
+                    </span>
+                  </div>
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>

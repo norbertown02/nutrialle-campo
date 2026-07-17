@@ -1,23 +1,13 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { IconSearch, IconTag } from '@tabler/icons-react'
+import { useState } from 'react'
+import { useProducts } from '../lib/useProducts'
+import { IconSearch, IconTag, IconCloudOff } from '@tabler/icons-react'
 
 function fmt(n) { return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) }
 
 export default function Precos() {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { products, loading, offline } = useProducts()
   const [busca, setBusca] = useState('')
   const [segmento, setSegmento] = useState('todos')
-
-  useEffect(() => { carregar() }, [])
-
-  async function carregar() {
-    setLoading(true)
-    const { data } = await supabase.from('products').select('*').eq('active', true).order('name')
-    setProducts(data || [])
-    setLoading(false)
-  }
 
   const filtrados = products.filter(p =>
     p.name?.toLowerCase().includes(busca.toLowerCase()) &&
@@ -31,6 +21,12 @@ export default function Precos() {
           <div style={{fontSize:18,fontWeight:700}}>Tabela de Preços</div>
           <div style={{fontSize:12,color:'var(--text-faint)'}}>{products.length} produtos ativos</div>
         </div>
+
+        {offline && (
+          <div style={{display:'flex',alignItems:'center',gap:6,background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
+            <IconCloudOff size={14}/> Sem conexão · mostrando a última tabela salva no aparelho
+          </div>
+        )}
 
         <div style={{display:'flex',gap:8,marginBottom:12}}>
           {['todos','leite','corte','suinos'].map(s=>(

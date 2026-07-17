@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
+import { db } from '../lib/db'
 import {
   IconFileText,
   IconCheck,
@@ -105,21 +106,27 @@ export default function DetalheCotacao() {
   async function carregar() {
     setLoading(true)
 
-    const { data: q } = await supabase
-      .from('quotes')
-      .select('*')
-      .eq('id', id)
-      .single()
+    // Tenta o Supabase primeiro; se falhar (offline) ou a cotação ainda
+    // não tiver sincronizado, cai para o que estiver salvo no aparelho.
+    let q = null
+    const { data: qNet, error: qErr } = await supabase.from('quotes').select('*').eq('id', id).single()
+    if (!qErr && qNet) {
+      q = qNet
+      await db.quotes_cache.put({ ...qNet, _pending: false })
+    } else {
+      q = await db.quotes_cache.get(id)
+    }
 
     if (q) {
       setQuote(q)
 
-      const { data: f } = await supabase
-        .from('farms')
-        .select('*')
-        .eq('id', q.farm_id)
-        .single()
-
+      let f = null
+      const { data: fNet, error: fErr } = await supabase.from('farms').select('*').eq('id', q.farm_id).single()
+      if (!fErr && fNet) {
+        f = fNet
+      } else {
+        f = await db.farms_cache.get(q.farm_id)
+      }
       setFarm(f)
 
       // Cotações antigas podem ter itens salvos sem bag_kg/price_kg.
@@ -127,10 +134,14 @@ export default function DetalheCotacao() {
       const productIds = [...new Set((q.items || []).map(it => it.product_id).filter(Boolean))]
 
       if (productIds.length > 0) {
-        const { data: prods } = await supabase
+        const { data: prodsNet, error: prodErr } = await supabase
           .from('products')
           .select('id,bag_kg,price_kg')
           .in('id', productIds)
+
+        const prods = !prodErr && prodsNet
+          ? prodsNet
+          : (await db.products_cache.bulkGet(productIds)).filter(Boolean)
 
         const mapa = {}
         for (const p of prods || []) mapa[p.id] = p
@@ -650,6 +661,22 @@ export default function DetalheCotacao() {
           <div style={{ fontWeight: 700, fontSize: 16, flex: 1 }}>
             Cotação
           </div>
+
+          {quote._pending && (
+            <span
+              style={{
+                background: 'var(--amber-bg)',
+                color: 'var(--amber)',
+                borderRadius: 20,
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: 600,
+                marginRight: 6,
+              }}
+            >
+              sincronizando
+            </span>
+          )}
 
           <span
             style={{

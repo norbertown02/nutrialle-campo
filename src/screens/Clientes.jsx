@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   IconSearch, IconUserPlus, IconMapPin,
-  IconUsersGroup, IconCheck, IconClock
+  IconUsersGroup, IconCheck, IconClock, IconCloudUpload
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useConfig } from '../lib/useConfig'
@@ -191,6 +191,11 @@ export default function Clientes() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <span className="pill pill-silver">{SEGMENTS[f.segment]}</span>
+                    {f.pending && (
+                      <span className="pill pill-amber">
+                        <IconCloudUpload size={11} /> sincronizando
+                      </span>
+                    )}
                     {f.hasChecklist ? (
                       <span className="pill pill-green">
                         <IconCheck size={11} /> avaliada

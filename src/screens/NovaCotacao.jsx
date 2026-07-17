@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
-import { IconPlus, IconTrash, IconChevronDown, IconSearch } from '@tabler/icons-react'
+import { useFarms } from '../lib/useFarms'
+import { useProducts } from '../lib/useProducts'
+import { useOnlineStatus } from '../lib/useOnlineStatus'
+import { db } from '../lib/db'
+import { enqueue } from '../lib/syncEngine'
+import { IconPlus, IconTrash, IconChevronDown, IconSearch, IconCloudOff } from '@tabler/icons-react'
 
 const PAGAMENTOS = [
   {value:'a_vista',    label:'À vista'},
@@ -23,10 +27,10 @@ export default function NovaCotacao() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const { user } = useAuth()
+  const online = useOnlineStatus()
 
-
-  const [farms, setFarms] = useState([])
-  const [products, setProducts] = useState([])
+  const { farms } = useFarms()
+  const { products, offline: produtosOffline } = useProducts()
   const [farmSel, setFarmSel] = useState(params.get('farm_id') || '')
   const [buscaFarm, setBuscaFarm] = useState('')
   const [buscaProd, setBuscaProd] = useState('')
@@ -37,20 +41,12 @@ export default function NovaCotacao() {
   const [salvando, setSalvando] = useState(false)
   const [stepFarm, setStepFarm] = useState(!params.get('farm_id'))
 
-  useEffect(() => { carregar() }, [])
-
-  async function carregar() {
-    const [rFarms, rProducts] = await Promise.all([
-      supabase.from('farms').select('id,name,segment,prospect,city,state').order('name'),
-      supabase.from('products').select('*').eq('active', true).order('name'),
-    ])
-    setFarms(rFarms.data || [])
-    setProducts(rProducts.data || [])
+  useEffect(() => {
     if (params.get('farm_id')) {
-      const f = rFarms.data?.find(f => f.id === params.get('farm_id'))
+      const f = farms.find(f => f.id === params.get('farm_id'))
       if (f) setBuscaFarm(f.name)
     }
-  }
+  }, [farms])
 
   const farmsFiltradas = farms.filter(f =>
     f.name?.toLowerCase().includes(buscaFarm.toLowerCase()) ||
@@ -107,9 +103,12 @@ export default function NovaCotacao() {
   const validUntil = new Date(Date.now() + 10*86400000).toISOString().split('T')[0]
 
   async function salvar(status = 'rascunho') {
-    if (!farmSel || items.length === 0) return
+    if (!farmSel || items.length === 0 || salvando) return
     setSalvando(true)
+
+    const id = crypto.randomUUID()
     const payload = {
+      id,
       farm_id: farmSel,
       seller_id: user?.id,
       items: items.map(it => ({
@@ -131,11 +130,16 @@ export default function NovaCotacao() {
       status,
       valid_until: validUntil,
       notes,
-
+      created_at: new Date().toISOString(),
     }
-    const { data, error } = await supabase.from('quotes').insert(payload).select().single()
-    if (error) { alert('Erro: ' + error.message); setSalvando(false); return }
-    if (data) navigate(`/prospeccao/${data.id}`)
+
+    // Grava local primeiro (não depende de rede) para nunca perder a
+    // cotação, e só então tenta enviar ao Supabase — online, sincroniza
+    // em segundos; offline, fica na fila e envia sozinha depois.
+    await db.quotes_cache.put({ ...payload, _pending: true })
+    await enqueue({ entity: 'quote', entityId: id, op: 'upsert', payload })
+
+    navigate(`/prospeccao/${id}`)
     setSalvando(false)
   }
 
@@ -297,6 +301,11 @@ export default function NovaCotacao() {
         {temDesconto && (
           <div style={{background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
             ⚠️ Desconto acima de 10% — cotação será sinalizada para aprovação
+          </div>
+        )}
+        {!online && (
+          <div style={{display:'flex',alignItems:'center',gap:6,background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
+            <IconCloudOff size={14}/> Sem conexão · a cotação fica salva no aparelho e envia sozinha quando a internet voltar{produtosOffline ? ' · preços da última tabela salva' : ''}
           </div>
         )}
         <div style={{background:'var(--surface-2)',borderRadius:10,padding:'12px 14px',marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center'}}>

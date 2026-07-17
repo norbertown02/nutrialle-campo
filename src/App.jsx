@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/useAuth.jsx'
+import { startAutoSync } from './lib/syncEngine'
 import AppBar from './components/AppBar'
 import TabBar from './components/TabBar'
 import SplashScreen from './components/SplashScreen'
+import SyncStatusBar from './components/SyncStatusBar'
 
 import Login from './screens/Login'
 import Home from './screens/Home'
@@ -37,6 +40,8 @@ import FazendaDados from './screens/FazendaDados'
 function AppContent() {
   const { user, loading, showSplash } = useAuth()
 
+  useEffect(() => { startAutoSync() }, [])
+
   if (loading || showSplash) {
     return <SplashScreen />
   }
@@ -46,6 +51,7 @@ function AppContent() {
   return (
     <div className="phone">
       <AppBar title="Nutrialle Campo" />
+      <SyncStatusBar />
 
       <div className="screen">
         <Routes>

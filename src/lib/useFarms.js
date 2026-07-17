@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { saveFarmsCache, loadFarmsCache } from './offlineCache'
+import { db } from './db'
+import { enqueue } from './syncEngine'
 import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
 
@@ -42,6 +43,10 @@ function fromDB(row) {
     prospect:     row.prospect,
     notes:        row.notes,
     marcaAtual:   row.marca_atual,
+
+    // true enquanto o registro ainda não foi confirmado no Supabase
+    // (criado ou editado offline, aguardando sincronização)
+    pending:      !!row._pending,
   }
 }
 
@@ -103,16 +108,33 @@ export function useFarms() {
     if (!user || !user.id) return
     async function load() {
       setLoading(true)
-      let query = supabase.from('farms').select('*').order('name')
-      const { data, error } = await query
-      if (!error && data) setFarms(data.map(fromDB))
+      const { data, error } = await supabase.from('farms').select('*').order('name')
+
+      if (!error && data) {
+        // Mantém visíveis fazendas criadas/editadas offline que ainda
+        // não confirmaram no servidor (senão elas "somem" da lista até
+        // a sincronização terminar).
+        const pendentes = await db.outbox.where('entity').equals('farm').toArray()
+        const idsPendentes = new Set(pendentes.map(p => p.entity_id))
+        const cacheAtual = await db.farms_cache.toArray()
+        const somenteLocais = cacheAtual.filter(f => idsPendentes.has(f.id) && !data.some(d => d.id === f.id))
+
+        const merged = [...somenteLocais, ...data]
+        await db.farms_cache.clear()
+        await db.farms_cache.bulkPut(merged)
+        setFarms(merged.map(fromDB))
+      } else {
+        // offline (ou erro de rede): usa o que tiver em cache local
+        const cached = await db.farms_cache.toArray()
+        setFarms(cached.map(fromDB))
+      }
       setLoading(false)
     }
     load()
   }, [user?.id])
 
   const addFarm = useCallback(async (farmData) => {
-    const id         = 'f' + Date.now()
+    const id         = crypto.randomUUID()
     const clientCode = generateClientCode(farms)
     const newFarm    = {
       ...farmData,
@@ -124,11 +146,18 @@ export function useFarms() {
       hasChecklist: false,
       createdAt: new Date().toISOString(),
     }
-    const { data: insertData, error } = await supabase.from('farms').insert(toDB(newFarm)).select()
-    console.log('INSERT farms result:', { insertData, error, payload: toDB(newFarm) })
-    if (!error) setFarms(prev => [newFarm, ...prev])
+    const payload = toDB(newFarm)
+
+    // Grava local primeiro (nunca falha, não depende de rede) e mostra
+    // na tela na hora. Depois enfileira para enviar ao Supabase — se
+    // já tiver internet, sincroniza em segundos; se não, fica na fila
+    // e vai sozinho quando a conexão voltar.
+    await db.farms_cache.put({ ...payload, _pending: true })
+    setFarms(prev => [newFarm, ...prev])
+    await enqueue({ entity: 'farm', entityId: id, op: 'upsert', payload })
+
     return newFarm
-  }, [farms])
+  }, [farms, user])
 
   const updateFarm = useCallback(async (id, changes) => {
     const updatedAt = new Date().toISOString()
@@ -137,24 +166,25 @@ export function useFarms() {
     Object.keys(payload).forEach(key => {
       if (payload[key] === undefined) delete payload[key]
     })
+    payload.updated_at = updatedAt
 
-    const { error } = await supabase
-      .from('farms')
-      .update({ ...payload, updated_at: updatedAt })
-      .eq('id', id)
+    const cached = await db.farms_cache.get(id)
+    if (cached) await db.farms_cache.put({ ...cached, ...payload, _pending: true })
+    setFarms(prev => prev.map(f =>
+      f.id === id ? { ...f, ...changes, updatedAt, pending: true } : f
+    ))
 
-    if (!error) {
-      setFarms(prev => prev.map(f =>
-        f.id === id ? { ...f, ...changes, updatedAt } : f
-      ))
-    }
+    await enqueue({ entity: 'farm', entityId: id, op: 'update', payload })
 
-    return { error }
+    return { error: null }
   }, [])
 
   const removeFarm = useCallback(async (id) => {
     const { error } = await supabase.from('farms').delete().eq('id', id)
-    if (!error) setFarms(prev => prev.filter(f => f.id !== id))
+    if (!error) {
+      setFarms(prev => prev.filter(f => f.id !== id))
+      await db.farms_cache.delete(id)
+    }
   }, [])
 
   const getFarm = useCallback((id) => {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IconArrowLeft, IconCheck, IconMapPin, IconX } from '@tabler/icons-react'
+import { IconArrowLeft, IconCheck, IconMapPin, IconX, IconCloudOff } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useConfig } from '../lib/useConfig'
+import { useOnlineStatus } from '../lib/useOnlineStatus'
 
 async function buscarCidades(termo, uf) {
   if (termo.length < 2) return []
@@ -151,6 +152,7 @@ export default function NovaFazenda() {
   const navigate = useNavigate()
   const { addFarm } = useFarms()
   const { SEGMENT_OPTIONS, STATES, inferRegion } = useConfig()
+  const online = useOnlineStatus()
 
   const [form, setForm] = useState({
     name:'', owner:'', ownerRole:'Proprietário', phone:'', email:'',
@@ -160,6 +162,7 @@ export default function NovaFazenda() {
   })
 
   const [cidadeVerificada, setCidadeVerificada] = useState(false)
+  const [salvando, setSalvando] = useState(false)
 
   function maskCPF(v) {
     return v.replace(/\D/g,'').slice(0,11)
@@ -183,11 +186,16 @@ export default function NovaFazenda() {
     setCidadeVerificada(true)
   }
 
-  const isValid = form.name.trim().length >= 3 && form.owner.trim().length >= 3 && form.city.trim().length >= 2 && cidadeVerificada
+  // A validação de cidade pelo IBGE depende de internet. Offline, não
+  // travamos o cadastro por causa disso — aceitamos a cidade digitada
+  // manualmente e ela pode ser conferida depois, quando sincronizar.
+  const isValid = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
+    form.city.trim().length >= 2 && (cidadeVerificada || !online)
 
-  const handleSave = () => {
-    if (!isValid) return
-    addFarm({
+  const handleSave = async () => {
+    if (!isValid || salvando) return
+    setSalvando(true)
+    await addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
       phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
       doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
@@ -199,6 +207,9 @@ export default function NovaFazenda() {
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
     })
+    // addFarm grava local antes de qualquer chamada de rede, então isso
+    // resolve na hora tanto online quanto offline — offline, a cotação
+    // fica na fila e sincroniza sozinha depois.
     navigate('/clientes')
   }
 
@@ -314,11 +325,13 @@ export default function NovaFazenda() {
       </div>
 
       {form.city && (
-        <div style={{ fontSize:11, color: cidadeVerificada ? 'var(--text-faint)' : 'var(--red)', marginTop:-8, marginBottom:12, display:'flex', alignItems:'center', gap:4 }}>
-          <IconMapPin size={11} />
+        <div style={{ fontSize:11, color: cidadeVerificada ? 'var(--text-faint)' : (online ? 'var(--red)' : 'var(--amber)'), marginTop:-8, marginBottom:12, display:'flex', alignItems:'center', gap:4 }}>
+          {online ? <IconMapPin size={11} /> : <IconCloudOff size={11} />}
           {cidadeVerificada
             ? `${form.city}, ${form.state} · verificado pelo IBGE`
-            : 'Selecione uma cidade da lista para validar'}
+            : online
+              ? 'Selecione uma cidade da lista para validar'
+              : 'Sem conexão · cidade será verificada quando sincronizar'}
         </div>
       )}
 
@@ -357,9 +370,15 @@ export default function NovaFazenda() {
         Campos com * são obrigatórios. A cidade é validada automaticamente pelo IBGE.
       </div>
 
-      <button className="btn btn-primary" style={{ marginTop:18, opacity:isValid?1:0.45, cursor:isValid?'pointer':'not-allowed' }}
-        disabled={!isValid} onClick={handleSave}>
-        <IconCheck size={18} /> Cadastrar fazenda
+      {!online && (
+        <div style={{display:'flex',alignItems:'center',gap:6,background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginTop:12,fontSize:12,color:'var(--amber)'}}>
+          <IconCloudOff size={14}/> Sem conexão · o cadastro fica salvo no aparelho e envia sozinho quando a internet voltar
+        </div>
+      )}
+
+      <button className="btn btn-primary" style={{ marginTop:18, opacity:(isValid && !salvando)?1:0.45, cursor:(isValid && !salvando)?'pointer':'not-allowed' }}
+        disabled={!isValid || salvando} onClick={handleSave}>
+        <IconCheck size={18} /> {salvando ? 'Salvando...' : 'Cadastrar fazenda'}
       </button>
     </div>
   )

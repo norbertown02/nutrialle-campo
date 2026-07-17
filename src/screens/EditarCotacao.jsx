@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
-import { IconTrash, IconSearch } from '@tabler/icons-react'
+import { useFarms } from '../lib/useFarms'
+import { useProducts } from '../lib/useProducts'
+import { useOnlineStatus } from '../lib/useOnlineStatus'
+import { db } from '../lib/db'
+import { enqueue } from '../lib/syncEngine'
+import { IconTrash, IconSearch, IconCloudOff } from '@tabler/icons-react'
 
 const PAGAMENTOS = [
   {value:'a_vista',    label:'À vista'},
@@ -23,8 +28,9 @@ export default function EditarCotacao() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [farms, setFarms] = useState([])
-  const [products, setProducts] = useState([])
+  const online = useOnlineStatus()
+  const { farms } = useFarms()
+  const { products, offline: produtosOffline } = useProducts()
   const [farmSel, setFarmSel] = useState('')
   const [buscaProd, setBuscaProd] = useState('')
   const [items, setItems] = useState([])
@@ -35,35 +41,46 @@ export default function EditarCotacao() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { carregar() }, [])
+  // produtos chegam de forma assíncrona (cache/rede); reprocessa os
+  // itens da cotação quando a lista de produtos estiver disponível
+  useEffect(() => { if (products.length > 0) recalcularItensComProdutos() }, [products.length])
 
   async function carregar() {
     setLoading(true)
-    const [rQuote, rFarms, rProducts] = await Promise.all([
-      supabase.from('quotes').select('*').eq('id', id).single(),
-      supabase.from('farms').select('id,name,segment,prospect,city,state').order('name'),
-      supabase.from('products').select('*').eq('active', true).order('name'),
-    ])
-    const q = rQuote.data
-    const prods = rProducts.data || []
+    let q = null
+    const { data, error } = await supabase.from('quotes').select('*').eq('id', id).single()
+    if (!error && data) {
+      q = data
+      await db.quotes_cache.put({ ...data, _pending: false })
+    } else {
+      // offline (ou cotação recém-criada offline, ainda não sincronizada)
+      q = await db.quotes_cache.get(id)
+    }
+
     if (q) {
       setFarmSel(q.farm_id)
-      // Itens de cotações antigas podem não ter bag_kg/price_kg salvos.
-      // Preenchemos a partir do cadastro do produto para manter a
-      // precificação sempre em R$/kg.
-      setItems((q.items || []).map(it => {
-        if (it.bag_kg && it.price_kg) return it
-        const produto = prods.find(p => p.id === it.product_id)
-        const bagKg = it.bag_kg || produto?.bag_kg || 25
-        const priceKg = it.price_kg || produto?.price_kg || (bagKg ? Number(it.unit_price || 0) / bagKg : 0)
-        return calcItem({ ...it, bag_kg: bagKg, price_kg: priceKg })
-      }))
+      setItems((q.items || []).map(it => normalizarItem(it)))
       setPagamento(q.payment_term || 'a_vista')
       setFrete(q.frete || 'CIF')
       setNotes(q.notes || '')
     }
-    setFarms(rFarms.data || [])
-    setProducts(prods)
     setLoading(false)
+  }
+
+  // Itens de cotações antigas podem não ter bag_kg/price_kg salvos.
+  // Preenchemos a partir do cadastro do produto para manter a
+  // precificação sempre em R$/kg.
+  function normalizarItem(it) {
+    if (it.bag_kg && it.price_kg) return it
+    const produto = products.find(p => p.id === it.product_id)
+    if (!produto) return it
+    const bagKg = it.bag_kg || produto.bag_kg || 25
+    const priceKg = it.price_kg || produto.price_kg || (bagKg ? Number(it.unit_price || 0) / bagKg : 0)
+    return calcItem({ ...it, bag_kg: bagKg, price_kg: priceKg })
+  }
+
+  function recalcularItensComProdutos() {
+    setItems(prev => prev.map(it => normalizarItem(it)))
   }
 
   const prodsFiltrados = products.filter(p =>
@@ -114,7 +131,7 @@ export default function EditarCotacao() {
   const farm = farms.find(f => f.id === farmSel)
 
   async function salvar() {
-    if (!farmSel || items.length === 0) return
+    if (!farmSel || items.length === 0 || salvando) return
     setSalvando(true)
     const payload = {
       items: items.map(it => ({
@@ -135,8 +152,13 @@ export default function EditarCotacao() {
       total,
       notes,
     }
-    const { error } = await supabase.from('quotes').update(payload).eq('id', id)
-    if (error) { alert('Erro: ' + error.message); setSalvando(false); return }
+
+    // Igual à criação: grava local primeiro (não perde a edição) e
+    // enfileira o envio — funciona online e offline.
+    const cached = await db.quotes_cache.get(id)
+    await db.quotes_cache.put({ ...(cached || { id }), ...payload, _pending: true })
+    await enqueue({ entity: 'quote', entityId: id, op: 'update', payload })
+
     navigate(`/prospeccao/${id}`)
     setSalvando(false)
   }
@@ -264,6 +286,11 @@ export default function EditarCotacao() {
         {temDesconto && (
           <div style={{background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
             ⚠️ Desconto acima de 10% — cotação será sinalizada para aprovação
+          </div>
+        )}
+        {!online && (
+          <div style={{display:'flex',alignItems:'center',gap:6,background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
+            <IconCloudOff size={14}/> Sem conexão · a alteração fica salva no aparelho e envia sozinha quando a internet voltar{produtosOffline ? ' · preços da última tabela salva' : ''}
           </div>
         )}
 
