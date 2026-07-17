@@ -11,6 +11,12 @@ const PAGAMENTOS = [
   {value:'30_60_90',   label:'30/60/90 dias'},
 ]
 
+const FRETES = [
+  {value:'CIF', label:'CIF', desc:'Frete por conta do vendedor'},
+  {value:'FOB', label:'FOB', desc:'Frete por conta do comprador'},
+  {value:'EXW', label:'EXW', desc:'Ex Works - retirada na fábrica pelo comprador'},
+]
+
 function fmt(n) { return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) }
 
 export default function NovaCotacao() {
@@ -119,7 +125,7 @@ export default function NovaCotacao() {
       })),
       payment_term: pagamento,
       frete,
-      frete_label: frete === 'CIF' ? 'CIF - Frete por conta do vendedor' : 'FOB - Frete por conta do comprador',
+      frete_label: (() => { const f = FRETES.find(f => f.value === frete); return f ? `${f.label} - ${f.desc}` : frete })(),
       payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
       total,
       status,
@@ -269,14 +275,14 @@ export default function NovaCotacao() {
         {/* Frete */}
         <div style={{fontWeight:600,marginBottom:8}}>Modalidade de frete</div>
         <div style={{display:'flex',gap:10,marginBottom:16}}>
-          {['CIF','FOB'].map(f=>(
-            <button key={f} onClick={()=>setFrete(f)} type="button"
+          {FRETES.map(f=>(
+            <button key={f.value} onClick={()=>setFrete(f.value)} type="button"
               style={{flex:1,padding:'10px 8px',borderRadius:10,cursor:'pointer',
-                border:'2px solid '+(frete===f?'var(--orange)':'var(--line)'),
-                background:frete===f?'var(--orange-bg)':'var(--surface-2)'}}>
-              <div style={{fontWeight:700,fontSize:14,color:frete===f?'var(--orange)':'var(--text)'}}>{f}</div>
+                border:'2px solid '+(frete===f.value?'var(--orange)':'var(--line)'),
+                background:frete===f.value?'var(--orange-bg)':'var(--surface-2)'}}>
+              <div style={{fontWeight:700,fontSize:14,color:frete===f.value?'var(--orange)':'var(--text)'}}>{f.label}</div>
               <div style={{fontSize:10,color:'var(--text-faint)',marginTop:2}}>
-                {f==='CIF'?'Frete por conta do vendedor':'Frete por conta do comprador'}
+                {f.desc}
               </div>
             </button>
           ))}
