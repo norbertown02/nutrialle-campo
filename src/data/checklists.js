@@ -26,7 +26,7 @@ export const CHECKLIST_TEMPLATES = {
           ]
         },
         {
-          id: 'q1', label: 'Tipo de ordenha', type: 'select',
+          id: 'q1', label: 'Tipo de ordenha', type: 'select', baseline: true,
           options: [
             { label: 'Automatica (robotica)', score: 100 },
             { label: 'Mecanica canalizada', score: 90 },
@@ -107,7 +107,7 @@ export const CHECKLIST_TEMPLATES = {
       stage: 'sistema', title: 'Sistema de producao', icon: 'home',
       questions: [
         {
-          id: 'q_sistema', label: 'Sistema de criacao utilizado', type: 'select',
+          id: 'q_sistema', label: 'Sistema de criacao utilizado', type: 'select', baseline: true,
           options: [
             { label: 'Free stall', score: 100 },
             { label: 'Compost barn', score: 100 },
@@ -157,7 +157,7 @@ export const CHECKLIST_TEMPLATES = {
           ]
         },
         {
-          id: 'q13', label: 'Tipo de instalacao para bezerras', type: 'select',
+          id: 'q13', label: 'Tipo de instalacao para bezerras', type: 'select', baseline: true,
           options: [
             { label: 'Bezerreiro individual com casinhas', score: 100 },
             { label: 'Bezerreiro coletivo coberto', score: 70 },
@@ -193,10 +193,10 @@ export const CHECKLIST_TEMPLATES = {
     {
       stage: 'conforto', title: 'Conforto e instalacoes', icon: 'armchair',
       questions: [
-        { id: 'q17', label: 'Tem sombreamento na sala de espera?', type: 'boolean' },
-        { id: 'q18', label: 'Tem ventiladores ou aspersores?', type: 'boolean' },
+        { id: 'q17', label: 'Tem sombreamento na sala de espera?', type: 'boolean', baseline: true },
+        { id: 'q18', label: 'Tem ventiladores ou aspersores?', type: 'boolean', baseline: true },
         {
-          id: 'q19', label: 'Disponibilidade de agua nos piquetes', type: 'select',
+          id: 'q19', label: 'Disponibilidade de agua nos piquetes', type: 'select', baseline: true,
           options: [
             { label: 'Bebedouro em todos os piquetes', score: 100 },
             { label: 'Maioria dos piquetes', score: 65 },
@@ -231,7 +231,7 @@ export const CHECKLIST_TEMPLATES = {
           ]
         },
         {
-          id: 'q_tipo_pastagem', label: 'Tipo de pastagem utilizada', type: 'text',
+          id: 'q_tipo_pastagem', label: 'Tipo de pastagem utilizada', type: 'text', baseline: true,
           placeholder: 'Ex: Brachiaria brizantha, Mombaça, Tanzânia, Tifton...'
         },
         {
@@ -373,7 +373,7 @@ export const CHECKLIST_TEMPLATES = {
       stage: 'ambiencia', title: 'Ambiencia e instalacoes', icon: 'temperature',
       questions: [
         {
-          id: 'q4', label: 'Controle de temperatura nas baias', type: 'select',
+          id: 'q4', label: 'Controle de temperatura nas baias', type: 'select', baseline: true,
           options: [
             { label: 'Climatizacao completa', score: 100 },
             { label: 'Ventiladores e cortinas', score: 70 },
@@ -381,14 +381,14 @@ export const CHECKLIST_TEMPLATES = {
           ]
         },
         {
-          id: 'q5', label: 'Estado das instalacoes', type: 'select',
+          id: 'q5', label: 'Estado das instalacoes', type: 'select', baseline: true,
           options: [
             { label: 'Modernas e funcionais', score: 100 },
             { label: 'Funcionais mas antigas', score: 65 },
             { label: 'Precisam de reforma', score: 25 },
           ]
         },
-        { id: 'q6', label: 'Tem maternidade separada?', type: 'boolean' },
+        { id: 'q6', label: 'Tem maternidade separada?', type: 'boolean', baseline: true },
       ]
     },
     {
@@ -433,7 +433,7 @@ export const CHECKLIST_TEMPLATES = {
     {
       stage: 'biosseguridade', title: 'Biosseguridade', icon: 'shield-check',
       questions: [
-        { id: 'q13', label: 'Tem barreira sanitaria na entrada?', type: 'boolean' },
+        { id: 'q13', label: 'Tem barreira sanitaria na entrada?', type: 'boolean', baseline: true },
         { id: 'q14', label: 'Controle de acesso de pessoas/veiculos?', type: 'boolean' },
         { id: 'q15', label: 'Vazio sanitario entre lotes?', type: 'boolean' },
       ]

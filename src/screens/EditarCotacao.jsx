@@ -152,6 +152,8 @@ export default function EditarCotacao() {
       total,
       needs_approval: temDesconto,
       notes,
+      // Qualquer edição renova a validade da cotação por mais 15 dias.
+      valid_until: new Date(Date.now() + 15*86400000).toISOString().split('T')[0],
     }
 
     // Igual à criação: grava local primeiro (não perde a edição) e

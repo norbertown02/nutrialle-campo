@@ -114,7 +114,7 @@ export default function Home() {
   const quickActions = [
     {
       icon: <IconUserPlus size={20} />,
-      label: 'Nova Fazenda',
+      label: 'Novo Cliente',
       path: '/clientes/novo',
     },
     {

@@ -12,6 +12,7 @@ import {
   IconEdit,
   IconDownload,
   IconBrandWhatsapp,
+  IconCalendarPlus,
 } from '@tabler/icons-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -167,6 +168,26 @@ export default function DetalheCotacao() {
 
     setQuote(prev => ({ ...prev, status }))
     setAtualizando(false)
+  }
+
+  // Renova a validade da cotação por mais 15 dias sem exigir nenhuma
+  // outra alteração — útil quando o cliente pede mais tempo para decidir.
+  async function postergarValidade() {
+    setAtualizando(true)
+
+    const novaValidade = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
+
+    await supabase
+      .from('quotes')
+      .update({ valid_until: novaValidade })
+      .eq('id', id)
+
+    const cached = await db.quotes_cache.get(id)
+    if (cached) await db.quotes_cache.put({ ...cached, valid_until: novaValidade })
+
+    setQuote(prev => ({ ...prev, valid_until: novaValidade }))
+    setAtualizando(false)
+    showToast('Validade renovada por mais 15 dias', 'success')
   }
 
   async function converterEmVenda() {
@@ -898,6 +919,25 @@ export default function DetalheCotacao() {
             >
               <IconEdit size={15} />
               Editar Cotação
+            </button>
+          )}
+
+          {(quote.status === 'rascunho' || quote.status === 'enviada') && (
+            <button
+              className="btn btn-ghost"
+              onClick={postergarValidade}
+              disabled={atualizando}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontSize: 14,
+                padding: '12px 16px',
+              }}
+            >
+              <IconCalendarPlus size={15} />
+              Postergar validade (+15 dias)
             </button>
           )}
 

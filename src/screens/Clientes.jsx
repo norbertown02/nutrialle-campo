@@ -53,7 +53,7 @@ export default function Clientes() {
         <h2>Clientes</h2>
         <p>
           {isEmpty
-            ? 'Cadastre sua primeira fazenda para começar'
+            ? 'Cadastre seu primeiro cliente para começar'
             : `${farms.length} ${farms.length === 1 ? 'fazenda' : 'fazendas'} em sua carteira`}
         </p>
       </div>
@@ -94,7 +94,7 @@ export default function Clientes() {
             onClick={() => navigate('/clientes/novo')}
           >
             <IconUserPlus size={18} />
-            Cadastrar primeira fazenda
+            Cadastrar primeiro cliente
           </button>
         </div>
       ) : (
