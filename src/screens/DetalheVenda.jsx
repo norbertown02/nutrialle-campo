@@ -2,7 +2,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   IconArrowLeft,
   IconAlertTriangle,
-  IconCheck,
   IconTruck,
   IconCreditCard,
   IconUser,
@@ -62,10 +61,6 @@ export default function DetalheVenda() {
   const farm = getFarm(venda.farmId)
   const farmName = farm ? farm.name : '(fazenda removida)'
 
-  const statusColor = venda.status === 'enviado' ? 'var(--green)' : 'var(--amber)'
-  const statusBg = venda.status === 'enviado' ? 'var(--green-bg)' : 'var(--amber-bg)'
-  const statusLabel = venda.status === 'enviado' ? 'Enviado' : 'Pendente de envio'
-
   const itens = Array.isArray(venda.items) ? venda.items : []
 
   async function handleExcluir() {
@@ -94,24 +89,17 @@ export default function DetalheVenda() {
         </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0' }}>
-        <span style={{
-          fontSize: 11, fontWeight: 600,
-          padding: '4px 10px', borderRadius: 20,
-          background: statusBg, color: statusColor,
-        }}>
-          {statusLabel}
-        </span>
-
-        {venda.needsApproval ? (
+      {venda.needsApproval ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0' }}>
           <span style={{
             fontSize: 11, fontWeight: 600, color: 'var(--red)',
+            background: 'var(--red-bg)', padding: '4px 10px', borderRadius: 20,
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
             <IconAlertTriangle size={13} /> Precisa aprovação
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {farm ? (
         <div
@@ -196,15 +184,6 @@ export default function DetalheVenda() {
           <div className="value" style={{ fontSize: 13 }}>{formatDateTime(venda.createdAt)}</div>
         </div>
       </div>
-
-      {venda.sentAt ? (
-        <div className="hint" style={{ marginBottom: 14 }}>
-          <IconCheck size={16} />
-          <div style={{ fontSize: 12 }}>
-            Enviada para o time administrativo em {formatDateTime(venda.sentAt)}.
-          </div>
-        </div>
-      ) : null}
 
       <button
         className="btn btn-ghost"

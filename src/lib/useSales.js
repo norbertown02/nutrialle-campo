@@ -16,8 +16,6 @@ function fromDB(row) {
     frete_label:      row.frete_label,
     needsApproval:    row.needs_approval,
     comissaoPct:      Number(row.comissao_pct || 0),
-    status:           row.status,
-    sentAt:           row.sent_at,
     createdAt:        row.created_at,
   }
 }
@@ -37,6 +35,8 @@ export function useSales() {
     load()
   }, [])
 
+  // Retorna { error } pra quem chamar poder tratar falha (ex: conversão
+  // de cotação em venda usa isso pra saber se deve avisar o usuário).
   const addSale = useCallback(async (saleData) => {
     const item = {
       id:                 's' + Date.now(),
@@ -50,7 +50,6 @@ export function useSales() {
       frete_label:        saleData.frete_label,
       needs_approval:     saleData.needsApproval ?? false,
       comissao_pct:       saleData.comissaoPct ?? 0,
-      status:             'pendente_envio',
       seller_id:          user && user.id,
     }
     const { error } = await supabase.from('sales').insert(item)
@@ -73,26 +72,18 @@ export function useSales() {
         console.warn('Erro ao disparar email:', e)
       }
     }
-  }, [])
+    return { error }
+  }, [user])
 
   const removeSale = useCallback(async (id) => {
     const { error } = await supabase.from('sales').delete().eq('id', id)
     if (!error) setSales(prev => prev.filter(s => s.id !== id))
+    return { error }
   }, [])
 
   const getSalesByFarm = useCallback((farmId) => {
     return sales.filter(s => s.farmId === farmId).sort((a, b) => b.saleDate.localeCompare(a.saleDate))
   }, [sales])
 
-  const getPendingSales = useCallback(() => {
-    return sales.filter(s => s.status === 'pendente_envio')
-  }, [sales])
-
-  const markAsSent = useCallback(async (saleIds) => {
-    const sentAt = new Date().toISOString()
-    const { error } = await supabase.from('sales').update({ status: 'enviado', sent_at: sentAt }).in('id', saleIds)
-    if (!error) setSales(prev => prev.map(s => saleIds.includes(s.id) ? { ...s, status: 'enviado', sentAt } : s))
-  }, [])
-
-  return { sales, addSale, removeSale, getSalesByFarm, getPendingSales, markAsSent }
+  return { sales, addSale, removeSale, getSalesByFarm }
 }

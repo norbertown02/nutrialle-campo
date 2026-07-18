@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { IconArrowLeft, IconCheck, IconMapPin, IconX, IconCloudOff } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useConfig } from '../lib/useConfig'
@@ -150,6 +150,8 @@ function MarcaInput({ value, onChange }) {
 
 export default function NovaFazenda() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isProspect = searchParams.get('prospect') === 'true'
   const { addFarm } = useFarms()
   const { SEGMENT_OPTIONS, STATES, inferRegion } = useConfig()
   const online = useOnlineStatus()
@@ -206,6 +208,7 @@ export default function NovaFazenda() {
       bairro: form.bairro?.trim()||null, complemento: form.complemento?.trim()||null,
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
+      prospect: isProspect,
     })
     // addFarm grava local antes de qualquer chamada de rede, então isso
     // resolve na hora tanto online quanto offline — offline, a cotação
@@ -220,9 +223,13 @@ export default function NovaFazenda() {
       </button>
 
       <div className="page-head">
-        <div className="eyebrow">Nova fazenda</div>
-        <h2>Cadastrar cliente</h2>
-        <p>Preencha os dados básicos. Você pode completar depois.</p>
+        <div className="eyebrow">{isProspect ? 'Novo lead' : 'Nova fazenda'}</div>
+        <h2>{isProspect ? 'Cadastrar prospecto' : 'Cadastrar cliente'}</h2>
+        <p>
+          {isProspect
+            ? 'Esse cadastro entra como prospecto — vira cliente ativo automaticamente quando a primeira cotação for convertida em venda.'
+            : 'Preencha os dados básicos. Você pode completar depois.'}
+        </p>
       </div>
 
       <div className="section-label">Identificação</div>

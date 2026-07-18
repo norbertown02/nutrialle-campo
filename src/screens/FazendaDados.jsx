@@ -123,7 +123,7 @@ export default function FazendaDados() {
       <div className="page-head" style={{ marginBottom: 16 }}>
         <div className="eyebrow">{fazenda.region || fazenda.city} · {segLabel}</div>
         <h2>{fazenda.name}</h2>
-        <p>{fazenda.ownerName} · {fazenda.herdSize || '—'} animais · {checks.length} visita{checks.length !== 1 ? 's' : ''}</p>
+        <p>{fazenda.owner} · {fazenda.herdSize || '—'} animais · {checks.length} visita{checks.length !== 1 ? 's' : ''}</p>
       </div>
 
       {/* Nota geral */}

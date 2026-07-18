@@ -180,7 +180,7 @@ export async function gerarRelatorioChecklist({ farm, checklists, template }) {
 
   doc.setFontSize(16);doc.setFont('helvetica','bold');doc.setTextColor(...W1);doc.text(farm.name||'Fazenda',M+18,126)
   doc.setFontSize(8.5);doc.setFont('helvetica','normal');doc.setTextColor(175,175,175)
-  doc.text('Produtor: '+(farm.owner||farm.ownerName||'—'),M+18,137)
+  doc.text('Produtor: '+(farm.owner||'—'),M+18,137)
   doc.text('Segmento: '+segLbl+'   |   Município: '+(farm.city||'—')+' / '+(farm.state||'—'),M+18,146)
   doc.text('Data da avaliação: '+dataUlt+'   |   '+checklists.length+' avaliação(ões) realizada(s)',M+18,155)
   doc.text('CAD/PRO: '+(farm.cadpro_1||farm.cadpro1||'—')+'   |   CPF/CNPJ: '+(farm.cpf||farm.cnpj||'—'),M+18,163)

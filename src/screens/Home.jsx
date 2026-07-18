@@ -74,7 +74,9 @@ export default function Home() {
 
   const totalClientes = farms.length
 
-  const propostasMes = sales.filter(s => s.saleDate?.startsWith(mesAtual())).length
+  // Mesmo conjunto de vendas do mês que já forma o valor em R$ acima —
+  // aqui é só a contagem, não confundir com "propostas" (cotações).
+  const pedidosMes = sales.filter(s => s.saleDate?.startsWith(mesAtual())).length
 
   const proximosCompromissos = appointments
     .filter(a => a.status === 'agendado' && a.appointmentDate >= hoje())
@@ -104,7 +106,7 @@ export default function Home() {
       icon: <IconTrendingUp size={21} />,
       label: 'Vendas no mês',
       value: fmtMoeda(vendasMes),
-      sub: `${propostasMes} proposta${propostasMes === 1 ? '' : 's'}`,
+      sub: `${pedidosMes} pedido${pedidosMes === 1 ? '' : 's'}`,
       wideValue: true,
     },
   ]

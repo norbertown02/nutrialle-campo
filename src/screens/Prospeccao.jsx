@@ -67,7 +67,7 @@ export default function Prospeccao() {
       <div style={{padding:'16px 16px 0'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <div>
-            <div style={{fontSize:18,fontWeight:700}}>Prospecção</div>
+            <div style={{fontSize:18,fontWeight:700}}>Cotações</div>
             <div style={{fontSize:12,color:'var(--text-faint)'}}>{quotes.length} cotações no total</div>
           </div>
           <button className="btn btn-primary" style={{fontSize:13,padding:'7px 14px'}} onClick={() => navigate('/prospeccao/nova')}>
@@ -131,6 +131,11 @@ export default function Prospeccao() {
                     <span style={{background:cfg.bg,color:cfg.color,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:600}}>
                       {cfg.label}
                     </span>
+                    {q.needs_approval && (
+                      <span style={{background:'var(--red-bg)',color:'var(--red)',borderRadius:20,padding:'2px 8px',fontSize:10,fontWeight:600}}>
+                        Precisa aprovação
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>

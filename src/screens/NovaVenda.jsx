@@ -34,6 +34,26 @@ function parsePercent(value) {
   return Number.isFinite(number) ? number : 0
 }
 
+const FRETES = [
+  { value: 'CIF', label: 'CIF', desc: 'Frete por conta do vendedor' },
+  { value: 'FOB', label: 'FOB', desc: 'Frete por conta do comprador' },
+  { value: 'EXW', label: 'EXW', desc: 'Ex Works - retirada na fábrica pelo comprador' },
+]
+
+// Mesma regra da cotação: a venda é sempre precificada em R$/kg, e o
+// preço do saco (unitPrice) é sempre derivado de price_kg * bag_kg —
+// nunca editado diretamente. Isso garante que uma venda direta e uma
+// venda que veio de cotação convertida sigam exatamente a mesma lógica.
+function calcItem(it) {
+  const bagKg = Number(it.bagKg || 0)
+  const priceKg = Number(it.priceKg || 0)
+  const qty = Number(it.quantity || 0)
+  const disc = Number(it.discount || 0)
+  const unitPrice = priceKg * bagKg
+  const subtotal = unitPrice * qty * (1 - disc / 100)
+  return { ...it, unitPrice, subtotal }
+}
+
 const backBtnStyle = {
   background: 'none',
   border: 'none',
@@ -57,7 +77,7 @@ export default function NovaVenda() {
   const getFarm = farmsHook.getFarm
   const salesHook = useSales()
   const addSale = salesHook.addSale
-  const { products, paymentTerms, loading: loadingProducts, MAX_DISCOUNT_PERCENT } = useProducts()
+  const { products, paymentTerms } = useProducts()
 
   const preselectedFarmId = searchParams.get('farm')
   const preselectedFarm = preselectedFarmId ? getFarm(preselectedFarmId) : null
@@ -83,29 +103,39 @@ export default function NovaVenda() {
   const addItem = () => {
     if (availableProducts.length === 0) return
     const firstProduct = availableProducts[0]
-    setItems(prev => [...prev, {
+    setItems(prev => [...prev, calcItem({
       key: 'i' + Date.now(),
       productId: firstProduct.id,
       productName: firstProduct.name,
-      unitPrice: firstProduct.price,
-      tablePrice: firstProduct.price,
+      unit: firstProduct.unit || 'saco',
+      bagKg: firstProduct.bag_kg || 25,
+      priceKg: firstProduct.price_kg || 0,
+      tablePriceKg: firstProduct.price_kg || 0,
+      maxDiscount: firstProduct.max_discount || 10,
       quantity: 1,
-    }])
+      discount: 0,
+    })])
   }
 
   const updateItem = (key, changes) => {
     setItems(prev => prev.map(it => {
       if (it.key !== key) return it
-      const updated = { ...it, ...changes }
+      let updated = { ...it, ...changes }
       if (changes.productId) {
         const p = products.find(p => p.id === changes.productId)
         if (p) {
-          updated.productName = p.name
-          updated.unitPrice = p.price
-          updated.tablePrice = p.price
+          updated = {
+            ...updated,
+            productName: p.name,
+            unit: p.unit || 'saco',
+            bagKg: p.bag_kg || 25,
+            priceKg: p.price_kg || 0,
+            tablePriceKg: p.price_kg || 0,
+            maxDiscount: p.max_discount || 10,
+          }
         }
       }
-      return updated
+      return calcItem(updated)
     }))
   }
 
@@ -113,24 +143,21 @@ export default function NovaVenda() {
     setItems(prev => prev.filter(it => it.key !== key))
   }
 
-  const subtotal = items.reduce((sum, it) =>
-    sum + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0)
+  const subtotal = items.reduce((sum, it) => sum + (Number(it.subtotal) || 0), 0)
 
   const comissaoPct = parsePercent(comissao)
   const valorComissao = subtotal * (comissaoPct / 100)
 
-  const hasOverDiscount = items.some(it => {
-    if (!it.tablePrice || it.tablePrice === 0) return false
-    const discount = (it.tablePrice - it.unitPrice) / it.tablePrice * 100
-    return discount > MAX_DISCOUNT_PERCENT
-  })
+  const hasOverDiscount = items.some(it => Number(it.discount) > Number(it.maxDiscount || 10))
 
   const isValid = farmId && items.length > 0 && !!paymentTermId && items.every(it =>
-    it.quantity > 0 && it.unitPrice >= 0
+    it.quantity > 0 && it.priceKg >= 0
   )
 
   const handleSave = () => {
     if (!isValid) return
+
+    const freteInfo = FRETES.find(f => f.value === frete)
 
     addSale({
       farmId,
@@ -138,15 +165,19 @@ export default function NovaVenda() {
       items: items.map(it => ({
         productId: it.productId,
         productName: it.productName,
+        unit: it.unit,
+        bagKg: Number(it.bagKg) || 0,
+        priceKg: Number(it.priceKg) || 0,
         unitPrice: Number(it.unitPrice),
         quantity: Number(it.quantity),
-        subtotal: Number(it.quantity) * Number(it.unitPrice),
+        discount: Number(it.discount) || 0,
+        subtotal: Number(it.subtotal),
       })),
       total: subtotal,
       paymentTermId,
       paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || "",
       frete,
-      frete_label: frete === 'CIF' ? 'CIF - Frete por conta do vendedor' : 'FOB - Frete por conta do comprador',
+      frete_label: freteInfo ? `${freteInfo.label} - ${freteInfo.desc}` : frete,
       comissaoPct: comissaoPct,
       notes: notes.trim(),
       needsApproval: hasOverDiscount,
@@ -222,11 +253,9 @@ export default function NovaVenda() {
         </div>
       ) : (
         items.map((it, idx) => {
-          const discount = it.tablePrice > 0
-            ? ((it.tablePrice - it.unitPrice) / it.tablePrice * 100)
-            : 0
-          const itemTotal = (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)
-          const overLimit = discount > MAX_DISCOUNT_PERCENT
+          const discount = Number(it.discount) || 0
+          const maxDiscount = Number(it.maxDiscount || 10)
+          const overLimit = discount > maxDiscount
 
           return (
             <div key={it.key} className="card" style={{ marginBottom: 10 }}>
@@ -268,12 +297,12 @@ export default function NovaVenda() {
                 ))}
               </select>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 <div>
                   <label style={{
                     display: 'block', fontSize: 11, color: 'var(--text-dim)',
                     marginBottom: 4
-                  }}>Qtd</label>
+                  }}>Qtd ({it.unit})</label>
                   <input
                     type="number"
                     min="0"
@@ -286,13 +315,28 @@ export default function NovaVenda() {
                   <label style={{
                     display: 'block', fontSize: 11, color: 'var(--text-dim)',
                     marginBottom: 4
-                  }}>Preco unit. (R$)</label>
+                  }}>R$/kg</label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
-                    value={it.unitPrice}
-                    onChange={e => updateItem(it.key, { unitPrice: e.target.value })}
+                    value={it.priceKg}
+                    onChange={e => updateItem(it.key, { priceKg: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={{
+                    display: 'block', fontSize: 11,
+                    color: overLimit ? 'var(--red)' : 'var(--text-dim)',
+                    marginBottom: 4
+                  }}>Desc. % {overLimit ? '⚠️' : ''}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={it.discount}
+                    onChange={e => updateItem(it.key, { discount: e.target.value })}
                     style={{ borderColor: overLimit ? 'var(--red)' : undefined }}
                   />
                 </div>
@@ -305,9 +349,15 @@ export default function NovaVenda() {
                   display: 'flex', alignItems: 'center', gap: 4
                 }}>
                   {overLimit ? <IconAlertTriangle size={12} /> : null}
-                  Desconto: {discount.toFixed(1)}% (tabela {fmtBRL(it.tablePrice)})
+                  Desconto de {discount.toFixed(1)}% (máximo do produto: {maxDiscount}%)
                 </div>
               ) : null}
+
+              <div style={{
+                fontSize: 11, color: 'var(--text-faint)', marginTop: 8
+              }}>
+                {(Number(it.quantity || 0) * Number(it.bagKg || 0)).toLocaleString('pt-BR')} kg total · {fmtBRL(it.unitPrice)}/{it.unit} ({it.bagKg}kg)
+              </div>
 
               <div style={{
                 marginTop: 10, paddingTop: 8,
@@ -316,7 +366,7 @@ export default function NovaVenda() {
                 fontSize: 13, fontWeight: 600
               }}>
                 <span style={{ color: 'var(--text-dim)' }}>Subtotal</span>
-                <span style={{ color: 'var(--orange)' }}>{fmtBRL(itemTotal)}</span>
+                <span style={{ color: 'var(--orange)' }}>{fmtBRL(it.subtotal)}</span>
               </div>
             </div>
           )
@@ -356,14 +406,14 @@ export default function NovaVenda() {
 
       <div className="section-label">Modalidade de frete</div>
       <div style={{display:'flex',gap:10,marginBottom:16}}>
-        {['CIF','FOB'].map(f=>(
-          <button key={f} onClick={()=>setFrete(f)} type="button"
+        {FRETES.map(f=>(
+          <button key={f.value} onClick={()=>setFrete(f.value)} type="button"
             style={{flex:1,padding:'10px 8px',borderRadius:10,cursor:'pointer',
-              border:'2px solid '+(frete===f?'var(--orange)':'var(--line)'),
-              background:frete===f?'var(--orange-bg)':'var(--surface-2)'}}>
-            <div style={{fontWeight:700,fontSize:14,color:frete===f?'var(--orange)':'var(--text)'}}>{f}</div>
+              border:'2px solid '+(frete===f.value?'var(--orange)':'var(--line)'),
+              background:frete===f.value?'var(--orange-bg)':'var(--surface-2)'}}>
+            <div style={{fontWeight:700,fontSize:14,color:frete===f.value?'var(--orange)':'var(--text)'}}>{f.label}</div>
             <div style={{fontSize:10,color:'var(--text-faint)',marginTop:2}}>
-              {f==='CIF'?'Frete por conta do vendedor':'Frete por conta do comprador'}
+              {f.desc}
             </div>
           </button>
         ))}
@@ -439,18 +489,17 @@ export default function NovaVenda() {
         }}>
           <IconAlertTriangle size={16} />
           <div>
-            <strong>Desconto acima de {MAX_DISCOUNT_PERCENT}%</strong>
+            <strong>Desconto acima do limite de algum produto</strong>
             <div style={{ marginTop: 3, fontSize: 11 }}>
-              Pedido sera salvo mas marcado para aprovacao do gerente
-              antes do envio ao faturamento.
+              Pedido será salvo mas marcado para aprovação do gerente.
             </div>
           </div>
         </div>
       ) : null}
 
       <div className="hint" style={{ marginBottom: 14 }}>
-        Pedido sera salvo no aparelho e enviado no fechamento do dia para
-        lancamento no Ultra Sistemas.
+        Ao salvar, o pedido é registrado e um e-mail com os dados é
+        enviado automaticamente para o time administrativo.
       </div>
 
       <button

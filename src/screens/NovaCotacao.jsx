@@ -31,7 +31,7 @@ export default function NovaCotacao() {
 
   const { farms } = useFarms()
   const { products, offline: produtosOffline } = useProducts()
-  const [farmSel, setFarmSel] = useState(params.get('farm_id') || '')
+  const [farmSel, setFarmSel] = useState(params.get('farm') || '')
   const [buscaFarm, setBuscaFarm] = useState('')
   const [buscaProd, setBuscaProd] = useState('')
   const [items, setItems] = useState([])
@@ -39,11 +39,11 @@ export default function NovaCotacao() {
   const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
   const [salvando, setSalvando] = useState(false)
-  const [stepFarm, setStepFarm] = useState(!params.get('farm_id'))
+  const [stepFarm, setStepFarm] = useState(!params.get('farm'))
 
   useEffect(() => {
-    if (params.get('farm_id')) {
-      const f = farms.find(f => f.id === params.get('farm_id'))
+    if (params.get('farm')) {
+      const f = farms.find(f => f.id === params.get('farm'))
       if (f) setBuscaFarm(f.name)
     }
   }, [farms])
@@ -97,7 +97,7 @@ export default function NovaCotacao() {
   function removeItem(idx) { setItems(prev => prev.filter((_, i) => i !== idx)) }
 
   const total = items.reduce((a, it) => a + (it.subtotal || 0), 0)
-  const temDesconto = items.some(it => Number(it.discount) > 10)
+  const temDesconto = items.some(it => Number(it.discount) > Number(it.max_discount || 10))
 
   const farm = farms.find(f => f.id === farmSel)
   const validUntil = new Date(Date.now() + 10*86400000).toISOString().split('T')[0]
@@ -128,6 +128,7 @@ export default function NovaCotacao() {
       payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
       total,
       status,
+      needs_approval: temDesconto,
       valid_until: validUntil,
       notes,
       created_at: new Date().toISOString(),
@@ -300,7 +301,7 @@ export default function NovaCotacao() {
         {/* Total */}
         {temDesconto && (
           <div style={{background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
-            ⚠️ Desconto acima de 10% — cotação será sinalizada para aprovação
+            ⚠️ Desconto acima do limite de algum produto — cotação será sinalizada para aprovação
           </div>
         )}
         {!online && (

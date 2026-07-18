@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   IconArrowLeft, IconPhone, IconBrandWhatsapp, IconMapPin,
   IconEdit, IconTrash, IconClipboardList, IconCalendarPlus,
-  IconReceipt, IconUser, IconBuildingWarehouse,
+  IconReceipt, IconUser, IconBuildingWarehouse, IconFileText,
   IconChecklist, IconRoute, IconCash, IconChartBar, IconDownload,
   IconLock, IconCopy
 } from '@tabler/icons-react'
@@ -16,6 +16,15 @@ import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
 import { CHECKLIST_TEMPLATES } from '../data/checklists'
 import { useSales } from '../lib/useSales'
 import { useConfig } from '../lib/useConfig'
+import { supabase } from '../lib/supabase'
+import { db } from '../lib/db'
+
+const STATUS_COTACAO_CFG = {
+  rascunho:   { label: 'Rascunho',   color: 'var(--text-faint)', bg: 'var(--surface-2)' },
+  enviada:    { label: 'Enviada',    color: 'var(--amber)',      bg: 'var(--amber-bg)'   },
+  convertida: { label: 'Convertida', color: 'var(--green)',      bg: 'var(--green-bg)'   },
+  cancelada:  { label: 'Cancelada',  color: 'var(--red)',        bg: 'var(--red-bg)'     },
+}
 
 function initials(name) {
   return (name || '')
@@ -47,10 +56,10 @@ const backBtnStyle = {
 }
 
 const actionBtnStyle = {
-  padding: '14px 6px',
+  padding: '12px 2px',
   flexDirection: 'column',
   gap: 5,
-  fontSize: 11
+  fontSize: 10
 }
 
 function Row(props) {
@@ -158,11 +167,34 @@ export default function FichaCliente() {
 
   const [tab, setTab] = useState('visitas')
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [farmQuotes, setFarmQuotes] = useState([])
 
   const farm = getFarm(id)
   const farmVisits = farm ? getVisitsByFarm(farm.id) : []
   const farmChecklists = farm ? getChecklistsByFarm(farm.id) : []
   const farmSales = farm ? getSalesByFarm(farm.id) : []
+
+  useEffect(() => {
+    if (!farm?.id) return
+    let ativo = true
+    async function carregarCotacoes() {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('farm_id', farm.id)
+        .order('created_at', { ascending: false })
+      if (!ativo) return
+      if (!error && data) {
+        setFarmQuotes(data)
+      } else {
+        // offline: usa o cache local, igual as outras telas de cotação
+        const cached = await db.quotes_cache.where('farm_id').equals(farm.id).toArray()
+        if (ativo) setFarmQuotes(cached)
+      }
+    }
+    carregarCotacoes()
+    return () => { ativo = false }
+  }, [farm?.id])
 
   const [editando, setEditando] = useState(false)
   const [editForm, setEditForm] = useState({})
@@ -214,11 +246,15 @@ export default function FichaCliente() {
     navigate('/vendas/nova?farm=' + farm.id)
   }
 
+  const handleCotacao = () => {
+    navigate('/prospeccao/nova?farm=' + farm.id)
+  }
+
   const handleEditar = () => {
     setEditForm({
       clientCode:    farm.clientCode || '',
       name:          farm.name || '',
-      owner:         farm.owner || farm.ownerName || '',
+      owner:         farm.owner || '',
       ownerRole:     farm.ownerRole || 'Proprietário',
       phone:         farm.phone || '',
       email:         farm.email || '',
@@ -252,7 +288,6 @@ export default function FichaCliente() {
       clientCode:    editForm.clientCode?.trim(),
       name:          editForm.name?.trim(),
       owner:         editForm.owner?.trim(),
-      ownerName:     editForm.owner?.trim(),
       ownerRole:     editForm.ownerRole?.trim(),
       phone:         editForm.phone?.trim(),
       email:         editForm.email?.trim(),
@@ -491,24 +526,28 @@ export default function FichaCliente() {
 
       <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr',
-            gap: 8,
+            gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+            gap: 6,
             marginTop: 12
           }}>
             <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleChecklist}>
-              <IconClipboardList size={22} />
+              <IconClipboardList size={20} />
               <span>Checklist</span>
             </button>
             <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleVisita}>
-              <IconCalendarPlus size={22} />
+              <IconCalendarPlus size={20} />
               <span>Visita</span>
             </button>
+            <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleCotacao}>
+              <IconFileText size={20} />
+              <span>Cotação</span>
+            </button>
             <button className="btn btn-ghost" style={actionBtnStyle} onClick={() => navigate('/fazenda-dados/' + farm.id)}>
-              <IconChartBar size={22} />
+              <IconChartBar size={20} />
               <span>Dados</span>
             </button>
             <button className="btn btn-primary" style={actionBtnStyle} onClick={handleVenda}>
-              <IconReceipt size={22} />
+              <IconReceipt size={20} />
               <span>Venda</span>
             </button>
           </div>
@@ -789,6 +828,29 @@ export default function FichaCliente() {
           <IconCash size={14} /> Vendas {farmSales.length > 0 ? '(' + farmSales.length + ')' : ''}
         </button>
         <button
+          onClick={() => setTab('cotacoes')}
+          style={{
+            flex: 1,
+            padding: '9px 4px',
+            borderRadius: 7,
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: "'Barlow Condensed', sans-serif",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: 0.4,
+            textTransform: 'uppercase',
+            background: tab === 'cotacoes' ? 'var(--orange)' : 'transparent',
+            color: tab === 'cotacoes' ? '#1a0d00' : 'var(--text-dim)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 5
+          }}
+        >
+          <IconFileText size={14} /> Cotações {farmQuotes.length > 0 ? '(' + farmQuotes.length + ')' : ''}
+        </button>
+        <button
           onClick={() => setTab('checklists')}
           style={{
             flex: 1,
@@ -840,13 +902,14 @@ export default function FichaCliente() {
               <span style={{ fontWeight: 600, fontSize: 13 }}>
                 {formatDate(s.saleDate)}
               </span>
-              <span style={{
-                fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
-                background: s.needsApproval ? 'var(--red-bg)' : 'var(--amber-bg)',
-                color: s.needsApproval ? 'var(--red)' : 'var(--amber)'
-              }}>
-                {s.needsApproval ? 'Precisa aprovacao' : 'Pendente envio'}
-              </span>
+              {s.needsApproval && (
+                <span style={{
+                  fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
+                  background: 'var(--red-bg)', color: 'var(--red)'
+                }}>
+                  Precisa aprovação
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
               {s.items.length} {s.items.length === 1 ? 'item' : 'itens'} · {s.paymentTermLabel}
@@ -859,6 +922,49 @@ export default function FichaCliente() {
             </div>
           </div>
         ))
+      ) : null}
+
+      {tab === 'cotacoes' && farmQuotes.length === 0 ? (
+        <EmptyHistory
+          icon={<IconFileText />}
+          label="Nenhuma cotação registrada"
+          hint="Toque em Cotação acima para criar a primeira."
+        />
+      ) : null}
+
+      {tab === 'cotacoes' && farmQuotes.length > 0 ? (
+        farmQuotes.map(q => {
+          const cfg = STATUS_COTACAO_CFG[q.status] || STATUS_COTACAO_CFG.rascunho
+          return (
+            <div
+              key={q.id}
+              className="card"
+              style={{ padding: 14, marginBottom: 8, cursor: 'pointer' }}
+              onClick={() => navigate('/prospeccao/' + q.id)}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 13 }}>
+                  {formatDate(q.created_at?.slice(0, 10))}
+                </span>
+                <span style={{
+                  fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
+                  background: cfg.bg, color: cfg.color
+                }}>
+                  {cfg.label}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
+                {(q.items || []).length} {(q.items || []).length === 1 ? 'item' : 'itens'} · {q.payment_term_label || '—'}
+              </div>
+              <div style={{
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontWeight: 700, fontSize: 18, color: 'var(--orange)'
+              }}>
+                R$ {Number(q.total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          )
+        })
       ) : null}
 
       {tab === 'checklists' && farmChecklists.length === 0 ? (

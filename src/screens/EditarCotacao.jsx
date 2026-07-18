@@ -127,7 +127,7 @@ export default function EditarCotacao() {
   function removeItem(idx) { setItems(prev => prev.filter((_, i) => i !== idx)) }
 
   const total = items.reduce((a, it) => a + (it.subtotal || 0), 0)
-  const temDesconto = items.some(it => Number(it.discount) > 10)
+  const temDesconto = items.some(it => Number(it.discount) > Number(it.max_discount || 10))
   const farm = farms.find(f => f.id === farmSel)
 
   async function salvar() {
@@ -150,6 +150,7 @@ export default function EditarCotacao() {
       frete,
       frete_label: (() => { const f = FRETES.find(f => f.value === frete); return f ? `${f.label} - ${f.desc}` : frete })(),
       total,
+      needs_approval: temDesconto,
       notes,
     }
 
@@ -235,12 +236,12 @@ export default function EditarCotacao() {
                       style={{width:'100%',padding:'6px 8px',fontSize:13}}/>
                   </div>
                   <div>
-                    <div style={{fontSize:10,color:`${Number(it.discount)>10?'var(--amber)':'var(--text-faint)'}`,marginBottom:4}}>
-                      Desc.% {Number(it.discount) > 10 ? '⚠️' : ''}
+                    <div style={{fontSize:10,color:`${Number(it.discount)>Number(it.max_discount||10)?'var(--amber)':'var(--text-faint)'}`,marginBottom:4}}>
+                      Desc.% {Number(it.discount) > Number(it.max_discount||10) ? '⚠️' : ''}
                     </div>
                     <input type="number" value={it.discount} min="0" max="100" step="0.5"
                       onChange={e => updateItem(idx, 'discount', e.target.value)}
-                      style={{width:'100%',padding:'6px 8px',fontSize:13,borderColor: Number(it.discount)>10 ? 'var(--amber)' : undefined}}/>
+                      style={{width:'100%',padding:'6px 8px',fontSize:13,borderColor: Number(it.discount)>Number(it.max_discount||10) ? 'var(--amber)' : undefined}}/>
                   </div>
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
@@ -285,7 +286,7 @@ export default function EditarCotacao() {
 
         {temDesconto && (
           <div style={{background:'var(--amber-bg)',border:'1px solid var(--amber)',borderRadius:8,padding:'8px 12px',marginBottom:12,fontSize:12,color:'var(--amber)'}}>
-            ⚠️ Desconto acima de 10% — cotação será sinalizada para aprovação
+            ⚠️ Desconto acima do limite de algum produto — cotação será sinalizada para aprovação
           </div>
         )}
         {!online && (

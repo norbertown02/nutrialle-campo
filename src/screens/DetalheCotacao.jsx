@@ -5,6 +5,7 @@ import { useAuth } from '../lib/useAuth.jsx'
 import { db } from '../lib/db'
 import { showToast } from '../lib/toast'
 import { confirmDialog } from '../lib/confirm'
+import { useSales } from '../lib/useSales'
 import {
   IconFileText,
   IconCheck,
@@ -94,6 +95,7 @@ export default function DetalheCotacao() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { addSale } = useSales()
 
   const [quote, setQuote] = useState(null)
   const [farm, setFarm] = useState(null)
@@ -194,23 +196,40 @@ export default function DetalheCotacao() {
 
     setAtualizando(true)
 
-    const venda = {
-      id: 's' + Date.now(),
-      farm_id: quote.farm_id,
-      sale_date: new Date().toISOString().split('T')[0],
-      items: quote.items,
-      payment_term: quote.payment_term,
-      payment_term_label: quote.payment_term_label,
+    // A cotação guarda os itens em snake_case (product_id, unit_price...),
+    // igual as outras tabelas do Supabase. A venda usa camelCase
+    // (productId, unitPrice...) porque é o formato que NovaVenda.jsx e
+    // toda a tela de vendas espera. Sem essa conversão, uma venda criada
+    // por conversão de cotação fica com nome de produto e preço em
+    // branco na listagem — o formato salvo não bate com o que a tela lê.
+    const itensVenda = (quote.items || []).map(it => ({
+      productId: it.product_id,
+      productName: it.product_name,
+      unit: it.unit,
+      bagKg: Number(it.bag_kg) || 0,
+      priceKg: Number(it.price_kg) || 0,
+      unitPrice: Number(it.unit_price) || 0,
+      quantity: Number(it.quantity) || 0,
+      discount: Number(it.discount) || 0,
+      subtotal: Number(it.subtotal) || 0,
+    }))
+
+    // Passa pelo mesmo addSale() que a venda direta usa — assim os dois
+    // caminhos de criar uma venda (direto ou por conversão de cotação)
+    // seguem exatamente a mesma lógica, e o e-mail automático para o
+    // administrativo dispara nos dois casos.
+    const { error: errVenda } = await addSale({
+      farmId: quote.farm_id,
+      saleDate: new Date().toISOString().split('T')[0],
+      items: itensVenda,
+      total: quote.total,
+      paymentTermId: quote.payment_term,
+      paymentTermLabel: quote.payment_term_label,
       frete: quote.frete || 'CIF',
       frete_label: quote.frete_label || 'CIF - Frete por conta do vendedor',
-      total: quote.total,
-      needs_approval: false,
-      status: 'pendente_envio',
-    }
-
-    const { error: errVenda } = await supabase
-      .from('sales')
-      .insert(venda)
+      needsApproval: !!quote.needs_approval,
+      notes: quote.notes || '',
+    })
 
     if (errVenda) {
       showToast('Erro ao criar venda: ' + errVenda.message, 'error')
@@ -705,6 +724,22 @@ export default function DetalheCotacao() {
           >
             {cfg.label}
           </span>
+
+          {quote.needs_approval && (
+            <span
+              style={{
+                background: 'var(--red-bg)',
+                color: 'var(--red)',
+                borderRadius: 20,
+                padding: '4px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                marginLeft: 8,
+              }}
+            >
+              Precisa aprovação
+            </span>
+          )}
         </div>
 
         <div
