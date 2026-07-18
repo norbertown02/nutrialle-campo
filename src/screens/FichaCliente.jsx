@@ -8,6 +8,7 @@ import {
   IconLock, IconCopy
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
+import { showToast } from '../lib/toast'
 import { criarAcessoCliente } from '../lib/clienteAcesso'
 import { useVisits } from '../lib/useVisits'
 import { useChecklists } from '../lib/useChecklists'
@@ -283,7 +284,7 @@ export default function FichaCliente() {
     if (!error) {
       setEditando(false)
     } else {
-      alert('Erro ao salvar: ' + error.message)
+      showToast('Erro ao salvar: ' + error.message, 'error')
     }
   }
 

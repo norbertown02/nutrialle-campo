@@ -157,7 +157,7 @@ export default function NovaFazenda() {
   const [form, setForm] = useState({
     name:'', owner:'', ownerRole:'Proprietário', phone:'', email:'',
     docTipo:'cpf', cpf:'', cnpj:'', cnpjIE:'', cadpro1:'', cadpro2:'', cadpro3:'',
-    segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'', bairro:'', complemento:'', ie:'',
+    segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'', bairro:'', complemento:'',
     herdSize:'', production:'', area:'', marcaAtual:'', marcaOutra:'',
   })
 
@@ -203,7 +203,7 @@ export default function NovaFazenda() {
       ie: form.cnpjIE?.trim()||null,
       city: form.city.trim(), state: form.state,
       cep: form.cep?.trim(), street: form.street?.trim(), street_number: form.street_number?.trim(),
-      bairro: form.bairro?.trim()||null, complemento: form.complemento?.trim()||null, ie: form.ie?.trim()||null,
+      bairro: form.bairro?.trim()||null, complemento: form.complemento?.trim()||null,
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
     })

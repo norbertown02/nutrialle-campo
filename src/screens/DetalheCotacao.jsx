@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
 import { db } from '../lib/db'
+import { showToast } from '../lib/toast'
 import {
   IconFileText,
   IconCheck,
@@ -174,10 +175,12 @@ export default function DetalheCotacao() {
     if (!farm?.phone) camposFaltando.push('Telefone')
 
     if (camposFaltando.length > 0) {
-      alert(
-        'Para converter em venda, complete os dados da fazenda:\n\n• ' +
+      showToast(
+        'Para converter em venda, complete os dados da fazenda:\n• ' +
           camposFaltando.join('\n• ') +
-          '\n\nAcesse a ficha do cliente e preencha os dados faltantes.'
+          '\n\nAcesse a ficha do cliente e preencha os dados faltantes.',
+        'error',
+        9000
       )
       return
     }
@@ -205,7 +208,7 @@ export default function DetalheCotacao() {
       .insert(venda)
 
     if (errVenda) {
-      alert('Erro ao criar venda: ' + errVenda.message)
+      showToast('Erro ao criar venda: ' + errVenda.message, 'error')
       setAtualizando(false)
       return
     }
@@ -581,7 +584,7 @@ export default function DetalheCotacao() {
       const doc = buildPDF()
       doc.save(nomeArquivoPDF())
     } catch (e) {
-      alert('Erro ao gerar PDF: ' + e.message)
+      showToast('Erro ao gerar PDF: ' + e.message, 'error')
     }
   }
 
@@ -601,7 +604,12 @@ export default function DetalheCotacao() {
         })
 
       if (upErr) {
-        alert('Erro ao fazer upload: ' + upErr.message)
+        showToast(
+          navigator.onLine
+            ? 'Erro ao fazer upload: ' + upErr.message
+            : 'Sem conexão — para compartilhar por WhatsApp é preciso estar online. Use "Baixar PDF" para salvar offline.',
+          'error'
+        )
         return
       }
 
@@ -618,7 +626,7 @@ export default function DetalheCotacao() {
 
       window.open(`https://wa.me/?text=${msg}`, '_blank')
     } catch (e) {
-      alert('Erro ao compartilhar: ' + e.message)
+      showToast('Erro ao compartilhar: ' + e.message, 'error')
     }
   }
 
