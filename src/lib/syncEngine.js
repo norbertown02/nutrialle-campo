@@ -1,6 +1,7 @@
 import { db } from './db'
 import { supabase } from './supabase'
 import { showToast } from './toast'
+import { logError } from './logError'
 
 // Depois de N tentativas com um erro que veio de verdade do servidor
 // (validação, permissão etc — não conectividade), paramos de tentar
@@ -28,7 +29,7 @@ const listeners = new Set()
 
 function notify() {
   listeners.forEach(cb => {
-    try { cb() } catch (e) {}
+    try { cb() } catch (e) { console.warn('Listener de sync falhou:', e) }
   })
 }
 
@@ -132,6 +133,7 @@ export async function processOutbox() {
             'error',
             10000
           )
+          logError('sync_engine', error, { entity: item.entity, entity_id: item.entity_id, op: item.op, attempts })
         }
       }
       notify()

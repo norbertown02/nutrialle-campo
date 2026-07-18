@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Há débito de lint pré-existente no projeto (avisos de variável não
+      # usada etc.) que ainda não foi limpo em todos os arquivos — por isso
+      # o lint não quebra o pipeline por enquanto, só o build (que é o que
+      # realmente impede um deploy quebrado). Vale endurecer isso (remover
+      # o continue-on-error) depois que o lint estiver 100% limpo.
+      - run: npm run lint
+        continue-on-error: true
+
+      - run: npm run build

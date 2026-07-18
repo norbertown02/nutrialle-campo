@@ -1,4 +1,4 @@
-const CACHE = 'nutrialle-v11'
+const CACHE = 'nutrialle-v12'
 const STATIC = [
   '/',
   '/index.html',
@@ -10,7 +10,17 @@ const STATIC = [
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)))
-  self.skipWaiting()
+  // Sem skipWaiting() aqui de propósito: se um vendedor está com o app
+  // aberto em campo, trocar a versão sozinho no meio da sessão pode
+  // deixar a tela pedindo por um chunk (JS de rota) que já não existe
+  // mais no servidor depois do deploy novo. O app novo fica "esperando"
+  // até o usuário confirmar (via mensagem SKIP_WAITING), o que só
+  // acontece quando ele toca em "Atualizar" no aviso — ou na próxima
+  // vez que abrir o app do zero.
+})
+
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting()
 })
 
 self.addEventListener('activate', e => {

@@ -13,6 +13,7 @@ import {
 
 import { useSales } from '../lib/useSales'
 import { useFarms } from '../lib/useFarms'
+import { confirmDialog } from '../lib/confirm'
 
 function fmtBRL(n) {
   return 'R$ ' + Number(n || 0).toLocaleString('pt-BR', {
@@ -67,8 +68,11 @@ export default function DetalheVenda() {
 
   const itens = Array.isArray(venda.items) ? venda.items : []
 
-  function handleExcluir() {
-    if (!window.confirm('Excluir esta venda? Essa ação não pode ser desfeita.')) return
+  async function handleExcluir() {
+    const ok = await confirmDialog('Excluir esta venda? Essa ação não pode ser desfeita.', {
+      title: 'Excluir venda', confirmLabel: 'Excluir', danger: true,
+    })
+    if (!ok) return
     removeSale(venda.id)
     navigate('/vendas')
   }

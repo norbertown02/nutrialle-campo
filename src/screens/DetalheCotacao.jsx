@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
 import { db } from '../lib/db'
 import { showToast } from '../lib/toast'
+import { confirmDialog } from '../lib/confirm'
 import {
   IconFileText,
   IconCheck,
@@ -100,16 +101,12 @@ export default function DetalheCotacao() {
   const [loading, setLoading] = useState(true)
   const [atualizando, setAtualizando] = useState(false)
 
-  useEffect(() => {
-    carregar()
-  }, [id])
-
   async function carregar() {
     setLoading(true)
 
     // Tenta o Supabase primeiro; se falhar (offline) ou a cotação ainda
     // não tiver sincronizado, cai para o que estiver salvo no aparelho.
-    let q = null
+    let q
     const { data: qNet, error: qErr } = await supabase.from('quotes').select('*').eq('id', id).single()
     if (!qErr && qNet) {
       q = qNet
@@ -121,7 +118,7 @@ export default function DetalheCotacao() {
     if (q) {
       setQuote(q)
 
-      let f = null
+      let f
       const { data: fNet, error: fErr } = await supabase.from('farms').select('*').eq('id', q.farm_id).single()
       if (!fErr && fNet) {
         f = fNet
@@ -152,6 +149,11 @@ export default function DetalheCotacao() {
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    carregar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   async function mudarStatus(status) {
     setAtualizando(true)
@@ -185,7 +187,10 @@ export default function DetalheCotacao() {
       return
     }
 
-    if (!confirm('Converter esta cotação em venda?')) return
+    const confirmou = await confirmDialog('Converter esta cotação em venda?', {
+      title: 'Converter em venda', confirmLabel: 'Converter',
+    })
+    if (!confirmou) return
 
     setAtualizando(true)
 
@@ -289,7 +294,9 @@ export default function DetalheCotacao() {
 
       try {
         doc.addImage(logoHeader, 'PNG', M, 12, 66, 14)
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Não foi possível desenhar o logo no PDF:', e)
+      }
 
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(19)
@@ -925,8 +932,11 @@ export default function DetalheCotacao() {
                 padding: '12px 16px',
                 color: 'var(--red)',
               }}
-              onClick={() => {
-                if (window.confirm('Cancelar esta cotação?')) mudarStatus('cancelada')
+              onClick={async () => {
+                const ok = await confirmDialog('Cancelar esta cotação?', {
+                  title: 'Cancelar cotação', confirmLabel: 'Cancelar cotação', danger: true,
+                })
+                if (ok) mudarStatus('cancelada')
               }}
             >
               Cancelar cotação

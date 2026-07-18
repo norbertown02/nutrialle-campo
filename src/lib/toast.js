@@ -14,7 +14,7 @@ let toasts = []
 
 function notify() {
   listeners.forEach(cb => {
-    try { cb(toasts) } catch (e) {}
+    try { cb(toasts) } catch (e) { console.warn('Listener de toast falhou:', e) }
   })
 }
 
@@ -23,9 +23,11 @@ export function getToasts() {
 }
 
 // type: 'error' | 'success' | 'info'
-export function showToast(message, type = 'info', duration = 6000) {
+// options.action: { label, onClick } — botão extra dentro do toast (ex: "Atualizar")
+// duration = 0 mantém o toast até o usuário interagir (usado para coisas que exigem ação, tipo nova versão disponível)
+export function showToast(message, type = 'info', duration = 6000, options = {}) {
   const id = nextId++
-  toasts = [...toasts, { id, message, type }]
+  toasts = [...toasts, { id, message, type, action: options.action || null }]
   notify()
   if (duration > 0) {
     setTimeout(() => dismissToast(id), duration)

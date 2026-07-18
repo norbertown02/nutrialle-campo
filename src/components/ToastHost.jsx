@@ -38,6 +38,18 @@ export default function ToastHost() {
             }}>
             <Icon size={16} style={{ flexShrink: 0, marginTop: 1 }} />
             <div style={{ flex: 1 }}>{t.message}</div>
+            {t.action && (
+              <button
+                onClick={(e) => { e.stopPropagation(); t.action.onClick(); dismissToast(t.id) }}
+                style={{
+                  flexShrink: 0, pointerEvents: 'auto', background: 'transparent',
+                  border: `1px solid ${cfg.color}`, color: cfg.color, borderRadius: 6,
+                  padding: '3px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {t.action.label}
+              </button>
+            )}
             <IconX size={14} style={{ flexShrink: 0, opacity: 0.7, marginTop: 1 }} />
           </div>
         )

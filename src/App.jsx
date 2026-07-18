@@ -1,46 +1,51 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/useAuth.jsx'
 import { startAutoSync } from './lib/syncEngine'
+import { lazyWithRetry } from './lib/lazyWithRetry'
+import { useServiceWorkerUpdate } from './lib/useServiceWorkerUpdate'
 import AppBar from './components/AppBar'
 import TabBar from './components/TabBar'
 import SplashScreen from './components/SplashScreen'
 import SyncStatusBar from './components/SyncStatusBar'
 import ToastHost from './components/ToastHost'
+import ConfirmDialog from './components/ConfirmDialog'
 
 // Cada tela vira um chunk separado, carregado só quando o vendedor
 // realmente navega até ela — em vez de baixar tudo (relatórios, gráficos,
 // PDF etc.) de uma vez só no primeiro carregamento, o que pesa bastante
-// em conexão de campo ruim.
-const Login = lazy(() => import('./screens/Login'))
-const Home = lazy(() => import('./screens/Home'))
+// em conexão de campo ruim. lazyWithRetry força um reload único se o
+// chunk não existir mais (deploy novo aconteceu enquanto o app estava
+// aberto), em vez de travar a tela.
+const Login = lazyWithRetry(() => import('./screens/Login'))
+const Home = lazyWithRetry(() => import('./screens/Home'))
 
-const Clientes = lazy(() => import('./screens/Clientes'))
-const NovaFazenda = lazy(() => import('./screens/NovaFazenda'))
-const FichaCliente = lazy(() => import('./screens/FichaCliente'))
+const Clientes = lazyWithRetry(() => import('./screens/Clientes'))
+const NovaFazenda = lazyWithRetry(() => import('./screens/NovaFazenda'))
+const FichaCliente = lazyWithRetry(() => import('./screens/FichaCliente'))
 
-const NovaVisita = lazy(() => import('./screens/NovaVisita'))
+const NovaVisita = lazyWithRetry(() => import('./screens/NovaVisita'))
 
-const NovaVenda = lazy(() => import('./screens/NovaVenda'))
-const Vendas = lazy(() => import('./screens/Vendas'))
-const DetalheVenda = lazy(() => import('./screens/DetalheVenda'))
+const NovaVenda = lazyWithRetry(() => import('./screens/NovaVenda'))
+const Vendas = lazyWithRetry(() => import('./screens/Vendas'))
+const DetalheVenda = lazyWithRetry(() => import('./screens/DetalheVenda'))
 
-const Checklist = lazy(() => import('./screens/Checklist'))
-const PickChecklist = lazy(() => import('./screens/PickChecklist'))
+const Checklist = lazyWithRetry(() => import('./screens/Checklist'))
+const PickChecklist = lazyWithRetry(() => import('./screens/PickChecklist'))
 
-const Agenda = lazy(() => import('./screens/Agenda'))
-const NovoCompromisso = lazy(() => import('./screens/NovoCompromisso'))
+const Agenda = lazyWithRetry(() => import('./screens/Agenda'))
+const NovoCompromisso = lazyWithRetry(() => import('./screens/NovoCompromisso'))
 
-const Prospeccao = lazy(() => import('./screens/Prospeccao'))
-const NovaCotacao = lazy(() => import('./screens/NovaCotacao'))
-const DetalheCotacao = lazy(() => import('./screens/DetalheCotacao'))
-const EditarCotacao = lazy(() => import('./screens/EditarCotacao'))
+const Prospeccao = lazyWithRetry(() => import('./screens/Prospeccao'))
+const NovaCotacao = lazyWithRetry(() => import('./screens/NovaCotacao'))
+const DetalheCotacao = lazyWithRetry(() => import('./screens/DetalheCotacao'))
+const EditarCotacao = lazyWithRetry(() => import('./screens/EditarCotacao'))
 
-const Precos = lazy(() => import('./screens/Precos'))
-const Mercado = lazy(() => import('./screens/Mercado'))
+const Precos = lazyWithRetry(() => import('./screens/Precos'))
+const Mercado = lazyWithRetry(() => import('./screens/Mercado'))
 
-const DashboardVendas = lazy(() => import('./screens/DashboardVendas'))
-const FazendaDados = lazy(() => import('./screens/FazendaDados'))
+const DashboardVendas = lazyWithRetry(() => import('./screens/DashboardVendas'))
+const FazendaDados = lazyWithRetry(() => import('./screens/FazendaDados'))
 
 function CarregandoTela() {
   return (
@@ -54,6 +59,7 @@ function AppContent() {
   const { user, loading, showSplash } = useAuth()
 
   useEffect(() => { startAutoSync() }, [])
+  useServiceWorkerUpdate()
 
   if (loading || showSplash) {
     return <SplashScreen />
@@ -108,6 +114,7 @@ function AppContent() {
 
       <TabBar />
       <ToastHost />
+      <ConfirmDialog />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import { IconAlertTriangle, IconRefresh } from '@tabler/icons-react'
+import { logError } from '../lib/logError'
 
 // Error boundaries só funcionam como componente de classe (React ainda não
 // tem equivalente em hooks). Sem isso, qualquer erro de render em qualquer
@@ -17,6 +18,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('Erro não tratado capturado pelo ErrorBoundary:', error, info)
+    logError('error_boundary', error, { componentStack: info?.componentStack })
   }
 
   render() {
