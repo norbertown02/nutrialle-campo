@@ -9,13 +9,6 @@ import { db } from '../lib/db'
 import { enqueue } from '../lib/syncEngine'
 import { IconTrash, IconSearch, IconCloudOff } from '@tabler/icons-react'
 
-const PAGAMENTOS = [
-  {value:'a_vista',    label:'À vista'},
-  {value:'30',         label:'30 dias'},
-  {value:'30_60',      label:'30/60 dias'},
-  {value:'30_60_90',   label:'30/60/90 dias'},
-]
-
 const FRETES = [
   {value:'CIF', label:'CIF', desc:'Frete por conta do vendedor'},
   {value:'FOB', label:'FOB', desc:'Frete por conta do comprador'},
@@ -30,11 +23,11 @@ export default function EditarCotacao() {
   const { user } = useAuth()
   const online = useOnlineStatus()
   const { farms } = useFarms()
-  const { products, offline: produtosOffline } = useProducts()
+  const { products, paymentTerms, offline: produtosOffline } = useProducts()
   const [farmSel, setFarmSel] = useState('')
   const [buscaProd, setBuscaProd] = useState('')
   const [items, setItems] = useState([])
-  const [pagamento, setPagamento] = useState('a_vista')
+  const [pagamento, setPagamento] = useState('')
   const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -44,6 +37,17 @@ export default function EditarCotacao() {
   // produtos chegam de forma assíncrona (cache/rede); reprocessa os
   // itens da cotação quando a lista de produtos estiver disponível
   useEffect(() => { if (products.length > 0) recalcularItensComProdutos() }, [products.length])
+
+  // Condições de pagamento vêm da tabela payment_terms do Supabase — antes
+  // esta tela usava uma lista fixa no código, desconectada do que é
+  // configurado no admin. Se a cotação salvou um valor antigo (formato
+  // fixo tipo "a_vista") que não existe mais como id em payment_terms,
+  // caímos para a primeira condição ativa.
+  useEffect(() => {
+    if (!paymentTerms.length) return
+    const aindaValido = paymentTerms.some(t => t.id === pagamento)
+    if (!aindaValido) setPagamento(paymentTerms[0].id)
+  }, [paymentTerms])
 
   async function carregar() {
     setLoading(true)
@@ -60,7 +64,7 @@ export default function EditarCotacao() {
     if (q) {
       setFarmSel(q.farm_id)
       setItems((q.items || []).map(it => normalizarItem(it)))
-      setPagamento(q.payment_term || 'a_vista')
+      setPagamento(q.payment_term || '')
       setFrete(q.frete || 'CIF')
       setNotes(q.notes || '')
     }
@@ -131,7 +135,7 @@ export default function EditarCotacao() {
   const farm = farms.find(f => f.id === farmSel)
 
   async function salvar() {
-    if (!farmSel || items.length === 0 || salvando) return
+    if (!farmSel || items.length === 0 || !pagamento || salvando) return
     setSalvando(true)
     const payload = {
       items: items.map(it => ({
@@ -146,7 +150,7 @@ export default function EditarCotacao() {
         subtotal: it.subtotal,
       })),
       payment_term: pagamento,
-      payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
+      payment_term_label: paymentTerms.find(p => p.id === pagamento)?.label || '',
       frete,
       frete_label: (() => { const f = FRETES.find(f => f.value === frete); return f ? `${f.label} - ${f.desc}` : frete })(),
       total,
@@ -262,7 +266,7 @@ export default function EditarCotacao() {
         {/* Pagamento */}
         <div style={{fontWeight:600,marginBottom:8}}>Condição de pagamento</div>
         <select value={pagamento} onChange={e=>setPagamento(e.target.value)} style={{width:'100%',marginBottom:16}}>
-          {PAGAMENTOS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+          {paymentTerms.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
         </select>
 
         {/* Frete */}
@@ -306,7 +310,7 @@ export default function EditarCotacao() {
       {/* Botão fixo */}
       <div style={{position:'fixed',bottom:65,left:0,right:0,padding:'10px 16px',background:'var(--surface-1)',borderTop:'1px solid var(--line)',zIndex:100}}>
         <button className="btn btn-primary" style={{width:'100%',fontSize:14,padding:'10px'}}
-          disabled={items.length===0||salvando} onClick={salvar}>
+          disabled={items.length===0||!pagamento||salvando} onClick={salvar}>
           {salvando ? 'Salvando...' : 'Salvar Alterações'}
         </button>
       </div>

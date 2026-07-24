@@ -8,13 +8,6 @@ import { db } from '../lib/db'
 import { enqueue } from '../lib/syncEngine'
 import { IconPlus, IconTrash, IconChevronDown, IconSearch, IconCloudOff } from '@tabler/icons-react'
 
-const PAGAMENTOS = [
-  {value:'a_vista',    label:'À vista'},
-  {value:'30',         label:'30 dias'},
-  {value:'30_60',      label:'30/60 dias'},
-  {value:'30_60_90',   label:'30/60/90 dias'},
-]
-
 const FRETES = [
   {value:'CIF', label:'CIF', desc:'Frete por conta do vendedor'},
   {value:'FOB', label:'FOB', desc:'Frete por conta do comprador'},
@@ -30,12 +23,12 @@ export default function NovaCotacao() {
   const online = useOnlineStatus()
 
   const { farms } = useFarms()
-  const { products, offline: produtosOffline } = useProducts()
+  const { products, paymentTerms, offline: produtosOffline } = useProducts()
   const [farmSel, setFarmSel] = useState(params.get('farm') || '')
   const [buscaFarm, setBuscaFarm] = useState('')
   const [buscaProd, setBuscaProd] = useState('')
   const [items, setItems] = useState([])
-  const [pagamento, setPagamento] = useState('a_vista')
+  const [pagamento, setPagamento] = useState('')
   const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -47,6 +40,16 @@ export default function NovaCotacao() {
       if (f) setBuscaFarm(f.name)
     }
   }, [farms])
+
+  // Condições de pagamento vêm da tabela payment_terms do Supabase (a
+  // mesma usada em Nova Venda) — antes esta tela usava uma lista fixa no
+  // código, então uma condição criada/editada/removida no admin nunca
+  // aparecia aqui.
+  useEffect(() => {
+    if (!paymentTerms.length) return
+    const aindaValido = paymentTerms.some(t => t.id === pagamento)
+    if (!aindaValido) setPagamento(paymentTerms[0].id)
+  }, [paymentTerms])
 
   const farmsFiltradas = farms.filter(f =>
     f.name?.toLowerCase().includes(buscaFarm.toLowerCase()) ||
@@ -103,7 +106,7 @@ export default function NovaCotacao() {
   const validUntil = new Date(Date.now() + 10*86400000).toISOString().split('T')[0]
 
   async function salvar(status = 'rascunho') {
-    if (!farmSel || items.length === 0 || salvando) return
+    if (!farmSel || items.length === 0 || !pagamento || salvando) return
     setSalvando(true)
 
     const id = crypto.randomUUID()
@@ -125,7 +128,7 @@ export default function NovaCotacao() {
       payment_term: pagamento,
       frete,
       frete_label: (() => { const f = FRETES.find(f => f.value === frete); return f ? `${f.label} - ${f.desc}` : frete })(),
-      payment_term_label: PAGAMENTOS.find(p => p.value === pagamento)?.label,
+      payment_term_label: paymentTerms.find(p => p.id === pagamento)?.label || '',
       total,
       status,
       needs_approval: temDesconto,
@@ -274,7 +277,7 @@ export default function NovaCotacao() {
         {/* Pagamento */}
         <div style={{fontWeight:600,marginBottom:8}}>Condição de pagamento</div>
         <select value={pagamento} onChange={e=>setPagamento(e.target.value)} style={{width:'100%',marginBottom:16}}>
-          {PAGAMENTOS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+          {paymentTerms.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
         </select>
 
         {/* Frete */}
@@ -315,7 +318,7 @@ export default function NovaCotacao() {
         </div>
 
         <div style={{position:'fixed',bottom:65,left:0,right:0,padding:'10px 16px',background:'var(--surface-1)',borderTop:'1px solid var(--line)',zIndex:100,maxWidth:430,margin:'0 auto'}}>
-          <button className="btn btn-primary" style={{width:'100%',fontSize:14,padding:'10px'}} disabled={!farmSel||items.length===0||salvando} onClick={() => salvar('rascunho')}>
+          <button className="btn btn-primary" style={{width:'100%',fontSize:14,padding:'10px'}} disabled={!farmSel||items.length===0||!pagamento||salvando} onClick={() => salvar('rascunho')}>
             {salvando ? 'Salvando...' : 'Salvar Cotação'}
           </button>
         </div>
