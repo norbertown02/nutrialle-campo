@@ -37,6 +37,16 @@ function comTimeout(promise, ms, fallback) {
   ])
 }
 
+// Cache em memória do último profile buscado com sucesso, por user id.
+// onAuthStateChange do Supabase dispara sozinho de tempos em tempos
+// (ex: renovação automática de token), e cada disparo refaz essa busca
+// com um timeout curto. Em campo, com sinal ruim, é comum a busca
+// demorar mais que o timeout — sem esse cache, isso fazia o nome
+// correto (vindo de profiles.name) ser substituído silenciosamente pelo
+// nome "chutado" a partir do e-mail de login, mesmo a tela já tendo
+// mostrado o nome certo segundos antes.
+const ultimoProfileConhecido = new Map()
+
 async function montarUsuario(authUser) {
   if (!authUser) return null
 
@@ -55,9 +65,17 @@ async function montarUsuario(authUser) {
 
     if (!error && data) {
       profile = data
+      ultimoProfileConhecido.set(authUser.id, data)
     }
   } catch (e) {
     console.warn('Erro ao carregar profile do usuário:', e)
+  }
+
+  // Busca deu timeout/falhou/não achou nada: em vez de cair direto pro
+  // nome chutado do e-mail, usa o último profile que já carregamos com
+  // sucesso pra esse usuário nesta sessão, se tiver.
+  if (!profile && ultimoProfileConhecido.has(authUser.id)) {
+    profile = ultimoProfileConhecido.get(authUser.id)
   }
 
   return {
