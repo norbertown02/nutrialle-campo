@@ -38,6 +38,16 @@ function fromDB(row) {
     ie:           row.ie,
     cadPro:       row.cad_pro,
 
+    // campos granulares do formulário de novo cadastro (tipo de documento
+    // e CAD/PROs individuais) — mantidos para que a tela de cadastro
+    // consiga reconstituir o formulário de origem se precisar
+    docTipo:      row.doc_tipo,
+    cpf:          row.cpf,
+    cnpj:         row.cnpj,
+    cadpro1:      row.cadpro_1,
+    cadpro2:      row.cadpro_2,
+    cadpro3:      row.cadpro_3,
+
     owner:        row.owner,
     prospect:     row.prospect,
     notes:        row.notes,
@@ -79,6 +89,19 @@ function toDB(farm) {
     cpf_cnpj:      farm.cpfCnpj,
     ie:            farm.ie,
     cad_pro:       farm.cadPro,
+
+    // Campos granulares vindos do formulário de novo cadastro. Antes
+    // essas chaves não existiam aqui, então o cadastro (que envia
+    // doc_tipo/cpf/cnpj/cadpro_1/2/3) nunca gravava cpf_cnpj/cad_pro —
+    // os dados digitados eram perdidos e a ficha do cliente aparecia
+    // zerada. NovaFazenda.jsx agora também envia cpfCnpj/cadPro
+    // consolidados diretamente, e mantemos os campos granulares aqui.
+    doc_tipo:      farm.docTipo,
+    cpf:           farm.cpf,
+    cnpj:          farm.cnpj,
+    cadpro_1:      farm.cadpro1,
+    cadpro_2:      farm.cadpro2,
+    cadpro_3:      farm.cadpro3,
 
     owner:         farm.owner,
     prospect:      farm.prospect,

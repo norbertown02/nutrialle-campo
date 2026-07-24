@@ -193,8 +193,16 @@ export default function DetalheCotacao() {
   async function converterEmVenda() {
     const camposFaltando = []
 
+    // CAD/PRO é o Cadastro de Produtor Rural — só se aplica a pessoa física
+    // (CPF). Cliente pessoa jurídica (CNPJ) não tem CAD/PRO, então não faz
+    // sentido travar a venda por isso. Usamos doc_tipo/cnpj quando
+    // disponíveis e, como reforço para cadastros antigos que só têm
+    // cpf_cnpj preenchido, inferimos pelo número de dígitos (CNPJ tem 14).
+    const digitosDoc = (farm?.cpf_cnpj || '').replace(/\D/g, '')
+    const isPessoaJuridica = farm?.doc_tipo === 'cnpj' || !!farm?.cnpj || digitosDoc.length === 14
+
     if (!farm?.cpf_cnpj) camposFaltando.push('CPF/CNPJ')
-    if (!farm?.cad_pro) camposFaltando.push('CAD/PRO')
+    if (!isPessoaJuridica && !farm?.cad_pro) camposFaltando.push('CAD/PRO')
     if (!farm?.street && !farm?.address) camposFaltando.push('Endereço')
     if (!farm?.city) camposFaltando.push('Município')
     if (!farm?.phone) camposFaltando.push('Telefone')

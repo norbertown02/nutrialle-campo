@@ -148,11 +148,22 @@ export default function NovaFazenda() {
   const handleSave = async () => {
     if (!isValid || salvando) return
     setSalvando(true)
+    // Campo único de CPF/CNPJ e CAD/PRO que o resto do app (ficha do
+    // cliente, PDF de venda, conversão de cotação em venda) lê. Sem isso,
+    // os dados digitados aqui iam só para doc_tipo/cpf/cnpj/cadpro_1/2/3
+    // e ficavam invisíveis em qualquer outra tela — o cadastro parecia
+    // "zerado" ao ser reaberto para edição.
+    const cpfCnpjConsolidado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
+    const cadProConsolidado = [form.cadpro1, form.cadpro2, form.cadpro3]
+      .filter(Boolean).join(', ') || null
+
     await addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
       phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
       doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
       cadpro_1: form.cadpro1||null, cadpro_2: form.cadpro2||null, cadpro_3: form.cadpro3||null,
+      cpfCnpj: cpfCnpjConsolidado || null,
+      cadPro: form.docTipo === 'cpf' ? cadProConsolidado : null,
       ie: form.cnpjIE?.trim()||null,
       city: form.city.trim(), state: form.state,
       cep: form.cep?.trim(), street: form.street?.trim(), street_number: form.street_number?.trim(),
