@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react'
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react'
 import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
@@ -96,6 +96,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showSplash, setShowSplash] = useState(false)
+  const usuarioRef = useRef(null)
 
   useEffect(() => {
     let ativo = true
@@ -124,10 +125,12 @@ export function AuthProvider({ children }) {
           const usuario = await montarUsuario(session.user)
 
           if (ativo) {
+            usuarioRef.current = usuario
             setUser(usuario)
           }
         } else {
           if (ativo) {
+            usuarioRef.current = null
             setUser(null)
           }
         }
@@ -135,6 +138,7 @@ export function AuthProvider({ children }) {
         console.error('Erro ao carregar sessão:', err)
 
         if (ativo) {
+          usuarioRef.current = null
           setUser(null)
         }
       } finally {
@@ -148,18 +152,32 @@ export function AuthProvider({ children }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!ativo) return
 
       try {
         if (session?.user) {
+          // TOKEN_REFRESHED dispara sozinho (renovação automática do
+          // Supabase, sem nenhuma ação do usuário) e não tem relação
+          // com o profile — refazer a busca aqui só criava uma chance a
+          // mais de dar timeout com sinal ruim em campo e trocar o nome
+          // certo pelo nome chutado do e-mail. Só rebuscamos o profile
+          // quando é de fato um usuário novo entrando (troca de conta)
+          // ou quando ainda não tínhamos ninguém carregado.
+          const mesmoUsuario = usuarioRef.current && usuarioRef.current.id === session.user.id
+          if (mesmoUsuario && event === 'TOKEN_REFRESHED') {
+            return
+          }
+
           const usuario = await montarUsuario(session.user)
 
           if (ativo) {
+            usuarioRef.current = usuario
             setUser(usuario)
           }
         } else {
           if (ativo) {
+            usuarioRef.current = null
             setUser(null)
           }
         }
@@ -167,6 +185,7 @@ export function AuthProvider({ children }) {
         console.error('Erro ao atualizar sessão:', err)
 
         if (ativo) {
+          usuarioRef.current = null
           setUser(null)
         }
       } finally {
@@ -203,6 +222,7 @@ export function AuthProvider({ children }) {
 
       const usuario = await montarUsuario(data.user)
 
+      usuarioRef.current = usuario
       setUser(usuario)
       setLoading(false)
 
@@ -214,6 +234,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error('Erro ao fazer login:', err)
       setError('Erro ao entrar. Tente novamente.')
+      usuarioRef.current = null
       setUser(null)
       setLoading(false)
       setShowSplash(false)
@@ -225,9 +246,11 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true)
       await supabase.auth.signOut()
+      usuarioRef.current = null
       setUser(null)
     } catch (err) {
       console.error('Erro ao sair:', err)
+      usuarioRef.current = null
       setUser(null)
     } finally {
       setLoading(false)
