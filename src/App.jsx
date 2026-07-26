@@ -47,6 +47,8 @@ const Mercado = lazyWithRetry(() => import('./screens/Mercado'))
 const DashboardVendas = lazyWithRetry(() => import('./screens/DashboardVendas'))
 const FazendaDados = lazyWithRetry(() => import('./screens/FazendaDados'))
 
+const Nutricao = lazyWithRetry(() => import('./screens/Nutricao'))
+
 function CarregandoTela() {
   return (
     <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-faint)' }}>
@@ -108,6 +110,8 @@ function AppContent() {
             <Route path="/dashboard-vendas" element={<DashboardVendas />} />
 
             <Route path="/fazenda-dados/:id" element={<FazendaDados />} />
+
+            <Route path="/nutricao" element={<Nutricao />} />
           </Routes>
         </Suspense>
       </div>
