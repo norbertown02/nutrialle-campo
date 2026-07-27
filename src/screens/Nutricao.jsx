@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { IconFileText, IconFlask2, IconChevronRight } from '@tabler/icons-react'
-import { irParaPlanos } from '../lib/irParaPlanos'
+import { IconFileText, IconFlask2, IconChevronRight, IconArrowLeft } from '@tabler/icons-react'
 
-function CardOpcao({ icon, titulo, descricao, onClick, carregando }) {
+function CardOpcao({ icon, titulo, descricao, onClick }) {
   return (
     <button
       onClick={onClick}
-      disabled={carregando}
       style={{
         width: '100%',
         textAlign: 'left',
@@ -17,8 +15,7 @@ function CardOpcao({ icon, titulo, descricao, onClick, carregando }) {
         borderRadius: 14,
         border: '1px solid var(--line)',
         background: 'var(--surface)',
-        cursor: carregando ? 'default' : 'pointer',
-        opacity: carregando ? 0.6 : 1,
+        cursor: 'pointer',
         fontFamily: 'inherit',
         marginBottom: 12,
       }}
@@ -39,17 +36,43 @@ function CardOpcao({ icon, titulo, descricao, onClick, carregando }) {
   )
 }
 
-export default function Nutricao() {
-  const [carregando, setCarregando] = useState(null)
+const TITULOS = {
+  introducao: 'Plano de Introdução',
+  nutricional: 'Controle Nutricional',
+}
 
-  async function abrir(modo) {
-    setCarregando(modo)
-    try {
-      await irParaPlanos(modo)
-    } catch (e) {
-      console.error('Erro ao abrir', modo, e)
-      setCarregando(null)
-    }
+export default function Nutricao() {
+  // null = mostra os dois cards de escolha; 'introducao'/'nutricional' =
+  // mostra o Nutrialle Planos dentro de um iframe em tela cheia (mesma
+  // origem, appcampo.nutrialle.com.br/planos -- a sessao do Supabase já
+  // fica compartilhada sozinha via localStorage, sem precisar de token).
+  const [modo, setModo] = useState(null)
+
+  if (modo) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+          background: '#0A0A0A', flexShrink: 0,
+        }}>
+          <button
+            onClick={() => setModo(null)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+              color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '6px 4px',
+            }}
+          >
+            <IconArrowLeft size={18} /> Voltar
+          </button>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', opacity: 0.85 }}>{TITULOS[modo]}</div>
+        </div>
+        <iframe
+          title={TITULOS[modo]}
+          src={`/planos?modo=${modo}&embed=1`}
+          style={{ flex: 1, width: '100%', border: 'none' }}
+        />
+      </div>
+    )
   }
 
   return (
@@ -66,16 +89,14 @@ export default function Nutricao() {
           icon={<IconFileText size={22} color="var(--orange)" />}
           titulo="Plano de Introdução"
           descricao="Proposta comercial pra uma fazenda nova: comparativo de mercado, produtos recomendados e ponto de equilíbrio."
-          onClick={() => abrir('introducao')}
-          carregando={carregando === 'introducao'}
+          onClick={() => setModo('introducao')}
         />
 
         <CardOpcao
           icon={<IconFlask2 size={22} color="var(--orange)" />}
           titulo="Controle Nutricional"
           descricao="Suas fazendas, lotes e dietas técnicas: exigências nutricionais reais comparadas com a dieta montada pra cada cliente."
-          onClick={() => abrir('nutricional')}
-          carregando={carregando === 'nutricional'}
+          onClick={() => setModo('nutricional')}
         />
       </div>
     </div>
