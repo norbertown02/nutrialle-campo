@@ -2,6 +2,6 @@
   "rewrites": [
     { "source": "/planos", "destination": "https://nutrialle-planos.vercel.app/planos" },
     { "source": "/planos/:path*", "destination": "https://nutrialle-planos.vercel.app/planos/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!.*\\..*).*)", "destination": "/index.html" }
   ]
 }
