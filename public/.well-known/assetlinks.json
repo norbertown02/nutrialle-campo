@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.nutrialle.campo",
+      "sha256_cert_fingerprints": [
+        "49:23:03:15:D6:19:26:88:67:E7:FF:F7:5E:40:38:58:F1:FD:9C:EE:22:B5:A9:7E:81:6E:98:9D:7A:7B:99:66",
+        "32:82:62:90:D3:BB:FF:70:B4:74:C5:8E:50:A2:06:81:BA:EC:0E:5D:D8:AC:77:83:BC:C6:EA:6C:A9:55:51:36"
+      ]
+    }
+  }
+]
