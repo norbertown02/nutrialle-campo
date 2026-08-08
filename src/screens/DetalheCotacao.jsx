@@ -911,7 +911,7 @@ export default function DetalheCotacao() {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 40 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 110 }}>
           {(quote.status === 'rascunho' || quote.status === 'enviada') && (
             <button
               className="btn btn-ghost"

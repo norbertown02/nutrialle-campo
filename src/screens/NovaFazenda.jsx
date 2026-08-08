@@ -142,8 +142,18 @@ export default function NovaFazenda() {
   // A validação de cidade pelo IBGE depende de internet. Offline, não
   // travamos o cadastro por causa disso — aceitamos a cidade digitada
   // manualmente e ela pode ser conferida depois, quando sincronizar.
+  //
+  // CPF/CNPJ é obrigatório aqui porque a Ultra não aceita criar um
+  // parceiro sem documento — cadastro sem isso nunca sincroniza (fica
+  // preso pra sempre em ultra_sync_status = "nao_sincronizado", sem
+  // nenhum aviso pro vendedor). Exigir na hora do cadastro evita esse
+  // cliente "fantasma" que nunca chega no ERP.
+  const documentoValido = form.docTipo === 'cpf'
+    ? form.cpf.replace(/\D/g, '').length === 11
+    : form.cnpj.replace(/\D/g, '').length === 14
+
   const isValid = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
-    form.city.trim().length >= 2 && (cidadeVerificada || !online)
+    form.city.trim().length >= 2 && (cidadeVerificada || !online) && documentoValido
 
   const handleSave = async () => {
     if (!isValid || salvando) return
@@ -237,7 +247,7 @@ export default function NovaFazenda() {
 
       {form.docTipo==='cpf' ? (
         <>
-          <Field label="CPF">
+          <Field label="CPF *">
             <input value={form.cpf} onChange={e=>setField('cpf',maskCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric"/>
           </Field>
           <Field label="CAD/PRO 1 (Cadastro de Produtor Rural)">
@@ -254,7 +264,7 @@ export default function NovaFazenda() {
           </Field>
         </>
       ) : (
-        <Field label="CNPJ">
+        <Field label="CNPJ *">
           <input value={form.cnpj} onChange={e=>setField('cnpj',maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" inputMode="numeric"/>
         </Field>
       )}
