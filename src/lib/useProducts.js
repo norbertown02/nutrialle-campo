@@ -6,16 +6,18 @@ export function useProducts() {
   const [products,       setProducts]       = useState([])
   const [paymentTerms,   setPaymentTerms]   = useState([])
   const [paymentMethods, setPaymentMethods] = useState([])
+  const [priceTables,   setPriceTables]   = useState([])
   const [loading,        setLoading]        = useState(true)
   const [offline,        setOffline]        = useState(false)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const [prod, terms, methods] = await Promise.all([
+      const [prod, terms, methods, tables] = await Promise.all([
         supabase.from('products').select('*').eq('active', true).order('segment').order('name'),
         supabase.from('payment_terms').select('*').eq('active', true).order('days'),
         supabase.from('erp_payment_methods').select('*').eq('active', true).order('description'),
+        supabase.from('erp_price_tables').select('*').eq('active', true).order('description'),
       ])
 
       if (!prod.error && prod.data) {
@@ -44,6 +46,12 @@ export function useProducts() {
         setPaymentMethods([])
       }
 
+      if (!tables.error && tables.data) {
+        setPriceTables(tables.data)
+      } else {
+        setPriceTables([])
+      }
+
       setLoading(false)
     }
     load()
@@ -51,5 +59,5 @@ export function useProducts() {
 
   const MAX_DISCOUNT_PERCENT = 10
 
-  return { products, paymentTerms, paymentMethods, loading, offline, MAX_DISCOUNT_PERCENT }
+  return { products, paymentTerms, paymentMethods, priceTables, loading, offline, MAX_DISCOUNT_PERCENT }
 }

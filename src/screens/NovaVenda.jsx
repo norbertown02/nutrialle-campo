@@ -69,7 +69,7 @@ export default function NovaVenda() {
   const getFarm = farmsHook.getFarm
   const salesHook = useSales()
   const addSale = salesHook.addSale
-  const { products, paymentTerms } = useProducts()
+  const { products, paymentTerms, paymentMethods, priceTables } = useProducts()
 
   const preselectedFarmId = searchParams.get('farm')
   const preselectedFarm = preselectedFarmId ? getFarm(preselectedFarmId) : null
@@ -79,6 +79,7 @@ export default function NovaVenda() {
   const [deliveryDate, setDeliveryDate] = useState('')
   const [items, setItems] = useState([])
   const [paymentTermId, setPaymentTermId] = useState('')
+  const [paymentMethodId, setPaymentMethodId] = useState('')
   const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
   const [comissao, setComissao] = useState('')
@@ -89,8 +90,22 @@ export default function NovaVenda() {
     if (!aindaValido) setPaymentTermId(paymentTerms[0].id)
   }, [paymentTerms, paymentTermId])
 
+  useEffect(() => {
+    if (!paymentMethods.length) return
+    const aindaValido = paymentMethods.some(m => String(m.id) === String(paymentMethodId))
+    if (!aindaValido) setPaymentMethodId(String(paymentMethods[0].id))
+  }, [paymentMethods, paymentMethodId])
+
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
   const availableProducts = products
+
+  const segmento = String(selectedFarm?.segment || '').trim().toLowerCase()
+  const isLoja = segmento === 'loja' || segmento.includes('loja')
+  const isProdutor = ['corte', 'leite', 'suinos', 'suínos', 'bovinos', 'pecuaria', 'pecuária'].some(v => segmento === v || segmento.includes(v))
+  const tabelaDesejada = isLoja ? 'loja' : isProdutor ? 'produtor' : null
+  const tabelaPreco = tabelaDesejada
+    ? priceTables.find(t => String(t.description || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(tabelaDesejada)) || null
+    : null
 
   const addItem = () => {
     if (availableProducts.length === 0) return
@@ -138,7 +153,7 @@ export default function NovaVenda() {
   const valorComissao = subtotal * (comissaoPct / 100)
   const hasOverDiscount = items.some(it => Number(it.discount) > Number(it.maxDiscount || 10))
 
-  const isValid = farmId && items.length > 0 && !!paymentTermId && items.every(it =>
+  const isValid = farmId && items.length > 0 && !!paymentTermId && !!paymentMethodId && !!tabelaPreco && items.every(it =>
     Number(it.quantity) > 0 && Number(it.priceKg) >= 0
   )
 
@@ -165,6 +180,10 @@ export default function NovaVenda() {
       total: subtotal,
       paymentTermId,
       paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || '',
+      paymentMethodId: Number(paymentMethodId),
+      paymentMethodLabel: paymentMethods.find(p => String(p.id) === String(paymentMethodId))?.description || '',
+      priceTableId: tabelaPreco?.id || null,
+      priceTableLabel: tabelaPreco?.description || '',
       frete,
       frete_label: freteInfo ? `${freteInfo.label} - ${freteInfo.desc}` : frete,
       comissaoPct,
@@ -295,6 +314,20 @@ export default function NovaVenda() {
         </select>
       </div>
 
+      <div className="section-label">Método de pagamento</div>
+      <div style={{ marginBottom: 14 }}>
+        <select value={paymentMethodId} onChange={e => setPaymentMethodId(e.target.value)}>
+          {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.description}</option>)}
+        </select>
+      </div>
+
+      <div className="section-label">Tabela de preço</div>
+      <div style={{ marginBottom: 14 }}>
+        <div className="hint" style={{ marginBottom: 0 }}>
+          {tabelaPreco ? `${tabelaPreco.description} — selecionada automaticamente pelo tipo do cliente.` : 'Não foi encontrada uma tabela de preço ativa para este tipo de cliente.'}
+        </div>
+      </div>
+
       <div className="section-label">Modalidade de frete</div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         {FRETES.map(f => (
@@ -326,6 +359,8 @@ export default function NovaVenda() {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{items.length} {items.length === 1 ? 'item' : 'itens'}</div>
             <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>{paymentTerms.find(p => p.id === paymentTermId)?.label || ''}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{paymentMethods.find(p => String(p.id) === String(paymentMethodId))?.description || ''}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{tabelaPreco?.description || ''}</div>
           </div>
         </div>
       </div>
