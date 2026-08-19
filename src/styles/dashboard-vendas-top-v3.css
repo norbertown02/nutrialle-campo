@@ -1,0 +1,17 @@
+.dashv2-period-card{border-radius:20px;background:rgba(255,255,255,.065);box-shadow:0 18px 48px rgba(0,0,0,.17);backdrop-filter:blur(18px)}
+.dashv2-period-tabs button{font-weight:600}
+.dashv2-period-tabs button.active{box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.dashv2-selects label>span{font-weight:600;letter-spacing:.45px}
+.dashv2-selects select{font-weight:500}
+.dashv2-period-summary{font-weight:500}
+.dash-kpi{border-radius:18px;box-shadow:0 14px 34px rgba(28,22,16,.07)}
+.dash-kpi small{font-weight:600!important;text-transform:none;letter-spacing:.05px}
+.dash-kpi strong{font-weight:700!important;letter-spacing:-.45px}
+.dash-kpi em{font-weight:500!important}
+.dash-card-head h2{font-weight:700!important}
+.dash-card-head p,.dash-card-head span{font-weight:500!important}
+.dash-rank-title strong,.dash-rank-title span{font-weight:600!important}
+.dash-compare-row strong,.dash-compare-row span{font-weight:550!important}
+.dash-compare-row em{font-weight:650!important}
+.dash-legend-row strong,.dash-legend-row em{font-weight:600!important}
+.dashv2-ranking-sub{font-weight:450!important}
