@@ -60,6 +60,12 @@ function fromDB(row) {
 }
 
 function toDB(farm) {
+  // O tipo do documento precisa acompanhar a escolha do formulário.
+  // Mantemos uma salvaguarda aqui para impedir que um CNPJ seja enviado
+  // ao Supabase como CPF mesmo que algum chamador não normalize o valor.
+  const explicitDocTipo = String(farm.docTipo ?? '').trim().toLowerCase()
+  const docTipo = explicitDocTipo === 'cnpj' || farm.cnpj ? 'cnpj' : 'cpf'
+
   return {
     id:            farm.id,
     client_code:   farm.clientCode,
@@ -90,13 +96,8 @@ function toDB(farm) {
     ie:            farm.ie,
     cad_pro:       farm.cadPro,
 
-    // Campos granulares vindos do formulário de novo cadastro. Antes
-    // essas chaves não existiam aqui, então o cadastro (que envia
-    // doc_tipo/cpf/cnpj/cadpro_1/2/3) nunca gravava cpf_cnpj/cad_pro —
-    // os dados digitados eram perdidos e a ficha do cliente aparecia
-    // zerada. NovaFazenda.jsx agora também envia cpfCnpj/cadPro
-    // consolidados diretamente, e mantemos os campos granulares aqui.
-    doc_tipo:      farm.docTipo,
+    // Campos granulares vindos do formulário de novo cadastro.
+    doc_tipo:      docTipo,
     cpf:           farm.cpf,
     cnpj:          farm.cnpj,
     cadpro_1:      farm.cadpro1,
