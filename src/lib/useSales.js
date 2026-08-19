@@ -21,6 +21,13 @@ function fromDB(row) {
     frete_label:      row.frete_label,
     needsApproval:    row.needs_approval,
     comissaoPct:      Number(row.comissao_pct || 0),
+    notes:            row.notes,
+    integrationStatus: row.integration_status,
+    integrationAttempts: row.integration_attempts,
+    ultraError:       row.ultra_error,
+    ultraOrderId:     row.ultra_order_id,
+    ultraOrderNumber: row.ultra_order_number,
+    ultraStatus:      row.ultra_status,
     createdAt:        row.created_at,
   }
 }
@@ -83,6 +90,72 @@ export function useSales() {
     return { error }
   }, [user])
 
+  const resendSaleToUltra = useCallback(async (id) => {
+    const sale = sales.find(s => s.id === id)
+    if (!sale) return { error: new Error('Venda não encontrada.') }
+
+    if (sale.ultraOrderId) {
+      return { error: new Error(`Esta venda já possui pedido no Ultra (${sale.ultraOrderNumber || sale.ultraOrderId}).`) }
+    }
+
+    // Mantemos a venda fora do lote automático enquanto o reenvio manual acontece.
+    const { error: markError } = await supabase
+      .from('sales')
+      .update({
+        integration_status: 'reenviando',
+        ultra_error: null,
+        ultra_response: null,
+      })
+      .eq('id', id)
+
+    if (markError) return { error: markError }
+
+    setSales(prev => prev.map(s => s.id === id
+      ? { ...s, integrationStatus: 'reenviando', ultraError: null }
+      : s
+    ))
+
+    try {
+      // A Edge Function já aceita saleIds para processamento direcionado.
+      // Não enviamos type aqui: type diferente de INSERT é deliberadamente ignorado
+      // pela função para não interferir no fluxo normal dos INSERTs.
+      const { data, error } = await supabase.functions.invoke('push-sales', {
+        body: { saleIds: [id] },
+      })
+
+      if (error) throw error
+
+      const result = Array.isArray(data?.results) ? data.results[0] : null
+      if (result?.status === 'erro') {
+        throw new Error(result.error || 'A Ultra recusou o pedido.')
+      }
+
+      const { data: updatedRow, error: refreshError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (!refreshError && updatedRow) {
+        setSales(prev => prev.map(s => s.id === id ? fromDB(updatedRow) : s))
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      await supabase
+        .from('sales')
+        .update({ integration_status: 'erro', ultra_error: error?.message || String(error) })
+        .eq('id', id)
+
+      setSales(prev => prev.map(s => s.id === id
+        ? { ...s, integrationStatus: 'erro', ultraError: error?.message || String(error) }
+        : s
+      ))
+
+      return { error }
+    }
+  }, [sales])
+
   const removeSale = useCallback(async (id) => {
     const { error } = await supabase.from('sales').delete().eq('id', id)
     if (!error) setSales(prev => prev.filter(s => s.id !== id))
@@ -93,5 +166,5 @@ export function useSales() {
     return sales.filter(s => s.farmId === farmId).sort((a, b) => b.saleDate.localeCompare(a.saleDate))
   }, [sales])
 
-  return { sales, addSale, removeSale, getSalesByFarm }
+  return { sales, addSale, resendSaleToUltra, removeSale, getSalesByFarm }
 }
