@@ -139,30 +139,18 @@ export default function NovaFazenda() {
     setCidadeVerificada(true)
   }
 
-  // A validação de cidade pelo IBGE depende de internet. Offline, não
-  // travamos o cadastro por causa disso — aceitamos a cidade digitada
-  // manualmente e ela pode ser conferida depois, quando sincronizar.
-  //
-  // CPF/CNPJ é obrigatório aqui porque a Ultra não aceita criar um
-  // parceiro sem documento — cadastro sem isso nunca sincroniza (fica
-  // preso pra sempre em ultra_sync_status = "nao_sincronizado", sem
-  // nenhum aviso pro vendedor). Exigir na hora do cadastro evita esse
-  // cliente "fantasma" que nunca chega no ERP.
   const documentoValido = form.docTipo === 'cpf'
     ? form.cpf.replace(/\D/g, '').length === 11
     : form.cnpj.replace(/\D/g, '').length === 14
 
+  const ieObrigatoriaValida = form.docTipo !== 'cnpj' || form.cnpjIE.trim().length >= 2
+
   const isValid = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
-    form.city.trim().length >= 2 && (cidadeVerificada || !online) && documentoValido
+    form.city.trim().length >= 2 && (cidadeVerificada || !online) && documentoValido && ieObrigatoriaValida
 
   const handleSave = async () => {
     if (!isValid || salvando) return
     setSalvando(true)
-    // Campo único de CPF/CNPJ e CAD/PRO que o resto do app (ficha do
-    // cliente, PDF de venda, conversão de cotação em venda) lê. Sem isso,
-    // os dados digitados aqui iam só para doc_tipo/cpf/cnpj/cadpro_1/2/3
-    // e ficavam invisíveis em qualquer outra tela — o cadastro parecia
-    // "zerado" ao ser reaberto para edição.
     const cpfCnpjConsolidado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
     const cadProConsolidado = [form.cadpro1, form.cadpro2, form.cadpro3]
       .filter(Boolean).join(', ') || null
@@ -182,9 +170,6 @@ export default function NovaFazenda() {
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
       prospect: isProspect,
     })
-    // addFarm grava local antes de qualquer chamada de rede, então isso
-    // resolve na hora tanto online quanto offline — offline, a cotação
-    // fica na fila e sincroniza sozinha depois.
     navigate('/clientes')
   }
 
@@ -234,7 +219,7 @@ export default function NovaFazenda() {
       <Field label="Tipo de documento">
         <div style={{ display:'flex', gap:6, marginBottom:10 }}>
           {[{v:'cpf',l:'CPF (Pessoa Física)'},{v:'cnpj',l:'CNPJ (Pessoa Jurídica)'}].map(opt=>(
-            <button key={opt.v} type="button" onClick={()=>{ setField('docTipo',opt.v); setField('cpf',''); setField('cnpj','') }} style={{
+            <button key={opt.v} type="button" onClick={()=>{ setField('docTipo',opt.v); setField('cpf',''); setField('cnpj',''); setField('cnpjIE','') }} style={{
               flex:1, padding:'10px 8px', borderRadius:10,
               border:'1px solid '+(form.docTipo===opt.v?'var(--orange)':'var(--line)'),
               background:form.docTipo===opt.v?'rgba(240,125,26,0.08)':'var(--surface-2)',
@@ -259,14 +244,16 @@ export default function NovaFazenda() {
           <Field label="CAD/PRO 3 (opcional)">
             <input value={form.cadpro3} onChange={e=>setField('cadpro3',e.target.value)} placeholder="Número do CAD/PRO"/>
           </Field>
-          <Field label="Inscrição Estadual (IE)">
+        </>
+      ) : (
+        <>
+          <Field label="CNPJ *">
+            <input value={form.cnpj} onChange={e=>setField('cnpj',maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" inputMode="numeric"/>
+          </Field>
+          <Field label="Inscrição Estadual (IE) *">
             <input value={form.cnpjIE||''} onChange={e=>setField('cnpjIE',e.target.value)} placeholder="Ex.: 123.456.789-0"/>
           </Field>
         </>
-      ) : (
-        <Field label="CNPJ *">
-          <input value={form.cnpj} onChange={e=>setField('cnpj',maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" inputMode="numeric"/>
-        </Field>
       )}
 
       <div className="section-label">Segmento e localização</div>
@@ -334,9 +321,8 @@ export default function NovaFazenda() {
         <input value={form.complemento||''} onChange={e => setField('complemento', e.target.value)} placeholder="Ex.: Sala 2, Galpão B" />
       </Field>
 
-
       <div className="hint" style={{ marginTop:18 }}>
-        Campos com * são obrigatórios. A cidade é validada automaticamente pelo IBGE.
+        Campos com * são obrigatórios. Para CNPJ, a Inscrição Estadual também é obrigatória. A cidade é validada automaticamente pelo IBGE.
       </div>
 
       {!online && (
