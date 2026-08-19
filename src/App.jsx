@@ -11,6 +11,7 @@ import SyncStatusBar from './components/SyncStatusBar'
 import ToastHost from './components/ToastHost'
 import ConfirmDialog from './components/ConfirmDialog'
 import './styles/dashboard-vendas-top-v3.css'
+import './styles/dashboard-refine.css'
 
 const Login = lazyWithRetry(() => import('./screens/Login'))
 const Home = lazyWithRetry(() => import('./screens/Home'))
