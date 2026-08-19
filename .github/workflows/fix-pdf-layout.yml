@@ -1,0 +1,172 @@
+name: Apply PDF layout fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-pdf-layout.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch PDF
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/screens/DetalheCotacao.jsx')
+          s = p.read_text()
+
+          old = """    doc.setFontSize(19)\n    doc.setTextColor(...TEXT)\n    doc.text(cliente, M + 7, y + 18, { maxWidth: 95 })\n\n    doc.setFont('helvetica', 'normal')\n    doc.setFontSize(8.4)\n    doc.setTextColor(...MUTED)\n\n    const infosCliente = [\n      labelSegmento(farm?.segment),\n      cidadeUf || '—',\n      farm?.prospect ? 'Prospecto' : 'Cliente ativo',\n    ].filter(Boolean)\n\n    doc.text(infosCliente.join('  ·  '), M + 7, y + 26)\n"""
+          new = """    const clienteLinhas = doc.splitTextToSize(cliente, 88).slice(0, 2)\n    doc.setFontSize(clienteLinhas.length > 1 ? 13.5 : 15.5)\n    doc.setTextColor(...TEXT)\n    doc.text(clienteLinhas, M + 7, y + 17, { lineHeightFactor: 1.15 })\n\n    doc.setFont('helvetica', 'normal')\n    doc.setFontSize(8.2)\n    doc.setTextColor(...MUTED)\n\n    const infosCliente = [\n      labelSegmento(farm?.segment),\n      cidadeUf || '—',\n      farm?.prospect ? 'Prospecto' : 'Cliente ativo',\n    ].filter(Boolean)\n\n    doc.text(infosCliente.join('  ·  '), M + 7, y + 30)\n"""
+          if old not in s: raise SystemExit('client block not found')
+          s = s.replace(old, new, 1)
+          s = s.replace("doc.roundedRect(M, y, W - M * 2, 34, 4, 4, 'FD')", "doc.roundedRect(M, y, W - M * 2, 39, 4, 4, 'FD')", 1)
+          s = s.replace("doc.line(W - M - 58, y + 7, W - M - 58, y + 27)", "doc.line(W - M - 58, y + 7, W - M - 58, y + 32)", 1)
+          s = s.replace("doc.text(vendedor, W - M - 51, y + 18, { maxWidth: 45 })", "doc.text(doc.splitTextToSize(vendedor, 43).slice(0, 2), W - M - 51, y + 18, { lineHeightFactor: 1.15 })", 1)
+          s = s.replace("y += 45", "y += 50", 1)
+
+          s = s.replace("""        'Qtd.',\n        'Total kg',\n        'R$/kg',\n        'R$/saco',\n        'Subtotal',""", """        'Qtd. (kg)',\n        'Total kg',\n        'R$/kg',\n        'Subtotal',""", 1)
+          old_body = """        const quantidade = Number(item.quantity || 0)\n        const bagKg = Number(item.bag_kg || produto?.bag_kg || 25)\n        const totalKg = quantidade * bagKg\n        const valorSaco = Number(item.unit_price || 0)\n        const valorKg = item.price_kg\n          ? Number(item.price_kg)\n          : produto?.price_kg\n            ? Number(produto.price_kg)\n            : bagKg > 0\n              ? valorSaco / bagKg\n              : 0\n\n        return [\n          item.product_name || '—',\n          quantidade.toLocaleString('pt-BR'),\n          `${totalKg.toLocaleString('pt-BR')} kg`,\n          moeda(valorKg),\n          moeda(valorSaco),\n          moeda(item.subtotal),\n        ]\n"""
+          new_body = """        const quantidadeKg = Number(item.quantity || 0)\n        const bagKg = Number(item.bag_kg || produto?.bag_kg || 25)\n        const valorKg = item.price_kg\n          ? Number(item.price_kg)\n          : produto?.price_kg\n            ? Number(produto.price_kg)\n            : bagKg > 0\n              ? Number(item.unit_price || 0) / bagKg\n              : 0\n\n        return [\n          item.product_name || '—',\n          `${quantidadeKg.toLocaleString('pt-BR')} kg`,\n          `${quantidadeKg.toLocaleString('pt-BR')} kg`,\n          moeda(valorKg),\n          moeda(item.subtotal),\n        ]\n"""
+          if old_body not in s: raise SystemExit('table body not found')
+          s = s.replace(old_body, new_body, 1)
+          old_cols = """        3: {\n          cellWidth: 25,\n          halign: 'right',\n        },\n        4: {\n          cellWidth: 26,\n          halign: 'right',\n        },\n        5: {\n          cellWidth: 24,\n          halign: 'right',\n          fontStyle: 'bold',\n          textColor: ORANGE_DARK,\n        },"""
+          new_cols = """        3: {\n          cellWidth: 30,\n          halign: 'right',\n        },\n        4: {\n          cellWidth: 31,\n          halign: 'right',\n          fontStyle: 'bold',\n          textColor: ORANGE_DARK,\n        },"""
+          if old_cols not in s: raise SystemExit('column styles not found')
+          s = s.replace(old_cols, new_cols, 1)
+
+          start = s.index("    const leftW = 105")
+          end = s.index("    const pageCount = doc.internal.getNumberOfPages()", start)
+          replacement = r'''    const leftW = 105
+    const rightW = W - M * 2 - leftW - 8
+
+    // Condições e resumo ficam lado a lado. Observações têm uma caixa própria
+    // abaixo, com altura dinâmica, para nunca sobrepor cidade/propriedade,
+    // valores ou outras linhas quando o vendedor escreve um texto maior.
+    const condicoes = [
+      ['Condição', quote?.payment_term_label || '—'],
+      ['Frete', quote?.frete_label || quote?.frete || 'CIF - Frete por conta do vendedor'],
+      ['Validade', validade],
+    ]
+
+    const obsTexto = String(quote?.notes || '').trim() || 'Nenhuma observação.'
+    const obsLinhas = doc.splitTextToSize(obsTexto, W - M * 2 - 12)
+    const obsHeight = Math.max(22, 14 + obsLinhas.length * 4.2)
+    const blocoH = 47
+
+    doc.setFillColor(...WHITE)
+    doc.setDrawColor(...LINE)
+    doc.roundedRect(M, y, leftW, blocoH, 4, 4, 'FD')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.8)
+    doc.setTextColor(...ORANGE_DARK)
+    doc.text('CONDIÇÕES COMERCIAIS', M + 6, y + 8)
+
+    let cy = y + 17
+    condicoes.forEach((linha, index) => {
+      if (index > 0) {
+        doc.setDrawColor(...LINE)
+        doc.line(M + 6, cy - 5, M + leftW - 6, cy - 5)
+      }
+
+      const valorLinhas = doc.splitTextToSize(String(linha[1]), 62).slice(0, 2)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(...TEXT)
+      doc.text(linha[0], M + 6, cy)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...MUTED)
+      doc.text(valorLinhas, M + 35, cy, { lineHeightFactor: 1.15 })
+      cy += Math.max(8, valorLinhas.length * 4.2 + 2)
+    })
+
+    const sx = M + leftW + 8
+
+    doc.setFillColor(...WHITE)
+    doc.setDrawColor(...LINE)
+    doc.roundedRect(sx, y, rightW, blocoH, 4, 4, 'FD')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.8)
+    doc.setTextColor(...ORANGE_DARK)
+    doc.text('RESUMO', sx + 6, y + 8)
+
+    const resumo = [
+      ['Subtotal', moeda(subtotal)],
+      ['Descontos', desconto > 0 ? moeda(desconto) : '—'],
+      ['Frete', freteValor > 0 ? moeda(freteValor) : '—'],
+    ]
+
+    let sy = y + 17
+    resumo.forEach((linha, index) => {
+      if (index > 0) {
+        doc.setDrawColor(...LINE)
+        doc.line(sx + 6, sy - 5, sx + rightW - 6, sy - 5)
+      }
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.3)
+      doc.setTextColor(...MUTED)
+      doc.text(linha[0], sx + 6, sy)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...TEXT)
+      doc.text(linha[1], sx + rightW - 6, sy, { align: 'right' })
+      sy += 8
+    })
+
+    doc.setDrawColor(...ORANGE)
+    doc.setLineWidth(0.45)
+    doc.line(sx + 6, y + 35, sx + rightW - 6, y + 35)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(...ORANGE_DARK)
+    doc.text('Total da cotação', sx + 6, y + 42)
+
+    doc.setFontSize(13)
+    doc.text(moeda(total), sx + rightW - 6, y + 42, { align: 'right' })
+
+    y += blocoH + 8
+
+    // Observações do pedido são sempre impressas no PDF. A altura da caixa
+    // acompanha a quantidade de linhas para evitar sobreposição.
+    if (y + obsHeight > H - 24) {
+      doc.addPage()
+      y = 24
+    }
+
+    doc.setFillColor(...WHITE)
+    doc.setDrawColor(...LINE)
+    doc.roundedRect(M, y, W - M * 2, obsHeight, 4, 4, 'FD')
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.8)
+    doc.setTextColor(...ORANGE_DARK)
+    doc.text('OBSERVAÇÕES DO PEDIDO', M + 6, y + 8)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(...TEXT)
+    doc.text(obsLinhas, M + 6, y + 16, { lineHeightFactor: 1.25 })
+
+'''
+          s = s[:start] + replacement + s[end:]
+
+          p.write_text(s)
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/screens/DetalheCotacao.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: melhorar PDF de cotação e observações'
+          git push
