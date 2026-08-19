@@ -1,0 +1,63 @@
+name: Add manual Ultra resend button
+
+on:
+  push:
+    paths:
+      - '.github/workflows/add-resend-ultra-button.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch sales detail
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/screens/DetalheVenda.jsx')
+          s = p.read_text()
+
+          s = s.replace(
+              "  IconDownload,\n} from '@tabler/icons-react'",
+              "  IconDownload,\n  IconRefresh,\n} from '@tabler/icons-react'",
+              1,
+          )
+
+          s = s.replace(
+              "  const { sales, removeSale } = useSales()",
+              "  const { sales, resendSaleToUltra, removeSale } = useSales()\n  const [reenviandoUltra, setReenviandoUltra] = useState(false)",
+              1,
+          )
+
+          s = s.replace(
+              "import { useNavigate, useParams } from 'react-router-dom'",
+              "import { useState } from 'react'\nimport { useNavigate, useParams } from 'react-router-dom'",
+              1,
+          )
+
+          marker = "  async function handleExcluir() {"
+          handler = '''  async function handleReenviarUltra() {\n    if (reenviandoUltra) return\n\n    setReenviandoUltra(true)\n    try {\n      const { error } = await resendSaleToUltra(venda.id)\n      if (error) {\n        showToast('Não foi possível reenviar: ' + (error.message || error), 'error')\n        return\n      }\n      showToast('Venda enviada novamente para o Ultra.', 'success')\n    } catch (e) {\n      showToast('Erro ao reenviar para o Ultra: ' + (e.message || e), 'error')\n    } finally {\n      setReenviandoUltra(false)\n    }\n  }\n\n'''
+          if marker not in s:
+              raise SystemExit('handleExcluir marker not found')
+          s = s.replace(marker, handler + marker, 1)
+
+          marker = '''      <button\n        className="btn btn-ghost"\n        style={{ color: 'var(--red)', borderColor: 'rgba(217,83,79,0.3)' }}\n        onClick={handleExcluir}\n      >'''
+          button = '''      {!venda.ultraOrderId && (venda.integrationStatus === 'erro' || venda.integrationStatus === 'aguardando_configuracao' || venda.ultraError) ? (\n        <button\n          className="btn btn-ghost"\n          onClick={handleReenviarUltra}\n          disabled={reenviandoUltra}\n          style={{\n            display: 'flex',\n            alignItems: 'center',\n            justifyContent: 'center',\n            gap: 8,\n            marginBottom: 10,\n            color: 'var(--orange)',\n            borderColor: 'rgba(240,125,26,0.35)',\n            opacity: reenviandoUltra ? 0.65 : 1,\n          }}\n        >\n          <IconRefresh size={16} />\n          {reenviandoUltra ? 'Reenviando para o Ultra...' : 'Reenviar para o Ultra'}\n        </button>\n      ) : null}\n\n''' + marker
+          if marker not in s:
+              raise SystemExit('delete button marker not found')
+          s = s.replace(marker, button, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/screens/DetalheVenda.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: adicionar botão de reenvio manual para Ultra'
+          git push
