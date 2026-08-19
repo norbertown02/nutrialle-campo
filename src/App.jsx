@@ -11,12 +11,6 @@ import SyncStatusBar from './components/SyncStatusBar'
 import ToastHost from './components/ToastHost'
 import ConfirmDialog from './components/ConfirmDialog'
 
-// Cada tela vira um chunk separado, carregado só quando o vendedor
-// realmente navega até ela — em vez de baixar tudo (relatórios, gráficos,
-// PDF etc.) de uma vez só no primeiro carregamento, o que pesa bastante
-// em conexão de campo ruim. lazyWithRetry força um reload único se o
-// chunk não existir mais (deploy novo aconteceu enquanto o app estava
-// aberto), em vez de travar a tela.
 const Login = lazyWithRetry(() => import('./screens/Login'))
 const Home = lazyWithRetry(() => import('./screens/Home'))
 
@@ -44,7 +38,7 @@ const EditarCotacao = lazyWithRetry(() => import('./screens/EditarCotacao'))
 const Precos = lazyWithRetry(() => import('./screens/Precos'))
 const Mercado = lazyWithRetry(() => import('./screens/Mercado'))
 
-const DashboardVendas = lazyWithRetry(() => import('./screens/DashboardVendasV3'))
+const DashboardVendas = lazyWithRetry(() => import('./screens/DashboardVendas'))
 const FazendaDados = lazyWithRetry(() => import('./screens/FazendaDados'))
 
 const Nutricao = lazyWithRetry(() => import('./screens/Nutricao'))
