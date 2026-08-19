@@ -1,0 +1,53 @@
+name: Restore sale delivery fields
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-sale-fields.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore delivery date in sales
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/lib/useSales.js')
+          s = p.read_text()
+
+          s = s.replace("    saleDate:         row.sale_date,\n", "    saleDate:         row.sale_date,\n    deliveryDate:     row.delivery_date,\n", 1)
+          s = s.replace("      sale_date:          saleData.saleDate,\n", "      sale_date:          saleData.saleDate,\n      delivery_date:      saleData.deliveryDate || null,\n", 1)
+
+          p.write_text(s)
+
+          p = Path('src/screens/NovaVenda.jsx')
+          s = p.read_text()
+
+          s = s.replace("  const [saleDate, setSaleDate] = useState(todayISO())\n", "  const [saleDate, setSaleDate] = useState(todayISO())\n  const [deliveryDate, setDeliveryDate] = useState('')\n", 1)
+
+          s = s.replace("      saleDate,\n      items: items.map", "      saleDate,\n      deliveryDate: deliveryDate || null,\n      items: items.map", 1)
+
+          marker = '''      <div className="section-label">Data</div>\n      <div style={{ marginBottom: 14 }}>\n        <input type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} />\n      </div>\n'''
+          replacement = marker + '''\n      <div className="section-label">Previsão de entrega</div>\n      <div style={{ marginBottom: 14 }}>\n        <input type="date" value={deliveryDate} min={saleDate || undefined} onChange={e => setDeliveryDate(e.target.value)} />\n      </div>\n'''
+          if marker not in s:
+              raise SystemExit('data block not found')
+          s = s.replace(marker, replacement, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/lib/useSales.js src/screens/NovaVenda.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: restaurar previsão de entrega nas vendas'
+          git push
