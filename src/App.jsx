@@ -44,7 +44,7 @@ const EditarCotacao = lazyWithRetry(() => import('./screens/EditarCotacao'))
 const Precos = lazyWithRetry(() => import('./screens/Precos'))
 const Mercado = lazyWithRetry(() => import('./screens/Mercado'))
 
-const DashboardVendas = lazyWithRetry(() => import('./screens/DashboardVendas'))
+const DashboardVendas = lazyWithRetry(() => import('./screens/DashboardVendasV3'))
 const FazendaDados = lazyWithRetry(() => import('./screens/FazendaDados'))
 
 const Nutricao = lazyWithRetry(() => import('./screens/Nutricao'))
