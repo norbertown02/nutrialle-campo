@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   IconArrowLeft,
@@ -9,6 +10,7 @@ import {
   IconReceipt,
   IconTrash,
   IconDownload,
+  IconRefresh,
 } from '@tabler/icons-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -79,7 +81,8 @@ export default function DetalheVenda() {
   const navigate = useNavigate()
   const { id } = useParams()
 
-  const { sales, removeSale } = useSales()
+  const { sales, resendSaleToUltra, removeSale } = useSales()
+  const [reenviandoUltra, setReenviandoUltra] = useState(false)
   const { getFarm } = useFarms()
   const { user } = useAuth()
 
@@ -481,6 +484,24 @@ export default function DetalheVenda() {
     }
   }
 
+  async function handleReenviarUltra() {
+    if (reenviandoUltra) return
+
+    setReenviandoUltra(true)
+    try {
+      const { error } = await resendSaleToUltra(venda.id)
+      if (error) {
+        showToast('Não foi possível reenviar: ' + (error.message || error), 'error')
+        return
+      }
+      showToast('Venda enviada novamente para o Ultra.', 'success')
+    } catch (e) {
+      showToast('Erro ao reenviar para o Ultra: ' + (e.message || e), 'error')
+    } finally {
+      setReenviandoUltra(false)
+    }
+  }
+
   async function handleExcluir() {
     const ok = await confirmDialog('Excluir esta venda? Essa ação não pode ser desfeita.', {
       title: 'Excluir venda', confirmLabel: 'Excluir', danger: true,
@@ -616,6 +637,27 @@ export default function DetalheVenda() {
       >
         <IconDownload size={16} /> Baixar PDF do pedido
       </button>
+
+      {!venda.ultraOrderId && (venda.integrationStatus === 'erro' || venda.integrationStatus === 'aguardando_configuracao' || venda.ultraError) ? (
+        <button
+          className="btn btn-ghost"
+          onClick={handleReenviarUltra}
+          disabled={reenviandoUltra}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            marginBottom: 10,
+            color: 'var(--orange)',
+            borderColor: 'rgba(240,125,26,0.35)',
+            opacity: reenviandoUltra ? 0.65 : 1,
+          }}
+        >
+          <IconRefresh size={16} />
+          {reenviandoUltra ? 'Reenviando para o Ultra...' : 'Reenviar para o Ultra'}
+        </button>
+      ) : null}
 
       <button
         className="btn btn-ghost"
