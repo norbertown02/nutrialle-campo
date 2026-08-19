@@ -1,17 +1,106 @@
-.dashv2-period-card{border-radius:20px;background:rgba(255,255,255,.065);box-shadow:0 18px 48px rgba(0,0,0,.17);backdrop-filter:blur(18px)}
-.dashv2-period-tabs button{font-weight:600}
-.dashv2-period-tabs button.active{box-shadow:0 6px 18px rgba(0,0,0,.18)}
-.dashv2-selects label>span{font-weight:600;letter-spacing:.45px}
-.dashv2-selects select{font-weight:500}
-.dashv2-period-summary{font-weight:500}
-.dash-kpi{border-radius:18px;box-shadow:0 14px 34px rgba(28,22,16,.07)}
-.dash-kpi small{font-weight:600!important;text-transform:none;letter-spacing:.05px}
-.dash-kpi strong{font-weight:700!important;letter-spacing:-.45px}
-.dash-kpi em{font-weight:500!important}
-.dash-card-head h2{font-weight:700!important}
-.dash-card-head p,.dash-card-head span{font-weight:500!important}
-.dash-rank-title strong,.dash-rank-title span{font-weight:600!important}
-.dash-compare-row strong,.dash-compare-row span{font-weight:550!important}
-.dash-compare-row em{font-weight:650!important}
-.dash-legend-row strong,.dash-legend-row em{font-weight:600!important}
-.dashv2-ranking-sub{font-weight:450!important}
+/* Topo refinado do dashboard — preserva toda a estrutura abaixo */
+.dashv2-period-card {
+  border-radius: 20px;
+  background: rgba(255,255,255,.065);
+  box-shadow: 0 18px 48px rgba(0,0,0,.17);
+  backdrop-filter: blur(18px);
+}
+
+.dashv2-period-tabs button {
+  font-weight: 550 !important;
+  letter-spacing: 0 !important;
+}
+
+.dashv2-period-tabs button.active {
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+
+.dashv2-selects label > span {
+  font-weight: 550 !important;
+  letter-spacing: .35px !important;
+}
+
+.dashv2-selects select,
+.dashv2-period-summary {
+  font-weight: 450 !important;
+}
+
+/* Cards superiores no visual V3 */
+.dash-kpi-grid {
+  gap: 10px !important;
+}
+
+.dash-kpi {
+  min-height: 98px !important;
+  padding: 14px !important;
+  gap: 12px !important;
+  border: 1px solid rgba(231,226,220,.95) !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 14px 34px rgba(28,22,16,.07) !important;
+}
+
+.dash-kpi__icon,
+.dash-kpi__icon.dash-green,
+.dash-kpi__icon.dash-blue,
+.dash-kpi__icon.dash-orange,
+.dash-kpi__icon.dash-purple {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  border-radius: 15px !important;
+  background: #fff4ea !important;
+  color: #e87722 !important;
+  box-shadow: none !important;
+}
+
+.dash-kpi__icon svg {
+  width: 22px !important;
+  height: 22px !important;
+  stroke-width: 1.7 !important;
+}
+
+.dash-kpi small {
+  color: #746e68 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.dash-kpi strong {
+  margin-top: 4px !important;
+  color: #151515 !important;
+  font-size: 20px !important;
+  line-height: 1.05 !important;
+  font-weight: 650 !important;
+  letter-spacing: -.45px !important;
+}
+
+.dash-kpi em {
+  margin-top: 7px !important;
+  font-size: 11px !important;
+  font-weight: 450 !important;
+}
+
+@media (max-width: 420px) {
+  .dash-kpi {
+    padding: 12px !important;
+    gap: 9px !important;
+  }
+
+  .dash-kpi__icon,
+  .dash-kpi__icon.dash-green,
+  .dash-kpi__icon.dash-blue,
+  .dash-kpi__icon.dash-orange,
+  .dash-kpi__icon.dash-purple {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: 13px !important;
+  }
+
+  .dash-kpi strong {
+    font-size: 17px !important;
+  }
+}
