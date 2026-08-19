@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   IconArrowLeft, IconCheck, IconPlus, IconTrash,
@@ -7,6 +7,7 @@ import {
 import { useFarms } from '../lib/useFarms'
 import { useSales } from '../lib/useSales'
 import { useProducts } from '../lib/useProducts'
+import { showToast } from '../lib/toast'
 
 function todayISO() {
   const d = new Date()
@@ -34,9 +35,8 @@ const FRETES = [
   { value: 'EXW', label: 'EXW', desc: 'Ex Works - retirada na fábrica pelo comprador' },
 ]
 
-// Na venda, quantidade é SEMPRE peso em quilogramas.
-// O preço também é R$/kg, portanto não existe conversão de kg para sacas
-// no cálculo da venda. bagKg permanece apenas como informação do produto.
+// A venda trabalha em KG de ponta a ponta.
+// bagKg é apenas informação logística e nunca altera a quantidade digitada.
 function calcItem(it) {
   const priceKg = Number(it.priceKg || 0)
   const qtyKg = Number(it.quantity || 0)
@@ -83,18 +83,7 @@ export default function NovaVenda() {
   const [frete, setFrete] = useState('CIF')
   const [notes, setNotes] = useState('')
   const [comissao, setComissao] = useState('')
-
-  useEffect(() => {
-    if (!paymentTerms.length) return
-    const aindaValido = paymentTerms.some(t => t.id === paymentTermId)
-    if (!aindaValido) setPaymentTermId(paymentTerms[0].id)
-  }, [paymentTerms, paymentTermId])
-
-  useEffect(() => {
-    if (!paymentMethods.length) return
-    const aindaValido = paymentMethods.some(m => String(m.id) === String(paymentMethodId))
-    if (!aindaValido) setPaymentMethodId(String(paymentMethods[0].id))
-  }, [paymentMethods, paymentMethodId])
+  const [saving, setSaving] = useState(false)
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
   const availableProducts = products
@@ -115,7 +104,7 @@ export default function NovaVenda() {
       productId: firstProduct.id,
       productName: firstProduct.name,
       unit: 'kg',
-      bagKg: firstProduct.bag_kg || 25,
+      bagKg: firstProduct.bag_kg || 0,
       priceKg: firstProduct.price_kg || 0,
       tablePriceKg: firstProduct.price_kg || 0,
       maxDiscount: firstProduct.max_discount || 10,
@@ -135,7 +124,7 @@ export default function NovaVenda() {
             ...updated,
             productName: p.name,
             unit: 'kg',
-            bagKg: p.bag_kg || 25,
+            bagKg: p.bag_kg || 0,
             priceKg: p.price_kg || 0,
             tablePriceKg: p.price_kg || 0,
             maxDiscount: p.max_discount || 10,
@@ -153,18 +142,25 @@ export default function NovaVenda() {
   const valorComissao = subtotal * (comissaoPct / 100)
   const hasOverDiscount = items.some(it => Number(it.discount) > Number(it.maxDiscount || 10))
 
-  const isValid = farmId && items.length > 0 && !!paymentTermId && !!paymentMethodId && !!tabelaPreco && items.every(it =>
-    Number(it.quantity) > 0 && Number(it.priceKg) >= 0
+  const datasValidas = !!saleDate && !!deliveryDate && deliveryDate >= saleDate
+  const itensValidos = items.length > 0 && items.every(it =>
+    !!it.productId && Number(it.quantity) > 0 && Number(it.priceKg) > 0
   )
+  const isValid = !!farmId && !!selectedFarm && datasValidas && itensValidos &&
+    !!paymentTermId && !!paymentMethodId && !!tabelaPreco && !!frete
 
-  const handleSave = () => {
-    if (!isValid) return
+  const handleSave = async () => {
+    if (!isValid || saving) {
+      if (!saving) showToast('Preencha cliente, datas, produtos em kg, preço/kg, condição e método de pagamento.', 'error')
+      return
+    }
+    setSaving(true)
     const freteInfo = FRETES.find(f => f.value === frete)
 
-    addSale({
+    const { error } = await addSale({
       farmId,
       saleDate,
-      deliveryDate: deliveryDate || null,
+      deliveryDate,
       items: items.map(it => ({
         productId: it.productId,
         productName: it.productName,
@@ -191,6 +187,13 @@ export default function NovaVenda() {
       needsApproval: hasOverDiscount,
     })
 
+    if (error) {
+      setSaving(false)
+      showToast('Não foi possível registrar o pedido: ' + (error.message || 'erro desconhecido'), 'error')
+      return
+    }
+
+    showToast('Pedido registrado com sucesso.', 'success')
     navigate('/vendas')
   }
 
@@ -227,18 +230,18 @@ export default function NovaVenda() {
         </>
       ) : null}
 
-      <div className="section-label">Data</div>
+      <div className="section-label">Data do pedido *</div>
       <div style={{ marginBottom: 14 }}>
         <input type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} />
       </div>
 
-      <div className="section-label">Previsão de entrega</div>
+      <div className="section-label">Previsão de entrega *</div>
       <div style={{ marginBottom: 14 }}>
         <input type="date" value={deliveryDate} min={saleDate || undefined} onChange={e => setDeliveryDate(e.target.value)} />
       </div>
 
       <div className="section-label">
-        Produtos
+        Produtos *
         <span style={{ fontSize: 11, color: 'var(--text-faint)', marginLeft: 'auto', fontWeight: 500, letterSpacing: 0, textTransform: 'none' }}>
           {items.length} {items.length === 1 ? 'item' : 'itens'}
         </span>
@@ -263,18 +266,18 @@ export default function NovaVenda() {
                 </button>
               </div>
 
-              <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>Produto</label>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>Produto *</label>
               <select value={it.productId} onChange={e => updateItem(it.key, { productId: e.target.value })} style={{ marginBottom: 8 }}>
-                {availableProducts.map(p => <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>)}
+                {availableProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>Quantidade (kg)</label>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>Quantidade (kg) *</label>
                   <input type="number" min="0" step="0.01" value={it.quantity} onChange={e => updateItem(it.key, { quantity: e.target.value })} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>R$/kg</label>
+                  <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>R$/kg *</label>
                   <input type="number" min="0" step="0.01" value={it.priceKg} onChange={e => updateItem(it.key, { priceKg: e.target.value })} />
                 </div>
                 <div>
@@ -307,28 +310,30 @@ export default function NovaVenda() {
         <IconPlus size={16} /> Adicionar produto
       </button>
 
-      <div className="section-label">Condicao de pagamento</div>
+      <div className="section-label">Condição de pagamento *</div>
       <div style={{ marginBottom: 14 }}>
         <select value={paymentTermId} onChange={e => setPaymentTermId(e.target.value)}>
+          <option value="">Selecionar condição...</option>
           {paymentTerms.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
         </select>
       </div>
 
-      <div className="section-label">Método de pagamento</div>
+      <div className="section-label">Método de pagamento *</div>
       <div style={{ marginBottom: 14 }}>
         <select value={paymentMethodId} onChange={e => setPaymentMethodId(e.target.value)}>
+          <option value="">Selecionar método...</option>
           {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.description}</option>)}
         </select>
       </div>
 
-      <div className="section-label">Tabela de preço</div>
+      <div className="section-label">Tabela de preço *</div>
       <div style={{ marginBottom: 14 }}>
         <div className="hint" style={{ marginBottom: 0 }}>
           {tabelaPreco ? `${tabelaPreco.description} — selecionada automaticamente pelo tipo do cliente.` : 'Não foi encontrada uma tabela de preço ativa para este tipo de cliente.'}
         </div>
       </div>
 
-      <div className="section-label">Modalidade de frete</div>
+      <div className="section-label">Modalidade de frete *</div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         {FRETES.map(f => (
           <button key={f.value} onClick={() => setFrete(f.value)} type="button" style={{ flex: 1, padding: '10px 8px', borderRadius: 10, cursor: 'pointer', border: '2px solid ' + (frete === f.value ? 'var(--orange)' : 'var(--line)'), background: frete === f.value ? 'var(--orange-bg)' : 'var(--surface-2)' }}>
@@ -345,9 +350,9 @@ export default function NovaVenda() {
         {comissaoPct > 0 && subtotal > 0 && <span style={{ fontSize: 13, color: 'var(--orange)', fontWeight: 600 }}>{'= ' + fmtBRL(valorComissao)}</span>}
       </div>
 
-      <div className="section-label">Observacoes</div>
+      <div className="section-label">Observações</div>
       <div style={{ marginBottom: 18 }}>
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Detalhes do pedido, prazo de entrega, observacoes do produtor..." style={{ minHeight: 70 }} />
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Detalhes do pedido, prazo de entrega, observações do produtor..." style={{ minHeight: 70 }} />
       </div>
 
       <div className="card" style={{ background: 'linear-gradient(135deg, rgba(240,125,26,0.13), rgba(240,125,26,0.05))', borderColor: 'rgba(240,125,26,0.3)', marginBottom: 14 }}>
@@ -376,11 +381,11 @@ export default function NovaVenda() {
       ) : null}
 
       <div className="hint" style={{ marginBottom: 14 }}>
-        Ao salvar, o pedido é registrado e um e-mail com os dados é enviado automaticamente para o time administrativo.
+        A quantidade do pedido é sempre registrada em kg. Ao salvar, o pedido só é registrado se todos os campos obrigatórios estiverem completos.
       </div>
 
-      <button className="btn btn-primary" onClick={handleSave} disabled={!isValid} style={{ opacity: isValid ? 1 : 0.45, cursor: isValid ? 'pointer' : 'not-allowed' }}>
-        <IconCheck size={18} /> Salvar pedido
+      <button className="btn btn-primary" onClick={handleSave} disabled={!isValid || saving} style={{ opacity: (isValid && !saving) ? 1 : 0.45, cursor: (isValid && !saving) ? 'pointer' : 'not-allowed' }}>
+        <IconCheck size={18} /> {saving ? 'Salvando...' : 'Salvar pedido'}
       </button>
     </div>
   )
