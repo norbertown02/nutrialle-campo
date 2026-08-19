@@ -1,0 +1,263 @@
+name: Refine dashboard design and product labels
+
+on:
+  push:
+    paths:
+      - '.github/workflows/refine-dashboard-design-products.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Refine dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+
+          dash = Path('src/screens/DashboardVendas.jsx')
+          text = dash.read_text()
+
+          text = text.replace(
+              "  const [goals, setGoals] = useState([])\n",
+              "  const [goals, setGoals] = useState([])\n  const [products, setProducts] = useState([])\n"
+          )
+
+          text = text.replace(
+              "    const [rSales, rQuotes, rFarms, rGoals] = await Promise.all([\n",
+              "    const [rSales, rQuotes, rFarms, rGoals, rProducts] = await Promise.all([\n"
+          )
+
+          text = text.replace(
+              "      supabase.from('goals').select('ano,mes,meta_fat,seller_id,ultra_salesman_id'),\n    ])",
+              "      supabase.from('goals').select('ano,mes,meta_fat,seller_id,ultra_salesman_id'),\n      supabase.from('products').select('id,name,ultra_codproduto,ultra_codproduto_clas'),\n    ])"
+          )
+
+          text = text.replace(
+              "    setGoals(rGoals.data || [])\n    setLoading(false)",
+              "    setGoals(rGoals.data || [])\n    setProducts(rProducts.data || [])\n    setLoading(false)"
+          )
+
+          text = text.replace(
+              "    const farmsById = Object.fromEntries(farms.map(f => [f.id, f]))\n",
+              "    const farmsById = Object.fromEntries(farms.map(f => [f.id, f]))\n    const productsById = Object.fromEntries(products.map(p => [p.id, p]))\n"
+          )
+
+          old = """      const items = Array.isArray(s.items) ? s.items : []
+      items.forEach(item => {
+        const nome = item.product_name || item.name || 'Produto sem nome'
+        if (!porProdutoMap[nome]) porProdutoMap[nome] = { label: nome, value: 0, quantity: 0 }
+        porProdutoMap[nome].value += Number(item.subtotal || 0)
+        porProdutoMap[nome].quantity += Number(item.quantity || 0)
+      })"""
+
+          new = """      const items = Array.isArray(s.items) ? s.items : []
+      items.forEach(item => {
+        const produtoCadastrado = productsById[item.productId || item.product_id]
+        const nome =
+          item.productName ||
+          item.product_name ||
+          item.name ||
+          produtoCadastrado?.name ||
+          'Produto não identificado'
+
+        if (!porProdutoMap[nome]) porProdutoMap[nome] = { label: nome, value: 0, quantity: 0 }
+        porProdutoMap[nome].value += Number(item.subtotal || item.total || 0)
+        porProdutoMap[nome].quantity += Number(item.quantity || item.quantityKg || item.quantity_kg || 0)
+      })"""
+
+          if old not in text:
+              raise SystemExit('Trecho de produtos não encontrado; abortando para não editar código inesperado.')
+          text = text.replace(old, new)
+
+          text = text.replace(
+              "  }, [sales, quotes, farms, user, periodo, tipoPeriodo, metaPeriodo])",
+              "  }, [sales, quotes, farms, products, user, periodo, tipoPeriodo, metaPeriodo])"
+          )
+
+          dash.write_text(text)
+
+          css = Path('src/styles/dashboard-vendas-v2.css')
+          c = css.read_text()
+          c += r'''
+
+/* Refinamento tipográfico — dashboard comercial */
+.dash-page,
+.dashv2-period-card,
+.dash-card,
+.dash-kpi,
+.dash-compare-table,
+.dash-ranking,
+.dash-goal {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.dash-hero h1 {
+  font-size: 29px;
+  font-weight: 700;
+  letter-spacing: -0.75px;
+}
+
+.dash-hero p {
+  font-weight: 400;
+}
+
+.dashv2-period-tabs button {
+  font-weight: 600;
+  letter-spacing: -0.05px;
+}
+
+.dashv2-selects label > span {
+  font-weight: 600;
+  letter-spacing: .45px;
+}
+
+.dashv2-selects select {
+  font-weight: 500;
+}
+
+.dashv2-period-summary {
+  font-weight: 500;
+}
+
+.dash-kpi small {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .15px;
+  text-transform: none;
+  color: #746e68;
+}
+
+.dash-kpi strong {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -.45px;
+}
+
+.dash-kpi em {
+  font-weight: 500;
+}
+
+.dash-card-head h2 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.25px;
+}
+
+.dash-card-head p,
+.dash-card-head span {
+  font-weight: 500;
+}
+
+.dashv2-axis-label,
+.dashv2-x-label {
+  font-weight: 500;
+}
+
+.dashv2-tooltip small,
+.dashv2-tooltip span {
+  font-weight: 500;
+}
+
+.dashv2-tooltip strong {
+  font-weight: 700;
+}
+
+.dashv2-chart-legend {
+  font-weight: 500;
+}
+
+.dash-legend-row strong,
+.dash-legend-row em {
+  font-weight: 600;
+}
+
+.dash-funnel-info {
+  font-weight: 400;
+}
+
+.dash-funnel-info strong {
+  font-weight: 650;
+}
+
+.dash-compare-head {
+  font-weight: 500;
+}
+
+.dash-compare-row strong,
+.dash-compare-row span {
+  font-weight: 550;
+}
+
+.dash-compare-row em {
+  font-weight: 650;
+}
+
+.dash-rank-number {
+  font-weight: 650;
+}
+
+.dash-rank-title {
+  font-weight: 400;
+}
+
+.dash-rank-title strong {
+  font-weight: 600;
+}
+
+.dash-rank-title span {
+  font-weight: 600;
+}
+
+.dashv2-ranking-sub {
+  font-weight: 450;
+}
+
+.dash-goal span {
+  font-weight: 450;
+}
+
+.dash-goal strong {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -.45px;
+}
+
+.dash-goal em {
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.dash-insight,
+.dash-insights {
+  font-weight: 450;
+}
+
+@media (min-width: 768px) {
+  .dash-hero h1 {
+    font-size: 32px;
+  }
+}
+'''
+          css.write_text(c)
+
+          sw = Path('public/sw.js')
+          sw_text = sw.read_text().replace("const CACHE = 'nutrialle-v17'", "const CACHE = 'nutrialle-v18'")
+          sw.write_text(sw_text)
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/screens/DashboardVendas.jsx src/styles/dashboard-vendas-v2.css public/sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: refina dashboard e corrige nomes de produtos"
+          git push
