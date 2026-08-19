@@ -1,0 +1,68 @@
+name: Apply sale price table and payment method
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-sale-price-table.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch sale form
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # useProducts: carregar as tabelas de preço ativas junto com produtos,
+          # condições e métodos de pagamento.
+          p = Path('src/lib/useProducts.js')
+          s = p.read_text()
+          s = s.replace("  const [paymentMethods, setPaymentMethods] = useState([])\n", "  const [paymentMethods, setPaymentMethods] = useState([])\n  const [priceTables,   setPriceTables]   = useState([])\n", 1)
+          s = s.replace("      const [prod, terms, methods] = await Promise.all([\n        supabase.from('products').select('*').eq('active', true).order('segment').order('name'),\n        supabase.from('payment_terms').select('*').eq('active', true).order('days'),\n        supabase.from('erp_payment_methods').select('*').eq('active', true).order('description'),\n      ])", "      const [prod, terms, methods, tables] = await Promise.all([\n        supabase.from('products').select('*').eq('active', true).order('segment').order('name'),\n        supabase.from('payment_terms').select('*').eq('active', true).order('days'),\n        supabase.from('erp_payment_methods').select('*').eq('active', true).order('description'),\n        supabase.from('erp_price_tables').select('*').eq('active', true).order('description'),\n      ])", 1)
+          s = s.replace("      if (!methods.error && methods.data) {\n        setPaymentMethods(methods.data)\n      } else {\n        setPaymentMethods([])\n      }\n\n      setLoading(false)", "      if (!methods.error && methods.data) {\n        setPaymentMethods(methods.data)\n      } else {\n        setPaymentMethods([])\n      }\n\n      if (!tables.error && tables.data) {\n        setPriceTables(tables.data)\n      } else {\n        setPriceTables([])\n      }\n\n      setLoading(false)", 1)
+          s = s.replace("  return { products, paymentTerms, paymentMethods, loading, offline, MAX_DISCOUNT_PERCENT }", "  return { products, paymentTerms, paymentMethods, priceTables, loading, offline, MAX_DISCOUNT_PERCENT }", 1)
+          p.write_text(s)
+
+          # NovaVenda: método de pagamento obrigatório e tabela de preço automática
+          # conforme o segmento do cliente.
+          p = Path('src/screens/NovaVenda.jsx')
+          s = p.read_text()
+          s = s.replace("  const { products, paymentTerms } = useProducts()", "  const { products, paymentTerms, paymentMethods, priceTables } = useProducts()", 1)
+          s = s.replace("  const [paymentTermId, setPaymentTermId] = useState('')\n", "  const [paymentTermId, setPaymentTermId] = useState('')\n  const [paymentMethodId, setPaymentMethodId] = useState('')\n", 1)
+          s = s.replace("  useEffect(() => {\n    if (!paymentTerms.length) return\n    const aindaValido = paymentTerms.some(t => t.id === paymentTermId)\n    if (!aindaValido) setPaymentTermId(paymentTerms[0].id)\n  }, [paymentTerms, paymentTermId])\n", "  useEffect(() => {\n    if (!paymentTerms.length) return\n    const aindaValido = paymentTerms.some(t => t.id === paymentTermId)\n    if (!aindaValido) setPaymentTermId(paymentTerms[0].id)\n  }, [paymentTerms, paymentTermId])\n\n  useEffect(() => {\n    if (!paymentMethods.length) return\n    const aindaValido = paymentMethods.some(m => String(m.id) === String(paymentMethodId))\n    if (!aindaValido) setPaymentMethodId(String(paymentMethods[0].id))\n  }, [paymentMethods, paymentMethodId])\n", 1)
+          s = s.replace("  const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm\n  const availableProducts = products\n", "  const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm\n  const availableProducts = products\n\n  const segmento = String(selectedFarm?.segment || '').trim().toLowerCase()\n  const isLoja = segmento === 'loja' || segmento.includes('loja')\n  const isProdutor = ['corte', 'leite', 'suinos', 'suínos', 'bovinos', 'pecuaria', 'pecuária'].some(v => segmento === v || segmento.includes(v))\n  const tabelaDesejada = isLoja ? 'loja' : isProdutor ? 'produtor' : null\n  const tabelaPreco = tabelaDesejada\n    ? priceTables.find(t => String(t.description || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').includes(tabelaDesejada)) || null\n    : null\n", 1)
+          s = s.replace("  const isValid = farmId && items.length > 0 && !!paymentTermId && items.every(it =>", "  const isValid = farmId && items.length > 0 && !!paymentTermId && !!paymentMethodId && !!tabelaPreco && items.every(it =>", 1)
+          s = s.replace("      paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || '',\n      frete,", "      paymentTermLabel: paymentTerms.find(p => p.id === paymentTermId)?.label || '',\n      paymentMethodId: Number(paymentMethodId),\n      paymentMethodLabel: paymentMethods.find(p => String(p.id) === String(paymentMethodId))?.description || '',\n      priceTableId: tabelaPreco?.id || null,\n      priceTableLabel: tabelaPreco?.description || '',\n      frete,", 1)
+          s = s.replace("      <div className=\"section-label\">Modalidade de frete</div>", "      <div className=\"section-label\">Método de pagamento</div>\n      <div style={{ marginBottom: 14 }}>\n        <select value={paymentMethodId} onChange={e => setPaymentMethodId(e.target.value)}>\n          {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.description}</option>)}\n        </select>\n      </div>\n\n      <div className=\"section-label\">Tabela de preço</div>\n      <div style={{ marginBottom: 14 }}>\n        <div className=\"hint\" style={{ marginBottom: 0 }}>\n          {tabelaPreco ? `${tabelaPreco.description} — selecionada automaticamente pelo tipo do cliente.` : 'Não foi encontrada uma tabela de preço ativa para este tipo de cliente.'}\n        </div>\n      </div>\n\n      <div className=\"section-label\">Modalidade de frete</div>", 1)
+          s = s.replace("            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>{paymentTerms.find(p => p.id === paymentTermId)?.label || ''}</div>", "            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>{paymentTerms.find(p => p.id === paymentTermId)?.label || ''}</div>\n            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{paymentMethods.find(p => String(p.id) === String(paymentMethodId))?.description || ''}</div>\n            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{tabelaPreco?.description || ''}</div>", 1)
+          p.write_text(s)
+
+          # useSales: persistir os dois campos novos na tabela sales.
+          p = Path('src/lib/useSales.js')
+          s = p.read_text()
+          s = s.replace("    paymentMethodLabel: row.payment_method_label,\n", "    paymentMethodLabel: row.payment_method_label,\n    priceTableId:     row.price_table_id,\n    priceTableLabel:  row.price_table_label,\n", 1)
+          s = s.replace("      payment_method_label: saleData.paymentMethodLabel || null,\n", "      payment_method_label: saleData.paymentMethodLabel || null,\n      price_table_id:     saleData.priceTableId || null,\n      price_table_label:  saleData.priceTableLabel || null,\n", 1)
+          p.write_text(s)
+          PY
+
+      - name: Verify patch
+        run: |
+          grep -q "priceTables" src/lib/useProducts.js
+          grep -q "priceTableId" src/lib/useSales.js
+          grep -q "paymentMethodId" src/screens/NovaVenda.jsx
+          grep -q "tabelaPreco" src/screens/NovaVenda.jsx
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/lib/useProducts.js src/lib/useSales.js src/screens/NovaVenda.jsx
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: salvar metodo e tabela de preco nas vendas'
+          git push
