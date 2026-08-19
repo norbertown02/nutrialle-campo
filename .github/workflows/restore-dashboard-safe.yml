@@ -1,0 +1,103 @@
+name: Restore dashboard safely
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-dashboard-safe.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Patch complete dashboard only
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('src/screens/DashboardVendas.jsx')
+          s = p.read_text()
+
+          old = "const nome = item.product_name || item.name || 'Produto sem nome'"
+          new = "const nome = item.productName || item.product_name || item.name || 'Produto não identificado'"
+          if old in s:
+              s = s.replace(old, new)
+          elif new not in s:
+              raise SystemExit('Trecho de nome de produto não encontrado')
+          p.write_text(s)
+
+          css = Path('src/styles/dashboard-vendas-v2.css')
+          c = css.read_text()
+          marker = '/* topo-v3-preservando-dashboard-completo */'
+          if marker not in c:
+              c += r'''
+
+/* topo-v3-preservando-dashboard-completo */
+.dashv2-period-card {
+  border-radius: 20px;
+  background: rgba(255,255,255,.065);
+  box-shadow: 0 18px 48px rgba(0,0,0,.17);
+  backdrop-filter: blur(18px);
+}
+.dashv2-period-tabs button {
+  font-weight: 600;
+}
+.dashv2-period-tabs button.active {
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+}
+.dashv2-selects label > span {
+  font-weight: 600;
+  letter-spacing: .45px;
+}
+.dashv2-selects select {
+  font-weight: 500;
+}
+.dashv2-period-summary {
+  font-weight: 500;
+}
+.dash-kpi {
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(28,22,16,.07);
+}
+.dash-kpi small {
+  font-weight: 600 !important;
+  text-transform: none;
+  letter-spacing: .05px;
+}
+.dash-kpi strong {
+  font-weight: 700 !important;
+  letter-spacing: -.45px;
+}
+.dash-kpi em {
+  font-weight: 500 !important;
+}
+.dash-card-head h2 { font-weight: 700 !important; }
+.dash-card-head p, .dash-card-head span { font-weight: 500 !important; }
+.dash-rank-title strong, .dash-rank-title span { font-weight: 600 !important; }
+.dash-compare-row strong, .dash-compare-row span { font-weight: 550 !important; }
+.dash-compare-row em { font-weight: 650 !important; }
+.dash-legend-row strong, .dash-legend-row em { font-weight: 600 !important; }
+.dashv2-ranking-sub { font-weight: 450 !important; }
+'''
+              css.write_text(c)
+
+          sw = Path('public/sw.js')
+          t = sw.read_text()
+          import re
+          t = re.sub(r"const CACHE = 'nutrialle-v\d+'", "const CACHE = 'nutrialle-v19'", t)
+          sw.write_text(t)
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/screens/DashboardVendas.jsx src/styles/dashboard-vendas-v2.css public/sw.js
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: mantém dashboard completo e refina topo"
+          git push
