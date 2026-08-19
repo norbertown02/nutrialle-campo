@@ -13,6 +13,8 @@ function fromDB(row) {
     total:            row.total,
     paymentTerm:      row.payment_term,
     paymentTermLabel: row.payment_term_label,
+    paymentMethodId:  row.payment_method_id,
+    paymentMethodLabel: row.payment_method_label,
     frete:            row.frete,
     frete_label:      row.frete_label,
     needsApproval:    row.needs_approval,
@@ -36,8 +38,6 @@ export function useSales() {
     load()
   }, [])
 
-  // Retorna { error } pra quem chamar poder tratar falha (ex: conversão
-  // de cotação em venda usa isso pra saber se deve avisar o usuário).
   const addSale = useCallback(async (saleData) => {
     const item = {
       id:                 's' + Date.now(),
@@ -48,16 +48,18 @@ export function useSales() {
       total:              saleData.total,
       payment_term:       saleData.paymentTermId,
       payment_term_label: saleData.paymentTermLabel,
+      payment_method_id:  saleData.paymentMethodId || null,
+      payment_method_label: saleData.paymentMethodLabel || null,
       frete:              saleData.frete || 'CIF',
       frete_label:        saleData.frete_label,
       needs_approval:     saleData.needsApproval ?? false,
       comissao_pct:       saleData.comissaoPct ?? 0,
+      notes:              saleData.notes || null,
       seller_id:          user && user.id,
     }
     const { error } = await supabase.from('sales').insert(item)
     if (!error) {
       setSales(prev => [fromDB(item), ...prev])
-      // Disparar e-mail automático com os dados do pedido
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.access_token) {
