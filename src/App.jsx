@@ -10,6 +10,7 @@ import SplashScreen from './components/SplashScreen'
 import SyncStatusBar from './components/SyncStatusBar'
 import ToastHost from './components/ToastHost'
 import ConfirmDialog from './components/ConfirmDialog'
+import './styles/dashboard-vendas-top-v3.css'
 
 const Login = lazyWithRetry(() => import('./screens/Login'))
 const Home = lazyWithRetry(() => import('./screens/Home'))
