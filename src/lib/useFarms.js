@@ -7,107 +7,87 @@ import { supabase } from './supabase'
 function fromDB(row) {
   if (!row) return null
   return {
-    id:           row.id,
-    clientCode:   row.client_code,
-    name:         row.name,
-    ownerRole:    row.owner_role,
-    phone:        row.phone,
-    email:        row.email,
-    authUserId:   row.auth_user_id,
-
-    city:         row.city,
-    state:        row.state,
-    region:       row.region,
-    cep:          row.cep,
-    street:       row.street,
+    id: row.id,
+    clientCode: row.client_code,
+    name: row.name,
+    ownerRole: row.owner_role,
+    phone: row.phone,
+    email: row.email,
+    authUserId: row.auth_user_id,
+    city: row.city,
+    state: row.state,
+    region: row.region,
+    cep: row.cep,
+    street: row.street,
     streetNumber: row.street_number,
-    bairro:       row.bairro,
-    complemento:  row.complemento,
-
-    segment:      row.segment,
-    herdSize:     row.herd_size,
-    production:   row.production,
-    area:         row.area,
-    status:       row.status,
+    bairro: row.bairro,
+    complemento: row.complemento,
+    segment: row.segment,
+    herdSize: row.herd_size,
+    production: row.production,
+    area: row.area,
+    status: row.status,
     hasChecklist: row.has_checklist,
-    clientSince:  row.client_since,
-    createdAt:    row.created_at,
-    updatedAt:    row.updated_at,
-
-    cpfCnpj:      row.cpf_cnpj,
-    ie:           row.ie,
-    cadPro:       row.cad_pro,
-
-    // campos granulares do formulário de novo cadastro (tipo de documento
-    // e CAD/PROs individuais) — mantidos para que a tela de cadastro
-    // consiga reconstituir o formulário de origem se precisar
-    docTipo:      row.doc_tipo,
-    cpf:          row.cpf,
-    cnpj:         row.cnpj,
-    cadpro1:      row.cadpro_1,
-    cadpro2:      row.cadpro_2,
-    cadpro3:      row.cadpro_3,
-
-    owner:        row.owner,
-    prospect:     row.prospect,
-    notes:        row.notes,
-    marcaAtual:   row.marca_atual,
-
-    // true enquanto o registro ainda não foi confirmado no Supabase
-    // (criado ou editado offline, aguardando sincronização)
-    pending:      !!row._pending,
+    clientSince: row.client_since,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    cpfCnpj: row.cpf_cnpj,
+    ie: row.ie,
+    cadPro: row.cad_pro,
+    docTipo: row.doc_tipo,
+    cpf: row.cpf,
+    cnpj: row.cnpj,
+    cadpro1: row.cadpro_1,
+    cadpro2: row.cadpro_2,
+    cadpro3: row.cadpro_3,
+    owner: row.owner,
+    prospect: row.prospect,
+    notes: row.notes,
+    marcaAtual: row.marca_atual,
+    pending: !!row._pending,
   }
 }
 
 function toDB(farm) {
-  // O tipo do documento precisa acompanhar a escolha do formulário.
-  // Mantemos uma salvaguarda aqui para impedir que um CNPJ seja enviado
-  // ao Supabase como CPF mesmo que algum chamador não normalize o valor.
   const explicitDocTipo = String(farm.docTipo ?? '').trim().toLowerCase()
   const docTipo = explicitDocTipo === 'cnpj' || farm.cnpj ? 'cnpj' : 'cpf'
 
   return {
-    id:            farm.id,
-    client_code:   farm.clientCode,
-    name:          farm.name,
-    owner_role:    farm.ownerRole,
-    phone:         farm.phone,
-    email:         farm.email,
-
-    city:          farm.city,
-    state:         farm.state,
-    region:        farm.region,
-    cep:           farm.cep,
-    street:        farm.street,
+    id: farm.id,
+    client_code: farm.clientCode,
+    name: farm.name,
+    owner_role: farm.ownerRole,
+    phone: farm.phone,
+    email: farm.email,
+    city: farm.city,
+    state: farm.state,
+    region: farm.region,
+    cep: farm.cep,
+    street: farm.street,
     street_number: farm.streetNumber,
-    bairro:        farm.bairro,
-    complemento:   farm.complemento,
-
-    segment:       farm.segment,
-    herd_size:     farm.herdSize,
-    production:    farm.production,
-    area:          farm.area,
-    status:        farm.status ?? 'ativo',
+    bairro: farm.bairro,
+    complemento: farm.complemento,
+    segment: farm.segment,
+    herd_size: farm.herdSize,
+    production: farm.production,
+    area: farm.area,
+    status: farm.status ?? 'ativo',
     has_checklist: farm.hasChecklist ?? false,
-    client_since:  farm.clientSince,
-    seller_id:     farm.sellerId,
-
-    cpf_cnpj:      farm.cpfCnpj,
-    ie:            farm.ie,
-    cad_pro:       farm.cadPro,
-
-    // Campos granulares vindos do formulário de novo cadastro.
-    doc_tipo:      docTipo,
-    cpf:           farm.cpf,
-    cnpj:          farm.cnpj,
-    cadpro_1:      farm.cadpro1,
-    cadpro_2:      farm.cadpro2,
-    cadpro_3:      farm.cadpro3,
-
-    owner:         farm.owner,
-    prospect:      farm.prospect,
-    notes:         farm.notes,
-    marca_atual:   farm.marcaAtual,
+    client_since: farm.clientSince,
+    seller_id: farm.sellerId,
+    cpf_cnpj: farm.cpfCnpj,
+    ie: farm.ie,
+    cad_pro: farm.cadPro,
+    doc_tipo: docTipo,
+    cpf: farm.cpf,
+    cnpj: farm.cnpj,
+    cadpro_1: farm.cadpro1,
+    cadpro_2: farm.cadpro2,
+    cadpro_3: farm.cadpro3,
+    owner: farm.owner,
+    prospect: farm.prospect,
+    notes: farm.notes,
+    marca_atual: farm.marcaAtual,
   }
 }
 
@@ -121,44 +101,85 @@ function generateClientCode(farms) {
   return `NUT-${next}`
 }
 
+const FARM_COLUMNS = [
+  'id','client_code','name','owner_role','phone','email','auth_user_id',
+  'city','state','region','cep','street','street_number','bairro','complemento',
+  'segment','herd_size','production','area','status','has_checklist','client_since',
+  'created_at','updated_at','cpf_cnpj','ie','cad_pro','doc_tipo','cpf','cnpj',
+  'cadpro_1','cadpro_2','cadpro_3','owner','prospect','notes','marca_atual'
+].join(',')
+
 export function useFarms() {
   const { user } = useAuth()
-  const [farms, setFarms]     = useState([])
+  const [farms, setFarms] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    if (!user || !user.id) return
+    let active = true
+
+    if (!user?.id) {
+      setFarms([])
+      setLoading(false)
+      return () => { active = false }
+    }
+
     async function load() {
       setLoading(true)
-      const { data, error } = await supabase.from('farms').select('*').order('name')
+
+      // 1) Cache primeiro: a carteira aparece imediatamente, sem esperar a rede.
+      const cached = await db.farms_cache.orderBy('name').toArray()
+      if (!active) return
+      if (cached.length) {
+        setFarms(cached.map(fromDB))
+        setLoading(false)
+      }
+
+      // 2) Atualização silenciosa em segundo plano.
+      setRefreshing(true)
+      const { data, error } = await supabase
+        .from('farms')
+        .select(FARM_COLUMNS)
+        .order('name')
+
+      if (!active) return
 
       if (!error && data) {
-        // Mantém visíveis fazendas criadas/editadas offline que ainda
-        // não confirmaram no servidor (senão elas "somem" da lista até
-        // a sincronização terminar).
         const pendentes = await db.outbox.where('entity').equals('farm').toArray()
         const idsPendentes = new Set(pendentes.map(p => p.entity_id))
         const cacheAtual = await db.farms_cache.toArray()
         const somenteLocais = cacheAtual.filter(f => idsPendentes.has(f.id) && !data.some(d => d.id === f.id))
-
         const merged = [...somenteLocais, ...data]
+
         await db.farms_cache.clear()
-        await db.farms_cache.bulkPut(merged)
-        setFarms(merged.map(fromDB))
-      } else {
-        // offline (ou erro de rede): usa o que tiver em cache local
-        const cached = await db.farms_cache.toArray()
-        setFarms(cached.map(fromDB))
+        if (merged.length) await db.farms_cache.bulkPut(merged)
+        if (active) setFarms(merged.map(fromDB))
+      } else if (!cached.length) {
+        const fallback = await db.farms_cache.orderBy('name').toArray()
+        if (active) setFarms(fallback.map(fromDB))
       }
-      setLoading(false)
+
+      if (active) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
-    load()
+
+    load().catch(error => {
+      console.warn('Falha ao carregar clientes:', error)
+      if (active) {
+        setLoading(false)
+        setRefreshing(false)
+      }
+    })
+
+    return () => { active = false }
   }, [user?.id])
 
   const addFarm = useCallback(async (farmData) => {
-    const id         = crypto.randomUUID()
+    const id = crypto.randomUUID()
     const clientCode = generateClientCode(farms)
-    const newFarm    = {
+    const newFarm = {
       ...farmData,
       id,
       clientCode,
@@ -170,21 +191,15 @@ export function useFarms() {
     }
     const payload = toDB(newFarm)
 
-    // Grava local primeiro (nunca falha, não depende de rede) e mostra
-    // na tela na hora. Depois enfileira para enviar ao Supabase — se
-    // já tiver internet, sincroniza em segundos; se não, fica na fila
-    // e vai sozinho quando a conexão voltar.
     await db.farms_cache.put({ ...payload, _pending: true })
     setFarms(prev => [newFarm, ...prev])
     await enqueue({ entity: 'farm', entityId: id, op: 'upsert', payload })
-
     return newFarm
   }, [farms, user])
 
   const updateFarm = useCallback(async (id, changes) => {
     const updatedAt = new Date().toISOString()
     const payload = toDB(changes)
-
     Object.keys(payload).forEach(key => {
       if (payload[key] === undefined) delete payload[key]
     })
@@ -197,7 +212,6 @@ export function useFarms() {
     ))
 
     await enqueue({ entity: 'farm', entityId: id, op: 'update', payload })
-
     return { error: null }
   }, [])
 
@@ -209,9 +223,7 @@ export function useFarms() {
     }
   }, [])
 
-  const getFarm = useCallback((id) => {
-    return farms.find(f => f.id === id)
-  }, [farms])
+  const getFarm = useCallback((id) => farms.find(f => f.id === id), [farms])
 
-  return { farms, loading, addFarm, updateFarm, removeFarm, getFarm }
+  return { farms, loading, refreshing, addFarm, updateFarm, removeFarm, getFarm }
 }
