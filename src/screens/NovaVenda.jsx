@@ -76,6 +76,7 @@ export default function NovaVenda() {
 
   const [farmId, setFarmId] = useState(preselectedFarmId || '')
   const [saleDate, setSaleDate] = useState(todayISO())
+  const [deliveryDate, setDeliveryDate] = useState('')
   const [items, setItems] = useState([])
   const [paymentTermId, setPaymentTermId] = useState('')
   const [frete, setFrete] = useState('CIF')
@@ -148,6 +149,7 @@ export default function NovaVenda() {
     addSale({
       farmId,
       saleDate,
+      deliveryDate: deliveryDate || null,
       items: items.map(it => ({
         productId: it.productId,
         productName: it.productName,
@@ -209,6 +211,11 @@ export default function NovaVenda() {
       <div className="section-label">Data</div>
       <div style={{ marginBottom: 14 }}>
         <input type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} />
+      </div>
+
+      <div className="section-label">Previsão de entrega</div>
+      <div style={{ marginBottom: 14 }}>
+        <input type="date" value={deliveryDate} min={saleDate || undefined} onChange={e => setDeliveryDate(e.target.value)} />
       </div>
 
       <div className="section-label">
