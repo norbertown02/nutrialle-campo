@@ -109,7 +109,7 @@ export default function NovaFazenda() {
 
   const [form, setForm] = useState({
     name:'', owner:'', ownerRole:'Proprietário', phone:'', email:'',
-    docTipo:'cpf', cpf:'', cnpj:'', cnpjIE:'', cadpro1:'', cadpro2:'', cadpro3:'',
+    docTipo:'cpf', cpf:'', cnpj:'', cnpjIE:'', cadPro:'',
     segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'', bairro:'', complemento:'',
     herdSize:'', production:'', area:'',
   })
@@ -152,14 +152,13 @@ export default function NovaFazenda() {
     if (!isValid || salvando) return
     setSalvando(true)
     const cpfCnpjConsolidado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
-    const cadProConsolidado = [form.cadpro1, form.cadpro2, form.cadpro3]
-      .filter(Boolean).join(', ') || null
+    const cadProConsolidado = form.cadPro?.trim() || null
 
     await addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
       phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
       doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
-      cadpro_1: form.cadpro1||null, cadpro_2: form.cadpro2||null, cadpro_3: form.cadpro3||null,
+      cadpro_1: form.cadPro?.trim()||null, cadpro_2: null, cadpro_3: null,
       cpfCnpj: cpfCnpjConsolidado || null,
       cadPro: form.docTipo === 'cpf' ? cadProConsolidado : null,
       ie: form.cnpjIE?.trim()||null,
@@ -235,14 +234,8 @@ export default function NovaFazenda() {
           <Field label="CPF *">
             <input value={form.cpf} onChange={e=>setField('cpf',maskCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric"/>
           </Field>
-          <Field label="CAD/PRO 1 (Cadastro de Produtor Rural)">
-            <input value={form.cadpro1} onChange={e=>setField('cadpro1',e.target.value)} placeholder="Número do CAD/PRO"/>
-          </Field>
-          <Field label="CAD/PRO 2 (opcional)">
-            <input value={form.cadpro2} onChange={e=>setField('cadpro2',e.target.value)} placeholder="Número do CAD/PRO"/>
-          </Field>
-          <Field label="CAD/PRO 3 (opcional)">
-            <input value={form.cadpro3} onChange={e=>setField('cadpro3',e.target.value)} placeholder="Número do CAD/PRO"/>
+          <Field label="CAD/PRO (Cadastro de Produtor Rural)">
+            <input value={form.cadPro} onChange={e=>setField('cadPro',e.target.value)} placeholder="Número do CAD/PRO"/>
           </Field>
         </>
       ) : (
