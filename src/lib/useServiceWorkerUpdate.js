@@ -1,26 +1,18 @@
 import { useEffect } from 'react'
 import { showToast } from './toast'
 
-// Detecta quando uma nova versão do app já foi baixada pelo service worker
-// e está esperando para assumir (ver public/sw.js — ela não assume sozinha
-// no meio de uma sessão aberta). Quando isso acontece, avisa o usuário com
-// um toast persistente; só troca de versão quando ele confirmar, evitando
-// que uma tela aberta em campo quebre no meio de uma cotação por causa de
-// um chunk que sumiu depois do deploy.
 export function useServiceWorkerUpdate() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
-    let recarregando = false
-    let dismissAtual = null
+    let reloading = false
+    let dismissUpdate = null
 
-    function avisarAtualizacao(registration) {
+    function notifyUpdate(registration) {
       const waiting = registration.waiting
-      if (!waiting) return
+      if (!waiting || dismissUpdate) return
 
-      if (dismissAtual) return // já está mostrando o aviso
-
-      dismissAtual = showToast(
+      dismissUpdate = showToast(
         'Nova versão do app disponível.',
         'info',
         0,
@@ -33,36 +25,46 @@ export function useServiceWorkerUpdate() {
       )
     }
 
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      // a nova versão assumiu o controle — recarrega uma vez pra garantir
-      // que todo o JS/CSS em memória é da versão nova, consistente entre si
-      if (recarregando) return
-      recarregando = true
+    const onControllerChange = () => {
+      if (reloading) return
+      reloading = true
       window.location.reload()
-    })
+    }
 
-    navigator.serviceWorker.getRegistration().then(registration => {
-      if (!registration) return
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
 
-      // já tem uma versão nova esperando desde antes desse carregamento
-      if (registration.waiting) avisarAtualizacao(registration)
+    navigator.serviceWorker.ready.then(registration => {
+      // Não espera o navegador decidir quando procurar por uma nova versão.
+      // Toda abertura do Campo força uma checagem do SW no servidor.
+      registration.update().catch(() => {})
+
+      if (registration.waiting) notifyUpdate(registration)
 
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing
         if (!newWorker) return
+
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            avisarAtualizacao(registration)
+            notifyUpdate(registration)
           }
         })
       })
 
-      // navegadores só checam por atualização automaticamente ao navegar；
-      // como esse é um app que fica aberto por horas em campo, força uma
-      // checagem quando a aba volta a ficar visível.
+      const checkForUpdate = () => registration.update().catch(() => {})
+
+      // Se o aparelho recupera conexão depois de trabalhar offline,
+      // verifica imediatamente se há atualização pendente.
+      window.addEventListener('online', checkForUpdate)
+
+      // Em sessões longas, verifica quando o usuário volta ao app.
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') registration.update().catch(() => {})
+        if (document.visibilityState === 'visible') checkForUpdate()
       })
     })
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+    }
   }, [])
 }
