@@ -14,7 +14,7 @@ export function useProducts() {
     async function load() {
       setLoading(true)
       const [prod, terms, methods, tables] = await Promise.all([
-        supabase.from('products').select('*').eq('active', true).order('segment').order('name'),
+        supabase.from('products').select('*').eq('active', true).order('name', { ascending: true }),
         supabase.from('payment_terms').select('*').eq('active', true).order('days'),
         supabase.from('erp_payment_methods').select('*').eq('active', true).order('description'),
         supabase.from('erp_price_tables').select('*').eq('active', true).order('description'),
