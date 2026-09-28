@@ -70,6 +70,181 @@ function normalizeSearch(value) {
     .trim()
 }
 
+function FarmSearchSelect({ farms, value, onChange }) {
+  const selected = farms.find(f => f.id === value) || null
+  const [query, setQuery] = useState(selected?.name || '')
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) setQuery(selected?.name || '')
+  }, [value, selected?.name, open])
+
+  const normalizedQuery = normalizeSearch(query)
+  const filtered = normalizedQuery
+    ? farms.filter(f => {
+        const haystack = normalizeSearch(
+          [
+            f.name,
+            f.owner_name,
+            f.owner,
+            f.city,
+            f.state,
+            f.client_code,
+            f.cpf_cnpj,
+            f.cpf,
+            f.cnpj
+          ].filter(Boolean).join(' ')
+        )
+        return haystack.includes(normalizedQuery)
+      })
+    : farms
+
+  const visible = filtered.slice(0, 30)
+
+  const choose = (farm) => {
+    onChange(farm.id)
+    setQuery(farm.name)
+    setOpen(false)
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        border: open ? '1.5px solid var(--orange)' : '1px solid var(--line)',
+        borderRadius: 11,
+        background: 'var(--surface-2)',
+        boxShadow: open ? '0 0 0 3px rgba(240,125,26,0.10)' : 'none',
+        transition: 'border-color .15s ease, box-shadow .15s ease'
+      }}>
+        <IconSearch
+          size={16}
+          style={{ position: 'absolute', left: 12, color: open ? 'var(--orange)' : 'var(--text-faint)', pointerEvents: 'none' }}
+        />
+        <input
+          value={query}
+          onFocus={() => {
+            setOpen(true)
+            if (selected) setQuery('')
+          }}
+          onBlur={() => {
+            window.setTimeout(() => {
+              setOpen(false)
+              setQuery(selected?.name || '')
+            }, 140)
+          }}
+          onChange={e => {
+            setQuery(e.target.value)
+            setOpen(true)
+          }}
+          placeholder="Digite o nome do cliente..."
+          autoComplete="off"
+          style={{
+            width: '100%',
+            padding: '11px 36px 11px 38px',
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            fontFamily: 'inherit',
+            fontSize: 13,
+            fontWeight: selected && !open ? 600 : 500,
+            color: 'var(--text)'
+          }}
+        />
+        <IconChevronDown
+          size={16}
+          style={{
+            position: 'absolute',
+            right: 12,
+            color: 'var(--text-faint)',
+            pointerEvents: 'none',
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: 'transform .15s ease'
+          }}
+        />
+      </div>
+
+      {open ? (
+        <div style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 'calc(100% + 6px)',
+          zIndex: 60,
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 12,
+          boxShadow: '0 14px 36px rgba(20,20,20,0.16)',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            padding: '8px 11px',
+            fontSize: 10,
+            fontWeight: 600,
+            color: 'var(--text-faint)',
+            borderBottom: '1px solid var(--line-soft)',
+            background: 'var(--surface-2)'
+          }}>
+            {filtered.length === 0
+              ? 'Nenhum cliente encontrado'
+              : `${filtered.length} ${filtered.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}`}
+          </div>
+
+          <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            {visible.map(farm => (
+              <button
+                key={farm.id}
+                type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => choose(farm)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: 'none',
+                  borderBottom: '1px solid var(--line-soft)',
+                  background: farm.id === value ? 'var(--orange-bg)' : 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 13,
+                    fontWeight: farm.id === value ? 700 : 600,
+                    color: farm.id === value ? 'var(--orange)' : 'var(--text)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {farm.name}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>
+                    {[farm.city, farm.state, farm.client_code ? `Cód. ${farm.client_code}` : null].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                {farm.id === value ? <IconCheck size={14} style={{ color: 'var(--orange)', flexShrink: 0 }} /> : null}
+              </button>
+            ))}
+
+            {filtered.length > visible.length ? (
+              <div style={{ padding: 9, textAlign: 'center', fontSize: 10, color: 'var(--text-faint)' }}>
+                Continue digitando para refinar a busca.
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function ProductSearchSelect({ products, value, onChange }) {
   const selected = products.find(p => p.id === value) || null
   const [query, setQuery] = useState(selected?.name || '')
@@ -406,10 +581,11 @@ export default function NovaVenda() {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 6, letterSpacing: 0.3 }}>
                 Selecione a fazenda *
               </label>
-              <select value={farmId} onChange={e => setFarmId(e.target.value)}>
-                <option value="">Escolher...</option>
-                {farms.map(f => <option key={f.id} value={f.id}>{f.name} - {f.city}</option>)}
-              </select>
+              <FarmSearchSelect
+                farms={farms}
+                value={farmId}
+                onChange={setFarmId}
+              />
             </div>
           )}
         </>
