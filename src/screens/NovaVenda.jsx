@@ -451,7 +451,7 @@ export default function NovaVenda() {
 
   const segmento = String(selectedFarm?.segment || '').trim().toLowerCase()
   const isLoja = segmento === 'loja' || segmento.includes('loja')
-  const isProdutor = ['corte', 'leite', 'suinos', 'suínos', 'bovinos', 'pecuaria', 'pecuária'].some(v => segmento === v || segmento.includes(v))
+  const isProdutor = ['corte', 'leite', 'suino', 'suíno', 'suinos', 'suínos', 'produtor', 'bovinos', 'pecuaria', 'pecuária'].some(v => segmento === v || segmento.includes(v))
   const tabelaDesejada = isLoja ? 'loja' : isProdutor ? 'produtor' : null
   const tabelaPreco = tabelaDesejada
     ? priceTables.find(t => String(t.description || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(tabelaDesejada)) || null
