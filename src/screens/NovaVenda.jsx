@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   IconArrowLeft, IconCheck, IconPlus, IconTrash,
-  IconAlertTriangle, IconReceipt
+  IconAlertTriangle, IconReceipt, IconSearch, IconChevronDown
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useSales } from '../lib/useSales'
@@ -61,6 +61,192 @@ const backBtnStyle = {
   fontFamily: 'inherit'
 }
 
+
+function normalizeSearch(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function ProductSearchSelect({ products, value, onChange }) {
+  const selected = products.find(p => p.id === value) || null
+  const [query, setQuery] = useState(selected?.name || '')
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) setQuery(selected?.name || '')
+  }, [value, selected?.name, open])
+
+  const normalizedQuery = normalizeSearch(query)
+  const filtered = normalizedQuery
+    ? products.filter(p => {
+        const haystack = normalizeSearch(
+          [p.name, p.segment, p.code, p.ultra_ref_fabrica].filter(Boolean).join(' ')
+        )
+        return haystack.includes(normalizedQuery)
+      })
+    : products
+
+  const visible = filtered.slice(0, 30)
+
+  const choose = (product) => {
+    onChange(product.id)
+    setQuery(product.name)
+    setOpen(false)
+  }
+
+  return (
+    <div style={{ position: 'relative', marginBottom: 8 }}>
+      <div style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        border: open ? '1.5px solid var(--orange)' : '1px solid var(--line)',
+        borderRadius: 11,
+        background: 'var(--surface-2)',
+        boxShadow: open ? '0 0 0 3px rgba(240,125,26,0.10)' : 'none',
+        transition: 'border-color .15s ease, box-shadow .15s ease'
+      }}>
+        <IconSearch
+          size={16}
+          style={{ position: 'absolute', left: 12, color: open ? 'var(--orange)' : 'var(--text-faint)', pointerEvents: 'none' }}
+        />
+        <input
+          value={query}
+          onFocus={() => {
+            setOpen(true)
+            if (selected) setQuery('')
+          }}
+          onBlur={() => {
+            window.setTimeout(() => {
+              setOpen(false)
+              setQuery(selected?.name || '')
+            }, 140)
+          }}
+          onChange={e => {
+            setQuery(e.target.value)
+            setOpen(true)
+          }}
+          placeholder="Digite para buscar um produto..."
+          autoComplete="off"
+          style={{
+            width: '100%',
+            padding: '11px 36px 11px 38px',
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            fontFamily: 'inherit',
+            fontSize: 13,
+            fontWeight: selected && !open ? 600 : 500,
+            color: 'var(--text)'
+          }}
+        />
+        <IconChevronDown
+          size={16}
+          style={{
+            position: 'absolute',
+            right: 12,
+            color: 'var(--text-faint)',
+            pointerEvents: 'none',
+            transform: open ? 'rotate(180deg)' : 'none',
+            transition: 'transform .15s ease'
+          }}
+        />
+      </div>
+
+      {open ? (
+        <div style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 'calc(100% + 6px)',
+          zIndex: 50,
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 12,
+          boxShadow: '0 14px 36px rgba(20,20,20,0.16)',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            padding: '8px 11px',
+            fontSize: 10,
+            fontWeight: 600,
+            color: 'var(--text-faint)',
+            borderBottom: '1px solid var(--line-soft)',
+            background: 'var(--surface-2)'
+          }}>
+            {filtered.length === 0
+              ? 'Nenhum produto encontrado'
+              : `${filtered.length} ${filtered.length === 1 ? 'produto encontrado' : 'produtos encontrados'}`}
+          </div>
+
+          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+            {visible.map(product => (
+              <button
+                key={product.id}
+                type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => choose(product)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: 'none',
+                  borderBottom: '1px solid var(--line-soft)',
+                  background: product.id === value ? 'var(--orange-bg)' : 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 13,
+                    fontWeight: product.id === value ? 700 : 600,
+                    color: product.id === value ? 'var(--orange)' : 'var(--text)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {product.name}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>
+                    {[product.segment, product.code].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+
+                <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                  {Number(product.price_kg || 0) > 0 ? (
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)' }}>
+                      {fmtBRL(product.price_kg)}/kg
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>sem preço</div>
+                  )}
+                  {product.id === value ? (
+                    <IconCheck size={14} style={{ color: 'var(--orange)', marginTop: 2 }} />
+                  ) : null}
+                </div>
+              </button>
+            ))}
+
+            {filtered.length > visible.length ? (
+              <div style={{ padding: 9, textAlign: 'center', fontSize: 10, color: 'var(--text-faint)' }}>
+                Continue digitando para refinar a busca.
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export default function NovaVenda() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -98,16 +284,15 @@ export default function NovaVenda() {
 
   const addItem = () => {
     if (availableProducts.length === 0) return
-    const firstProduct = availableProducts[0]
     setItems(prev => [...prev, calcItem({
       key: 'i' + Date.now(),
-      productId: firstProduct.id,
-      productName: firstProduct.name,
+      productId: '',
+      productName: '',
       unit: 'kg',
-      bagKg: firstProduct.bag_kg || 0,
-      priceKg: firstProduct.price_kg || 0,
-      tablePriceKg: firstProduct.price_kg || 0,
-      maxDiscount: firstProduct.max_discount || 10,
+      bagKg: 0,
+      priceKg: 0,
+      tablePriceKg: 0,
+      maxDiscount: 10,
       quantity: 1,
       discount: 0,
     })])
@@ -267,9 +452,11 @@ export default function NovaVenda() {
               </div>
 
               <label style={{ display: 'block', fontSize: 11, color: 'var(--text-dim)', marginBottom: 4 }}>Produto *</label>
-              <select value={it.productId} onChange={e => updateItem(it.key, { productId: e.target.value })} style={{ marginBottom: 8 }}>
-                {availableProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              <ProductSearchSelect
+                products={availableProducts}
+                value={it.productId}
+                onChange={productId => updateItem(it.key, { productId })}
+              />
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 <div>
