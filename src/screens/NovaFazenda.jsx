@@ -145,8 +145,14 @@ export default function NovaFazenda() {
 
   const ieObrigatoriaValida = form.docTipo !== 'cnpj' || form.cnpjIE.trim().length >= 2
 
-  const isValid = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
+  const cadastroCompletoValido = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
     form.city.trim().length >= 2 && (cidadeVerificada || !online) && documentoValido && ieObrigatoriaValida
+
+  // Prospecto usado apenas para cotação: somente o nome é obrigatório.
+  // O cadastro completo continua obrigatório no fluxo de venda.
+  const isValid = isProspect
+    ? form.name.trim().length >= 3
+    : cadastroCompletoValido
 
   const handleSave = async () => {
     if (!isValid || salvando) return
@@ -154,7 +160,7 @@ export default function NovaFazenda() {
     const cpfCnpjConsolidado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
     const cadProConsolidado = form.cadPro?.trim() || null
 
-    await addFarm({
+    const newFarm = await addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
       phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
       doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
@@ -169,7 +175,7 @@ export default function NovaFazenda() {
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
       prospect: isProspect,
     })
-    navigate('/clientes')
+    navigate(isProspect ? `/prospeccao/nova?farm=${newFarm.id}` : '/clientes')
   }
 
   return (
@@ -190,11 +196,11 @@ export default function NovaFazenda() {
 
       <div className="section-label">Identificação</div>
 
-      <Field label="Nome da fazenda *">
+      <Field label={isProspect ? 'Nome *' : 'Nome da fazenda *'}>
         <input value={form.name} onChange={e => setField('name', e.target.value)} placeholder="Ex.: Fazenda Boa Vista" />
       </Field>
 
-      <Field label="Nome do produtor *">
+      <Field label={isProspect ? 'Nome do produtor' : 'Nome do produtor *'}>
         <input value={form.owner} onChange={e => setField('owner', e.target.value)} placeholder="Ex.: João Marquezini" />
       </Field>
 
@@ -231,7 +237,7 @@ export default function NovaFazenda() {
 
       {form.docTipo==='cpf' ? (
         <>
-          <Field label="CPF *">
+          <Field label={isProspect ? 'CPF' : 'CPF *'}>
             <input value={form.cpf} onChange={e=>setField('cpf',maskCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric"/>
           </Field>
           <Field label="CAD/PRO (Cadastro de Produtor Rural)">
@@ -240,10 +246,10 @@ export default function NovaFazenda() {
         </>
       ) : (
         <>
-          <Field label="CNPJ *">
+          <Field label={isProspect ? 'CNPJ' : 'CNPJ *'}>
             <input value={form.cnpj} onChange={e=>setField('cnpj',maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" inputMode="numeric"/>
           </Field>
-          <Field label="Inscrição Estadual (IE) *">
+          <Field label={isProspect ? 'Inscrição Estadual (IE)' : 'Inscrição Estadual (IE) *'}>
             <input value={form.cnpjIE||''} onChange={e=>setField('cnpjIE',e.target.value)} placeholder="Ex.: 123.456.789-0"/>
           </Field>
         </>
@@ -251,7 +257,7 @@ export default function NovaFazenda() {
 
       <div className="section-label">Segmento e localização</div>
 
-      <Field label="Segmento *">
+      <Field label={isProspect ? 'Segmento' : 'Segmento *'}>
         <div style={{ display:'flex', gap:6 }}>
           {SEGMENT_OPTIONS.map(opt => (
             <button key={opt.value} type="button" onClick={() => setField('segment', opt.value)} style={{
@@ -268,12 +274,12 @@ export default function NovaFazenda() {
       </Field>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
-        <Field label="UF *">
+        <Field label={isProspect ? 'UF' : 'UF *'}>
           <select value={form.state} onChange={e => { setField('state', e.target.value); setField('city', ''); setCidadeVerificada(false) }}>
             {STATES.map(s => <option key={s.value} value={s.value}>{s.value}</option>)}
           </select>
         </Field>
-        <Field label="Cidade *">
+        <Field label={isProspect ? 'Cidade' : 'Cidade *'}>
           <CidadeInput
             value={form.city}
             uf={form.state}
@@ -315,7 +321,9 @@ export default function NovaFazenda() {
       </Field>
 
       <div className="hint" style={{ marginTop:18 }}>
-        Campos com * são obrigatórios. Para CNPJ, a Inscrição Estadual também é obrigatória. A cidade é validada automaticamente pelo IBGE.
+        {isProspect
+          ? 'Para criar uma cotação, somente o nome é obrigatório. Os demais dados podem ser completados depois, antes de transformar a cotação em venda.'
+          : 'Campos com * são obrigatórios. Para CNPJ, a Inscrição Estadual também é obrigatória. A cidade é validada automaticamente pelo IBGE.'}
       </div>
 
       {!online && (
