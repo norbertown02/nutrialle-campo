@@ -422,6 +422,21 @@ function ProductSearchSelect({ products, value, onChange }) {
   )
 }
 
+function cadastroCompletoParaVenda(farm) {
+  if (!farm) return false
+  const doc = String(farm.cpfCnpj || farm.cpf_cnpj || farm.cpf || farm.cnpj || '').replace(/\D/g, '')
+  const isCnpj = farm.docTipo === 'cnpj' || farm.doc_tipo === 'cnpj' || !!farm.cnpj || doc.length === 14
+  const documentoValido = isCnpj ? doc.length === 14 : doc.length === 11
+  const ieValida = !isCnpj || String(farm.ie || '').trim().length >= 2
+
+  return !farm.prospect &&
+    String(farm.name || '').trim().length >= 3 &&
+    String(farm.owner || '').trim().length >= 3 &&
+    String(farm.city || '').trim().length >= 2 &&
+    documentoValido &&
+    ieValida
+}
+
 export default function NovaVenda() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -447,6 +462,7 @@ export default function NovaVenda() {
   const [saving, setSaving] = useState(false)
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
+  const farmsDisponiveisParaVenda = farms.filter(cadastroCompletoParaVenda)
   const availableProducts = products
 
   const segmento = String(selectedFarm?.segment || '').trim().toLowerCase()
@@ -510,12 +526,19 @@ export default function NovaVenda() {
   const itensValidos = items.length > 0 && items.every(it =>
     !!it.productId && Number(it.quantity) > 0 && Number(it.priceKg) > 0
   )
-  const isValid = !!farmId && !!selectedFarm && datasValidas && itensValidos &&
+  const cadastroClienteValido = cadastroCompletoParaVenda(selectedFarm)
+  const isValid = !!farmId && !!selectedFarm && cadastroClienteValido && datasValidas && itensValidos &&
     !!paymentTermId && !!paymentMethodId && !!tabelaPreco && !!frete
 
   const handleSave = async () => {
     if (!isValid || saving) {
-      if (!saving) showToast('Preencha cliente, datas, produtos em kg, preço/kg, condição e método de pagamento.', 'error')
+      if (!saving) {
+        if (selectedFarm && !cadastroClienteValido) {
+          showToast('Para registrar uma venda, complete primeiro o cadastro do cliente. Prospectos com cadastro simplificado podem receber cotação, mas não pedido.', 'error')
+        } else {
+          showToast('Preencha cliente, datas, produtos em kg, preço/kg, condição e método de pagamento.', 'error')
+        }
+      }
       return
     }
     setSaving(true)
@@ -576,9 +599,9 @@ export default function NovaVenda() {
       {!preselectedFarm ? (
         <>
           <div className="section-label">Fazenda</div>
-          {farms.length === 0 ? (
+          {farmsDisponiveisParaVenda.length === 0 ? (
             <div className="hint" style={{ marginBottom: 18 }}>
-              Voce ainda nao tem fazendas cadastradas. Volte para Clientes e cadastre primeiro a fazenda.
+              Nenhum cliente com cadastro completo está disponível para venda. Complete o cadastro do cliente em Clientes antes de registrar o pedido.
             </div>
           ) : (
             <div style={{ marginBottom: 14 }}>
@@ -586,13 +609,19 @@ export default function NovaVenda() {
                 Selecione a fazenda *
               </label>
               <FarmSearchSelect
-                farms={farms}
+                farms={farmsDisponiveisParaVenda}
                 value={farmId}
                 onChange={setFarmId}
               />
             </div>
           )}
         </>
+      ) : null}
+
+      {selectedFarm && !cadastroClienteValido ? (
+        <div className="hint" style={{ marginBottom: 16, color: 'var(--amber)' }}>
+          Este cadastro ainda é um prospecto ou está incompleto. Ele pode receber cotação, mas para venda é necessário completar o cadastro do cliente.
+        </div>
       ) : null}
 
       <div className="section-label">Data do pedido *</div>
