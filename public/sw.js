@@ -78,7 +78,9 @@ self.addEventListener('fetch', event => {
   // toda navegação busca o HTML novo na rede. O cache serve somente offline.
   if (request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
     event.respondWith((async () => {
-      const response = await networkFirst(request, APP_SHELL)
+      const response = url.pathname.startsWith('/planos')
+        ? await networkFirst(request)
+        : await networkFirst(request, APP_SHELL)
       return response || new Response('Offline', { status: 503, statusText: 'Offline' })
     })())
     return
