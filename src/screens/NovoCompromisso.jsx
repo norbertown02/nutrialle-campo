@@ -20,6 +20,8 @@ export default function NovoCompromisso() {
   const { farms } = useFarms()
   const { addAppointment } = useAppointments()
 
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [kind, setKind] = useState('visita') // visita | lembrete
   const [title, setTitle] = useState('')
   const [appointmentDate, setAppointmentDate] = useState(todayISO())
@@ -29,9 +31,12 @@ export default function NovoCompromisso() {
 
   const isValid = title.trim().length >= 3 && appointmentDate
 
-  const handleSave = () => {
-    if (!isValid) return
-    addAppointment({
+  const handleSave = async () => {
+    if (!isValid || saving) return
+    setSaving(true)
+    setSaveError('')
+    try {
+    await addAppointment({
       title: title.trim(),
       appointmentDate,
       appointmentTime: appointmentTime || null,
@@ -40,10 +45,12 @@ export default function NovoCompromisso() {
       kind, // 'visita' ou 'lembrete'
     })
     navigate('/agenda')
+    } catch (e) { setSaveError(e.message || 'Falha ao salvar compromisso') } finally { setSaving(false) }
   }
 
   return (
     <div className="content">
+      {saveError && <div role="alert" style={{color:"var(--red)", padding:12}}>{saveError}</div>}
       <button onClick={() => navigate(-1)} style={backBtnStyle}>
         <IconArrowLeft size={16} /> Voltar
       </button>
@@ -117,7 +124,7 @@ export default function NovoCompromisso() {
           style={{minHeight:80}}/>
       </div>
 
-      <button className="btn btn-primary" onClick={handleSave} disabled={!isValid}
+      <button className="btn btn-primary" onClick={handleSave} disabled={!isValid || saving}
         style={{opacity:isValid?1:0.45,cursor:isValid?'pointer':'not-allowed'}}>
         <IconCheck size={18}/> Salvar compromisso
       </button>
