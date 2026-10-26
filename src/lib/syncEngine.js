@@ -18,11 +18,13 @@ const MAX_TENTATIVAS_ERRO_SERVIDOR = 3
 const TABLE_BY_ENTITY = {
   farm: 'farms',
   quote: 'quotes',
+  visit: 'visits',
+  appointment: 'appointments',
 }
 
 // Ordem de sincronização: fazendas antes de cotações, porque uma
 // cotação pode referenciar uma fazenda que ainda não chegou ao servidor.
-const ENTITY_ORDER = { farm: 0, quote: 1 }
+const ENTITY_ORDER = { farm: 0, visit: 1, appointment: 2, quote: 3 }
 
 let syncing = false
 const listeners = new Set()
@@ -64,6 +66,7 @@ export async function getOutboxItems() {
 // entity: 'farm' | 'quote'
 // op: 'upsert' (criação — envia a linha inteira) | 'update' (edição — envia só o que mudou)
 export async function enqueue({ entity, entityId, op, payload }) {
+  if (!TABLE_BY_ENTITY[entity]) throw new Error('Tipo de sincronização desconhecido: ' + entity)
   await db.outbox.add({
     entity,
     entity_id: entityId,
@@ -103,11 +106,11 @@ export async function processOutbox() {
 
       try {
         if (item.op === 'update') {
-          const res = await supabase.from(table).update(item.payload).eq('id', item.entity_id)
-          error = res.error
+          const res = await supabase.from(table).update(item.payload).eq('id', item.entity_id).select('id')
+          error = res.error || (!res.data?.length ? new Error('Atualização não confirmada pelo servidor') : null)
         } else {
-          const res = await supabase.from(table).upsert(item.payload, { onConflict: 'id' })
-          error = res.error
+          const res = await supabase.from(table).upsert(item.payload, { onConflict: 'id' }).select('id')
+          error = res.error || (!res.data?.length ? new Error('Gravação não confirmada pelo servidor') : null)
         }
       } catch (e) {
         error = e
@@ -129,7 +132,7 @@ export async function processOutbox() {
 
         if (esgotouTentativas) {
           showToast(
-            `Não foi possível enviar um registro (${item.entity === 'farm' ? 'cliente' : 'cotação'}) depois de ${attempts} tentativas: ${error.message || error}. Fale com o suporte se persistir.`,
+            `Não foi possível enviar um registro (${({farm:'cliente',quote:'cotação',visit:'visita',appointment:'compromisso'})[item.entity] || item.entity}) depois de ${attempts} tentativas: ${error.message || error}. Fale com o suporte se persistir.`,
             'error',
             10000
           )
@@ -145,7 +148,7 @@ export async function processOutbox() {
 }
 
 async function marcarSincronizado(entity, entityId) {
-  const cacheTable = entity === 'farm' ? db.farms_cache : entity === 'quote' ? db.quotes_cache : null
+  const cacheTable = ({ farm: db.farms_cache, quote: db.quotes_cache, visit: db.visits_cache, appointment: db.appointments_cache })[entity]
   if (!cacheTable) return
   const row = await cacheTable.get(entityId)
   if (row) await cacheTable.update(entityId, { _pending: false })
