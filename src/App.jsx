@@ -30,6 +30,7 @@ const Checklist = lazyWithRetry(() => import('./screens/Checklist'))
 const PickChecklist = lazyWithRetry(() => import('./screens/PickChecklist'))
 
 const Agenda = lazyWithRetry(() => import('./screens/Agenda'))
+const RecuperarSincronizacao = lazyWithRetry(() => import('./screens/RecuperarSincronizacao'))
 const NovoCompromisso = lazyWithRetry(() => import('./screens/NovoCompromisso'))
 
 const Prospeccao = lazyWithRetry(() => import('./screens/Prospeccao'))
@@ -93,6 +94,7 @@ function AppContent() {
             <Route path="/vendas/:id" element={<DetalheVenda />} />
 
             <Route path="/agenda" element={<Agenda />} />
+            <Route path="/sincronizacao/recuperar" element={<RecuperarSincronizacao />} />
             <Route path="/agenda/novo" element={<NovoCompromisso />} />
 
             <Route path="/prospeccao" element={<Prospeccao />} />
