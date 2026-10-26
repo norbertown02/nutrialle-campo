@@ -1,66 +1,65 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
+import { db } from './db'
+import { enqueue, onSyncChange } from './syncEngine'
+import { logError } from './logError'
 
-function fromDB(row) {
-  if (!row) return null
-  return {
-    id:              row.id,
-    farmId:          row.farm_id,
-    title:           row.title,
-    appointmentDate: row.appointment_date,
-    appointmentTime: row.appointment_time,
-    city:            row.city,
-    notes:           row.notes,
-    status:          row.status,
-    doneAt:          row.done_at,
-    createdAt:       row.created_at,
-    kind:            row.kind || 'visita',
-  }
-}
+const fromDB = row => row ? ({ id: row.id, farmId: row.farm_id, title: row.title, appointmentDate: row.appointment_date, appointmentTime: row.appointment_time, city: row.city, notes: row.notes, status: row.status, doneAt: row.done_at, createdAt: row.created_at, kind: row.kind || 'visita', pending: !!row._pending }) : null
 
 export function useAppointments() {
   const { user } = useAuth()
   const [appointments, setAppointments] = useState([])
 
   useEffect(() => {
-    async function load() {
-      let q = supabase.from('appointments')
-      const { data, error } = await q
-        .select('*')
-        .order('appointment_date', { ascending: true })
-      if (!error && data) setAppointments(data.map(fromDB))
+    let active = true
+    if (!user?.id) { setAppointments([]); return () => { active = false } }
+    const load = async () => {
+      const local = await db.appointments_cache.where('seller_id').equals(user.id).toArray()
+      if (active) setAppointments(local.map(fromDB))
+      const { data, error } = await supabase.from('appointments').select('*').eq('seller_id', user.id).order('appointment_date', {ascending:true})
+      if (error) { logError('appointments_load', error); return }
+      const pending = await db.outbox.where('entity').equals('appointment').toArray()
+      const pendingIds = new Set(pending.map(x => x.entity_id))
+      const preserved = local.filter(x => pendingIds.has(x.id))
+      const merged = new Map(data.map(x => [x.id, {...x, _pending:false}]))
+      for (const row of preserved) merged.set(row.id, row)
+      if (!active) return
+      await db.appointments_cache.bulkPut([...merged.values()])
+      if (active) setAppointments([...merged.values()].map(fromDB))
     }
-    load()
-  }, [])
+    load().catch(error => logError('appointments_load', error))
+    const unsub = onSyncChange(() => { load().catch(console.warn) })
+    const onFocus = () => load().catch(console.warn)
+    window.addEventListener('focus', onFocus)
+    return () => { active = false; unsub(); window.removeEventListener('focus', onFocus) }
+  }, [user?.id])
 
   const addAppointment = useCallback(async (data) => {
-    const item = {
-      id:               'a' + Date.now(),
-      farm_id:          data.farmId || null,
-      title:            data.title,
-      appointment_date: data.appointmentDate,
-      appointment_time: data.appointmentTime || null,
-      city:             data.city || null,
-      notes:            data.notes || null,
-      status:           'agendado',
-      kind:             data.kind || 'visita',
-      seller_id:        user && user.id,
-    }
-    const { error } = await supabase.from('appointments').insert(item)
-    if (!error) setAppointments(prev => [...prev, fromDB(item)])
-  }, [])
+    if (!user?.id) throw new Error('Entre novamente na conta para salvar.')
+    const record = { id: 'a' + crypto.randomUUID(), farm_id: data.farmId || null, title: data.title, appointment_date: data.appointmentDate, appointment_time: data.appointmentTime || null, city: data.city || null, notes: data.notes || null, status: 'agendado', kind: data.kind || 'visita', seller_id: user.id, created_at: new Date().toISOString() }
+    await db.appointments_cache.put({...record, _pending:true})
+    setAppointments(prev => [fromDB({...record, _pending:true}), ...prev])
+    await enqueue({entity:'appointment', entityId:record.id, op:'upsert', payload:record})
+    return {id:record.id, pending:true}
+  }, [user?.id])
 
   const removeAppointment = useCallback(async (id) => {
-    const { error } = await supabase.from('appointments').delete().eq('id', id)
-    if (!error) setAppointments(prev => prev.filter(a => a.id !== id))
-  }, [])
+    const pending = await db.outbox.where('entity_id').equals(id).toArray()
+    if (pending.length) throw new Error('Aguarde a sincronização antes de excluir este registro.')
+    const { error } = await supabase.from('appointments').delete().eq('id', id).eq('seller_id', user.id)
+    if (error) throw error
+    await db.appointments_cache.delete(id)
+    setAppointments(prev => prev.filter(x => x.id !== id))
+  }, [user?.id])
 
   const markAsDone = useCallback(async (id) => {
     const doneAt = new Date().toISOString()
-    const { error } = await supabase.from('appointments').update({ status: 'realizado', done_at: doneAt }).eq('id', id)
-    if (!error) setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'realizado', doneAt } : a))
-  }, [])
-
+    const existing = await db.appointments_cache.get(id)
+    if (!existing || existing.seller_id !== user?.id) throw new Error('Compromisso não encontrado para este usuário')
+    await db.appointments_cache.update(id, { status:'realizado', done_at:doneAt, _pending:true })
+    setAppointments(prev => prev.map(a => a.id === id ? {...a, status:'realizado', doneAt, pending:true} : a))
+    await enqueue({ entity:'appointment', entityId:id, op:'update', payload:{status:'realizado',done_at:doneAt} })
+  }, [user?.id])
   return { appointments, addAppointment, removeAppointment, markAsDone }
 }
