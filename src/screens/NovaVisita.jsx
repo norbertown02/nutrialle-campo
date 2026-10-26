@@ -34,6 +34,8 @@ export default function NovaVisita() {
   const preselectedFarmId = searchParams.get('farm')
   const preselectedFarm   = preselectedFarmId ? getFarm(preselectedFarmId) : null
 
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [farmId,        setFarmId]        = useState(preselectedFarmId || '')
   const [visitDate,     setVisitDate]     = useState(todayISO())
   const [outcome,       setOutcome]       = useState('')
@@ -43,15 +45,18 @@ export default function NovaVisita() {
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
   const isValid = farmId && outcome && visitDate
 
-  const handleSave = () => {
-    if (!isValid) return
+  const handleSave = async () => {
+    if (!isValid || saving) return
+    setSaving(true)
+    setSaveError('')
+    try {
 
     // Salva a visita
-    addVisit({ farmId, visitDate, outcome, notes: notes.trim(), nextVisitDate: nextVisitDate || null })
+    await addVisit({ farmId, visitDate, outcome, notes: notes.trim(), nextVisitDate: nextVisitDate || null })
 
     // Cria compromisso automático para a próxima visita
     if (nextVisitDate) {
-      addAppointment({
+      await addAppointment({
         title: `Visita — ${selectedFarm?.name || ''}`,
         appointmentDate: nextVisitDate,
         appointmentTime: null,
@@ -61,10 +66,12 @@ export default function NovaVisita() {
     }
 
     navigate('/clientes/' + farmId)
+    } catch (e) { setSaveError(e.message || 'Falha ao salvar visita') } finally { setSaving(false) }
   }
 
   return (
     <div className="content">
+      {saveError && <div role="alert" style={{color:"var(--red)", padding:12}}>{saveError}</div>}
       <button
         onClick={() => navigate(-1)}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, padding: 0, marginBottom: 14, fontFamily: 'inherit' }}
@@ -163,7 +170,7 @@ export default function NovaVisita() {
         className="btn btn-primary"
         style={{ marginTop: 18, opacity: isValid ? 1 : 0.45, cursor: isValid ? 'pointer' : 'not-allowed' }}
         disabled={!isValid}
-        onClick={handleSave}
+        onClick={handleSave} disabled={saving}
       >
         <IconCheck size={18} /> Salvar visita
       </button>
