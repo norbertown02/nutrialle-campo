@@ -91,6 +91,12 @@ export default function Budget() {
     Promise.all([supabase.from('budget_items').select('*').eq('cycle_id',cycleId).eq('seller_id',user.id),supabase.from('budget_client_reviews').select('*').eq('cycle_id',cycleId).eq('seller_id',user.id)]).then(([a,b])=>{if(!live)return;setItems(a.data||[]);setReviews(b.data||[]);if(a.error||b.error)setMessage((a.error||b.error).message)})
     return()=>{live=false}
   },[cycleId,user?.id])
+  const markStarted=async()=>{
+    if(!['pending','revision_requested'].includes(assignment?.status))return
+    const {error}=await supabase.from('budget_cycle_sellers').update({status:'draft'})
+      .eq('cycle_id',cycleId).eq('seller_id',user.id)
+    if(!error)setAssignments(prev=>prev.map(a=>a.cycle_id===cycleId?{...a,status:'draft'}:a))
+  }
   const save=async (record,quantity)=>{
     if(!editable)return
     const next={cycle_id:cycleId,seller_id:user.id,farm_id:record.farm_id,product_id:record.product_id,
@@ -98,7 +104,7 @@ export default function Budget() {
     setBusy(true);setMessage('')
     const {data,error}=await supabase.from('budget_items').upsert(next,{onConflict:'cycle_id,seller_id,farm_id,product_id,month'}).select().single()
     if(error)setMessage(error.message)
-    else setItems(prev=>[...prev.filter(r=>!(r.farm_id===data.farm_id&&r.product_id===data.product_id&&r.month===data.month)),data])
+    else {setItems(prev=>[...prev.filter(r=>!(r.farm_id===data.farm_id&&r.product_id===data.product_id&&r.month===data.month)),data]);await markStarted()}
     setBusy(false)
   }
   const applySuggestion=async s=>{
@@ -109,7 +115,7 @@ export default function Budget() {
       unit_price:Math.max(0,s.unit_price||Number(products.find(p=>p.id===s.product_id)?.price_kg)||0),source:'recurring'}))
     const {data,error}=await supabase.from('budget_items').upsert(rows,{onConflict:'cycle_id,seller_id,farm_id,product_id,month'}).select()
     if(error)setMessage(error.message)
-    else setItems(prev=>[...prev.filter(x=>!data.some(d=>d.farm_id===x.farm_id&&d.product_id===x.product_id&&d.month===x.month)),...data])
+    else {setItems(prev=>[...prev.filter(x=>!data.some(d=>d.farm_id===x.farm_id&&d.product_id===x.product_id&&d.month===x.month)),...data]);await markStarted()}
     setBusy(false)
   }
   const useAllSuggestions=async()=>{
@@ -126,7 +132,7 @@ export default function Budget() {
       if(error){setMessage(error.message);break}
       saved=[...saved,...(data||[])]
     }
-    setItems(prev=>[...prev,...saved]);setBusy(false)
+    setItems(prev=>[...prev,...saved]);if(saved.length)await markStarted();setBusy(false)
   }
   const addProduct=async()=>{
     const product=products.find(p=>p.id===newProduct)
@@ -149,6 +155,7 @@ export default function Budget() {
       const {data,error}=await supabase.from('budget_client_reviews').upsert({cycle_id:cycleId,seller_id:user.id,farm_id:farmId,status:'no_sales'},{onConflict:'cycle_id,seller_id,farm_id'}).select().single()
       if(error)setMessage(error.message);else setReviews(prev=>[...prev.filter(x=>x.farm_id!==farmId),data])
     }
+    await markStarted()
     setBusy(false)
   }
   const submit=async()=>{
