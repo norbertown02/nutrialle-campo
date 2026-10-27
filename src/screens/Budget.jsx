@@ -317,6 +317,14 @@ export default function Budget() {
     else {
       setItems(prev => [...prev.filter(x => !data.some(d =>
         clientKey(d) === clientKey(x) && d.product_id === x.product_id && d.month === x.month)), ...data])
+      // Um cliente com volume positivo não pode continuar marcado como "sem vendas".
+      if (Object.values(values).some(v => Number(v) > 0) &&
+          reviews.some(r => clientKey(r) === farmId)) {
+        const field = String(farmId).startsWith('budget:') ? 'budget_prospect_id' : 'farm_id'
+        const cleared = await supabase.from('budget_client_reviews').delete()
+          .eq('cycle_id',cycleId).eq('seller_id',user.id).eq(field,clientDbFields(farmId)[field])
+        if (!cleared.error) setReviews(prev => prev.filter(r => clientKey(r) !== farmId))
+      }
       if (!quiet) setNotice({ kind: 'success', text: 'Previsão de ' + (productById.get(productId)?.name || 'produto') + ' salva.' })
       await markStarted()
     }
@@ -415,7 +423,16 @@ export default function Budget() {
   async function submit() {
     if (!editable || busy) return
     await Promise.allSettled([...pendingWrites.current])
-    if (!items.some(i=>Number(i.quantity_kg)>0) && !reviews.length) {
+    // Ler dados realmente persistidos: evita o envio usando um estado React
+    // anterior à última gravação automática disparada pelo onBlur.
+    const [{ data: confirmed, error: confirmError },{ data: zeroReviews, error: zeroError }] = await Promise.all([
+      supabase.from('budget_items').select('quantity_kg').eq('cycle_id',cycleId).eq('seller_id',user.id),
+      supabase.from('budget_client_reviews').select('id').eq('cycle_id',cycleId).eq('seller_id',user.id),
+    ])
+    if (confirmError || zeroError) {
+      setNotice({kind:'error',text:'Não foi possível confirmar as previsões. Tente novamente antes de enviar.'});return
+    }
+    if (!(confirmed || []).some(i=>Number(i.quantity_kg)>0) && !(zeroReviews || []).length) {
       setNotice({ kind: 'error', text: 'Avalie ao menos um cliente antes de enviar.' });return
     }
     const message = remaining
