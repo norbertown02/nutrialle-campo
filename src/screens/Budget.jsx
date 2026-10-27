@@ -471,6 +471,7 @@ export default function Budget() {
         <span className={'bfd-state ' + (editable ? 'open' : 'closed')}>{editable ? 'Liberado' : assignment?.status === 'approved' ? 'Aprovado' : assignment?.status === 'submitted' ? 'Enviado' : cycle.status === 'draft' ? 'Aguardando liberação' : 'Somente leitura'}</span>
       </div>
       {assignment?.feedback && <div className="bfd-feedback"><strong>Orientação da gestão</strong><p>{assignment.feedback}</p></div>}
+      {assignment?.status === 'approved' && <div className="bfd-approved-goals"><IconCheck size={18}/><div><strong>Budget aprovado · Metas definidas</strong><p>Os valores aprovados de cada mês são agora suas metas comerciais oficiais. Consulte a aba Metas no aplicativo Gestão.</p></div></div>}
       <div className="bfd-summary">
         <div><small>Previsão total</small><strong>{brl(plannedValue)}</strong><span>{num(plannedKg / 1000)} t previstas</span></div>
         <div><small>Clientes avaliados</small><strong>{reviewedCount} <em>/ {myFarms.length}</em></strong><span>{remaining} aguardando análise</span></div>
@@ -553,7 +554,7 @@ export default function Budget() {
         })}
       </section>
       {editable && <div className="bfd-submit-panel"><div><IconClipboardCheck size={18}/><span><strong>Pronto para enviar?</strong><small>{remaining ? remaining + ' clientes ainda sem avaliação' : 'Sua carteira está revisada'}</small></span></div><button type="button" className="bfd-btn bfd-btn-primary" disabled={busy} onClick={submit}><IconSend size={16}/> Enviar para aprovação</button></div>}
-      <p className="bfd-footnote">Os volumes por produto são salvos automaticamente ao sair dos campos. As médias usam pedidos dos três últimos meses encerrados. O budget não altera metas ou faturamento.</p>
+      <p className="bfd-footnote">Os volumes por produto são salvos automaticamente ao sair dos campos. As médias usam pedidos dos três últimos meses encerrados. A aprovação transforma os valores previstos em metas mensais. Pedidos e faturamento não são alterados.</p>
       </>}
     </>}
     {addingClient && editable && <div className="bfd-modal-overlay" onClick={() => !busy && setAddingClient(false)}>
