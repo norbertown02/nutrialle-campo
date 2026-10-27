@@ -4,6 +4,7 @@ import { IconArrowLeft, IconCheck, IconMapPin, IconX, IconCloudOff } from '@tabl
 import { useFarms } from '../lib/useFarms'
 import { useConfig } from '../lib/useConfig'
 import { useOnlineStatus } from '../lib/useOnlineStatus'
+import { documentoValido as validarDocumento, erroDocumento, somenteDigitos } from '../lib/documentValidation'
 
 async function buscarCidades(termo, uf) {
   if (termo.length < 2) return []
@@ -139,9 +140,9 @@ export default function NovaFazenda() {
     setCidadeVerificada(true)
   }
 
-  const documentoValido = form.docTipo === 'cpf'
-    ? form.cpf.replace(/\D/g, '').length === 11
-    : form.cnpj.replace(/\D/g, '').length === 14
+  const documentoInformado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
+  const documentoValido = validarDocumento(form.docTipo, documentoInformado)
+  const mensagemDocumento = documentoInformado ? erroDocumento(form.docTipo, documentoInformado) : null
 
   const ieObrigatoriaValida = form.docTipo !== 'cnpj' || form.cnpjIE.trim().length >= 2
 
@@ -151,7 +152,7 @@ export default function NovaFazenda() {
   // Prospecto usado apenas para cotação: somente o nome é obrigatório.
   // O cadastro completo continua obrigatório no fluxo de venda.
   const isValid = isProspect
-    ? form.name.trim().length >= 3
+    ? form.name.trim().length >= 3 && (!somenteDigitos(documentoInformado) || documentoValido)
     : cadastroCompletoValido
 
   const handleSave = async () => {
@@ -163,7 +164,7 @@ export default function NovaFazenda() {
     const newFarm = await addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
       phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
-      doc_tipo: form.docTipo, cpf: form.cpf||null, cnpj: form.cnpj||null,
+      docTipo: form.docTipo, cpf: form.docTipo === 'cpf' ? form.cpf || null : null, cnpj: form.docTipo === 'cnpj' ? form.cnpj || null : null,
       cadpro_1: form.cadPro?.trim()||null, cadpro_2: null, cadpro_3: null,
       cpfCnpj: cpfCnpjConsolidado || null,
       cadPro: form.docTipo === 'cpf' ? cadProConsolidado : null,
@@ -253,6 +254,16 @@ export default function NovaFazenda() {
             <input value={form.cnpjIE||''} onChange={e=>setField('cnpjIE',e.target.value)} placeholder="Ex.: 123.456.789-0"/>
           </Field>
         </>
+      )}
+
+      {mensagemDocumento && (
+        <div role="alert" style={{
+          padding: '10px 12px', borderRadius: 10, marginBottom: 12,
+          background: 'var(--red-bg)', border: '1px solid var(--red)',
+          color: 'var(--red)', fontSize: 12, lineHeight: 1.5
+        }}>
+          {mensagemDocumento} O cliente não poderá ser sincronizado enquanto o documento estiver inválido.
+        </div>
       )}
 
       <div className="section-label">Segmento e localização</div>
