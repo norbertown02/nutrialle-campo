@@ -118,7 +118,7 @@ export default function Budget() {
     const [a, c, f, p, h] = await Promise.all([
       supabase.from('budget_cycle_sellers').select('*').eq('seller_id', user.id),
       supabase.from('budget_cycles').select('*').order('created_at', { ascending: false }),
-      supabase.from('farms').select('id,name,seller_id,prospect,segment,city').eq('seller_id', user.id).order('name'),
+      supabase.rpc('budget_my_clients'),
       supabase.from('products').select('id,name,ultra_codproduto,price_kg,segment').eq('active', true).order('name'),
       supabase.rpc('budget_my_sales_history'),
     ])
@@ -272,7 +272,7 @@ export default function Budget() {
     }).select('id,name,seller_id,prospect,segment,city').single()
     if (error) setNotice({ kind: 'error', text: 'Não foi possível cadastrar: ' + error.message })
     else {
-      setFarms(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))
+      setFarms(prev => [...prev, { ...data, assigned: true }].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))
       setActiveFarm(data.id);setQuery('');setFilter('all')
       setAddingClient(false);setNewClient({ name: '', segment: 'leite', city: '' })
       setNotice({ kind: 'success', text: 'Cliente incluído como prospecto. Você já pode planejar produtos; complete o cadastro para efetuar pedidos.' })
@@ -351,7 +351,7 @@ export default function Budget() {
             </button>
             {open && <div className="bfd-client-detail">
               <div className="bfd-client-tools">
-                <div><span className="bfd-overline">PREVISÃO POR PRODUTO</span><h3>{f.name}</h3>{f.prospect && <small>Cliente em pré-cadastro</small>}</div>
+                <div><span className="bfd-overline">PREVISÃO POR PRODUTO</span><h3>{f.name}</h3>{f.prospect && <button type="button" className="bfd-complete-customer" onClick={() => navigate('/clientes/' + f.id)}>Pré-cadastro · completar ficha <IconArrowRight size={13}/></button>}{f.assigned === false && <small>Cliente do seu histórico de vendas · carteira vinculada a outro responsável</small>}</div>
                 {editable && <button className="bfd-btn bfd-btn-dark" disabled={busy} onClick={() => openNewProduct(f.id)}><IconPlus size={16}/> Produto</button>}
               </div>
               {editable && !reviewedZero && farmSuggestions.length > 0 && <div className="bfd-suggestions">
@@ -416,6 +416,7 @@ export default function Budget() {
     {addingClient && editable && <div className="bfd-modal-overlay" onClick={() => !busy && setAddingClient(false)}>
       <div className="bfd-modal" role="dialog" aria-modal="true" aria-label="Adicionar novo cliente" onClick={e => e.stopPropagation()}>
         <div className="bfd-modal-grip"/>
+        {notice?.kind === 'error' && <div className="bfd-modal-error" role="alert">{notice.text}</div>}
         <div className="bfd-modal-heading"><div><span className="bfd-overline">OPORTUNIDADE COMERCIAL</span><h2>Novo cliente</h2><p>Crie um pré-cadastro para incluir imediatamente na sua previsão. Complete a ficha do cliente depois, antes de realizar pedidos.</p></div><button className="bfd-icon" onClick={() => setAddingClient(false)} aria-label="Fechar"><IconX size={18}/></button></div>
         <label>Nome do cliente / empresa <span>*</span><input autoFocus value={newClient.name} onChange={e => setNewClient(prev => ({ ...prev, name: e.target.value }))} placeholder="Nome da fazenda ou empresa"/></label>
         <label>Segmento<select value={newClient.segment} onChange={e => setNewClient(prev => ({ ...prev, segment: e.target.value }))}><option value="leite">Bovinos de leite</option><option value="corte">Bovinos de corte</option><option value="suinos">Suínos</option></select></label>
