@@ -179,3 +179,71 @@
 }
 
 .bfd-remove-product{align-self:flex-start;border:0;background:transparent;padding:6px 0;color:#a55e55;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:650}
+
+/* Budget v3: volumes digitados diretamente ao lado do produto */
+.bfd-inline-product{display:grid;grid-template-columns:minmax(118px,1.03fr) minmax(0,1.85fr);gap:12px;padding:13px;align-items:start;min-width:0;background:#fff}
+.bfd-inline-head{display:flex;align-items:start;gap:4px;min-width:0}
+.bfd-inline-name{display:grid;gap:6px;min-width:0;flex:1}
+.bfd-inline-name strong{font-size:12px;line-height:1.42;color:#282420;overflow-wrap:anywhere}
+.bfd-inline-name small{font-size:10px;line-height:1.45;color:#938c84}
+.bfd-inline-remove{flex:none;border:0;background:transparent;color:#ab8880;padding:2px 0 0 2px;display:grid;place-items:center}
+.bfd-inline-month-grid{display:grid;gap:6px;min-width:0;max-width:100%;overflow-x:auto;padding-bottom:4px}
+.bfd-inline-month{display:grid;min-width:0;gap:6px}
+.bfd-inline-month>span{font-size:9px;font-weight:800;color:#93877b;text-align:center;white-space:nowrap;text-transform:capitalize}
+.bfd-inline-month>div{display:flex;align-items:center;gap:3px;border:1px solid #dfd9d3;border-radius:8px;background:#fff;padding:0 4px;min-width:0;height:38px}
+.bfd-inline-month input{width:100%;min-width:0;border:0;outline:0;text-align:right;font-size:13px;font-weight:800;color:#242220;background:transparent;letter-spacing:-.02em}
+.bfd-inline-month>div:focus-within{border-color:#e87722;box-shadow:0 0 0 2px rgba(232,119,34,.09)}
+.bfd-inline-month small{font-size:8px;color:#a59c93;flex:none}
+.bfd-inline-foot{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:9px;border-top:1px solid #f1efed;min-width:0}
+.bfd-inline-price{display:flex;gap:6px;align-items:center;font-size:10px;font-weight:650;color:#8e8479}
+.bfd-inline-price input{width:76px;min-width:0;padding:7px;border:1px solid #e7e0da;border-radius:7px;font-size:11px;color:#28231e;text-align:right;outline:0}
+.bfd-inline-price input:focus{border-color:#e87722}
+.bfd-inline-total{font-size:12px;font-weight:800;color:#29241f;margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bfd-save-state{font-size:9px;display:inline-flex;align-items:center;gap:3px;color:#2c8650;white-space:nowrap}
+.bfd-save-state.saving,.bfd-save-state.editing{color:#a17b54}
+.bfd-save-state.error,.bfd-save-state.price{color:#bc5039}
+.bfd-product-card{margin:0}
+.bfd-summary-open{border:1px solid #e7d3bf;border-radius:12px;background:#fffaf5;padding:12px 14px;display:flex;gap:10px;align-items:center;text-align:left;color:#b66d2c;width:100%;min-width:0}
+.bfd-summary-open>span{flex:1;display:grid;gap:4px;min-width:0}
+.bfd-summary-open strong{font-size:12px;color:#413124}
+.bfd-summary-open small{font-size:10px;color:#9f8068;overflow-wrap:anywhere;line-height:1.3}
+.bfd-report{display:flex;flex-direction:column;gap:14px;margin:0 0 8px}
+.bfd-report-heading{display:grid;gap:6px;padding:10px 0}
+.bfd-report-heading h2{font-size:22px;letter-spacing:-.045em}
+.bfd-report-heading p{color:#94877e;font-size:11px}
+.bfd-report-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bfd-report-pair article{display:flex;flex-direction:column;gap:9px;align-items:flex-start;background:#fff;padding:13px 11px;border:1px solid #e9e3dd;border-radius:12px;min-width:0}
+.bfd-report-pair article>small{color:#868077;font-size:10px;line-height:1.4;font-weight:650}
+.bfd-report-pair article>strong{font-size:clamp(15px,4.5vw,21px);letter-spacing:-.04em;overflow-wrap:anywhere;line-height:1.2;font-variant-numeric:tabular-nums}
+.bfd-report-pair article>span{color:#a1988c;font-size:10px;line-height:1.4}
+.bfd-report-difference strong.positive{color:#24784a}
+.bfd-report-difference strong.negative{color:#b85744}
+.bfd-report-difference strong.neutral{color:#85807a}
+.bfd-report-section{display:flex;flex-direction:column;background:#fff;border:1px solid #e9e4df;border-radius:12px;padding:13px}
+.bfd-report-section h3{font-size:12px;letter-spacing:-.01em;margin-bottom:7px}
+.bfd-report-line{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:9px;row-gap:4px;padding:10px 0;border-bottom:1px solid #f1ede9;align-items:start}
+.bfd-report-line:last-child{border-bottom:0}
+.bfd-report-line span{font-size:11px;font-weight:650;overflow-wrap:anywhere;text-transform:capitalize}
+.bfd-report-line strong{font-size:11px;white-space:nowrap}
+.bfd-report-line small{grid-column:1/-1;color:#9f958e;font-size:10px}
+.bfd-report-section>p{font-size:11px;color:#96908a}
+.bfd-report-disclaimer{font-size:10px;line-height:1.7;color:#9b9188;background:#f5f2ee;padding:12px;border-radius:9px}
+@media(min-width:768px){
+ .bfd-inline-product{grid-template-columns:minmax(165px,1fr) minmax(0,2fr);gap:17px;padding:15px}
+ .bfd-inline-name strong{font-size:13px}
+ .bfd-inline-month input{font-size:14px}
+ .bfd-inline-month>div{height:41px;padding:0 8px}
+}
+@media(max-width:425px){
+ .bfd-inline-product{grid-template-columns:minmax(93px,.87fr) minmax(0,2.15fr);gap:7px;padding:10px 8px}
+ .bfd-inline-name strong{font-size:10.5px}
+ .bfd-inline-name small{font-size:9px}
+ .bfd-inline-month-grid{gap:4px}
+ .bfd-inline-month>span{font-size:8.5px}
+ .bfd-inline-month>div{height:36px;padding:0 3px;gap:2px}
+ .bfd-inline-month input{font-size:12px}
+ .bfd-inline-month small{font-size:8px}
+ .bfd-inline-foot{gap:6px}
+ .bfd-inline-price input{width:64px}
+ .bfd-inline-total{font-size:11px}
+}
