@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useAuth } from '../lib/useAuth.jsx'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import {
   IconArrowLeft, IconChevronDown, IconChevronUp, IconPlus, IconSearch, IconCheck,
   IconArrowRight, IconRefresh, IconSend, IconCalendarMonth, IconBuildingStore,
-  IconX, IconUserPlus, IconAlertCircle, IconPackage, IconPencil, IconClipboardCheck, IconTrash
+  IconX, IconUserPlus, IconAlertCircle, IconPackage, IconPencil, IconClipboardCheck, IconTrash, IconChartBar, IconTrendingUp, IconTrendingDown
 } from '@tabler/icons-react'
 import './Budget.css'
 
@@ -14,6 +14,12 @@ const num = n => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits:
 const monthName = m => new Date(m + '-01T12:00:00').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')
 const normal = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 const decimal = value => Math.max(0, Number(String(value ?? 0).replace(',', '.')) || 0)
+const clientKey = row => row.budget_prospect_id ? 'budget:' + row.budget_prospect_id : row.farm_id
+const clientDbFields = key => String(key).startsWith('budget:')
+  ? { farm_id: null, budget_prospect_id: String(key).slice(7) }
+  : { farm_id: key, budget_prospect_id: null }
+const clientConflict = key => 'cycle_id,seller_id,' +
+  (String(key).startsWith('budget:') ? 'budget_prospect_id' : 'farm_id')
 const qtyFrom = item => Number(item.quantityKg ?? item.quantity ?? item.qty ?? 0)
 const priceFrom = item => Number(item.priceKg ?? item.unitPrice ?? item.unit_price ?? item.price_kg ?? 0)
 const itemCode = item => String(item.productKey || item.product_code || item.productCode ||
@@ -96,6 +102,10 @@ export default function Budget() {
   const [assignments, setAssignments] = useState([])
   const [items, setItems] = useState([])
   const [reviews, setReviews] = useState([])
+  const [budgetProspects, setBudgetProspects] = useState([])
+  const [baseline, setBaseline] = useState(null)
+  const [view, setView] = useState('clients')
+  const pendingWrites = useRef(new Set())
   const [farms, setFarms] = useState([])
   const [products, setProducts] = useState([])
   const [history, setHistory] = useState([])
@@ -106,7 +116,6 @@ export default function Budget() {
   const [picker, setPicker] = useState(false)
   const [productQuery, setProductQuery] = useState('')
   const [chosenProductId, setChosenProductId] = useState('')
-  const [editingProductId, setEditingProductId] = useState('')
   const [addingClient, setAddingClient] = useState(false)
   const [newClient, setNewClient] = useState({ name: '', segment: 'leite', city: '' })
   const [busy, setBusy] = useState(false)
@@ -116,20 +125,24 @@ export default function Budget() {
   async function load() {
     if (!user?.id) return
     setLoading(true)
-    const [a, c, f, p, h] = await Promise.all([
+    const [a, c, f, p, h, bc, bs] = await Promise.all([
       supabase.from('budget_cycle_sellers').select('*').eq('seller_id', user.id),
       supabase.from('budget_cycles').select('*').order('created_at', { ascending: false }),
       supabase.rpc('budget_my_clients'),
       supabase.from('products').select('id,name,ultra_codproduto,price_kg,segment').eq('active', true).order('name'),
       supabase.rpc('budget_my_sales_history'),
+      supabase.from('budget_prospects').select('*').eq('seller_id', user.id),
+      supabase.rpc('budget_sales_baselines'),
     ])
-    const error = [a, c, f, p, h].find(r => r.error)?.error
+    const error = [a, c, f, p, h, bc, bs].find(r => r.error)?.error
     if (error) setNotice({ kind: 'error', text: 'Falha ao carregar os dados: ' + error.message })
     setAssignments(a.data || [])
     setCycles(c.data || [])
     setFarms(f.data || [])
     setProducts(p.data || [])
     setHistory(h.data || [])
+    setBudgetProspects(bc.data || [])
+    setBaseline((bs.data || []).find(x => x.seller_id === user.id) || null)
     setCycleId(old => old || (c.data || []).find(cycle => (a.data || []).some(a => a.cycle_id === cycle.id))?.id || '')
     setLoading(false)
   }
@@ -143,24 +156,39 @@ export default function Budget() {
     new Date() <= new Date(cycle.closes_at) &&
     ['pending', 'draft', 'revision_requested'].includes(assignment?.status))
   const suggestions = useMemo(() => historicalProducts(history, products), [history, products])
-  const myFarms = farms
-  const farmById = useMemo(() => new Map(farms.map(f => [f.id, f])), [farms])
+  const budgetOnlyClients = useMemo(() => budgetProspects
+    .filter(p => p.cycle_id === cycleId)
+    .map(p => ({ ...p, id: 'budget:' + p.id, budgetOnly: true, prospect: true, assigned: true })),
+    [budgetProspects, cycleId])
+  const myFarms = useMemo(() => [...farms, ...budgetOnlyClients].sort((a,b) =>
+    String(a.name).localeCompare(String(b.name), 'pt-BR')), [farms, budgetOnlyClients])
+  const farmById = useMemo(() => new Map(myFarms.map(f => [f.id, f])), [myFarms])
   const productById = useMemo(() => new Map(products.map(p => [p.id, p])), [products])
   const client = farmById.get(activeFarm)
-  const farmItems = items.filter(item => item.farm_id === activeFarm)
+  const farmItems = items.filter(item => clientKey(item) === activeFarm)
   const farmSuggestions = suggestions.filter(s => s.farm_id === activeFarm && !farmItems.some(i => i.product_id === s.product_id))
-  const noSales = reviews.some(r => r.farm_id === activeFarm)
+  const noSales = reviews.some(r => clientKey(r) === activeFarm)
   const plannedValue = items.reduce((a, i) => a + Number(i.quantity_kg) * Number(i.unit_price), 0)
   const plannedKg = items.reduce((a, i) => a + Number(i.quantity_kg), 0)
-  const clientsWithForecast = new Set(items.filter(i => Number(i.quantity_kg) > 0).map(i => i.farm_id))
-  const reviewedClients = new Set([...clientsWithForecast, ...reviews.map(r => r.farm_id)])
-  const remaining = myFarms.filter(f => !reviewedClients.has(f.id)).length
+  const clientsWithForecast = new Set(items.filter(i => Number(i.quantity_kg) > 0).map(clientKey))
+  const reviewedClients = new Set([...clientsWithForecast, ...reviews.map(clientKey)])
+  // Numerador e denominador precisam usar o mesmo universo de clientes, inclusive
+  // aqueles que chegaram pelo historico comercial e os exclusivos deste budget.
+  const reviewedCount = myFarms.filter(f => reviewedClients.has(f.id)).length
+  const remaining = Math.max(0, myFarms.length - reviewedCount)
+  const scale = (cycle?.months?.length || 0) / 3
+  const baselineAmount = Number(baseline?.baseline_amount || 0) * scale
+  const baselineKg = Number(baseline?.baseline_kg || 0) * scale
+  const growthAmount = baselineAmount > 0 ? (plannedValue / baselineAmount - 1) * 100 : null
+  const growthKg = baselineKg > 0 ? (plannedKg / baselineKg - 1) * 100 : null
+  const variationText = value => value === null ? 'Sem base comparável' :
+    (value > 0 ? '+' : '') + value.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'
   const filteredFarms = myFarms.filter(f => {
     const matches = normal(f.name + ' ' + (f.city || '')).includes(normal(query))
     if (!matches) return false
     if (filter === 'pending') return !reviewedClients.has(f.id)
     if (filter === 'planned') return clientsWithForecast.has(f.id)
-    if (filter === 'zero') return reviews.some(r => r.farm_id === f.id)
+    if (filter === 'zero') return reviews.some(r => clientKey(r) === f.id)
     return true
   })
   const availableProducts = products.filter(p => !farmItems.some(i => i.product_id === p.id) &&
@@ -186,38 +214,41 @@ export default function Budget() {
       .update({ status: 'draft' }).eq('cycle_id', cycleId).eq('seller_id', user.id)
     if (!error) setAssignments(prev => prev.map(a => a.cycle_id === cycleId ? { ...a, status: 'draft' } : a))
   }
-  async function upsertForecast(farmId, productId, values, unitPrice, source) {
+  async function upsertForecast(farmId, productId, values, unitPrice, source, quiet = false) {
     if (!editable) return false
     if (!farmById.has(farmId)) { setNotice({ kind: 'error', text: 'Cliente não está na sua carteira. Atualize a página.' });return false }
     if (Object.values(values).some(v => v > 0) && unitPrice <= 0) {
       setNotice({ kind: 'error', text: 'Informe um preço de referência para este produto.' });return false
     }
-    setBusy(true);setNotice(null)
+    if (!quiet) { setBusy(true);setNotice(null) }
     const list = cycle.months.map(month => ({
-      cycle_id: cycleId, seller_id: user.id, farm_id: farmId, product_id: productId,
+      cycle_id: cycleId, seller_id: user.id, ...clientDbFields(farmId), product_id: productId,
       month, quantity_kg: Math.round(Math.max(0, values[month] || 0) * 1000) / 1000,
       unit_price: unitPrice, source,
     }))
     const { data, error } = await supabase.from('budget_items').upsert(list, {
-      onConflict: 'cycle_id,seller_id,farm_id,product_id,month',
+      onConflict: clientConflict(farmId) + ',product_id,month',
     }).select()
     if (error) setNotice({ kind: 'error', text: 'Não foi possível salvar: ' + error.message })
     else {
-      setItems(prev => [...prev.filter(x => !data.some(d => d.farm_id === x.farm_id && d.product_id === x.product_id && d.month === x.month)), ...data])
-      setNotice({ kind: 'success', text: 'Previsão de ' + (productById.get(productId)?.name || 'produto') + ' salva.' })
+      setItems(prev => [...prev.filter(x => !data.some(d =>
+        clientKey(d) === clientKey(x) && d.product_id === x.product_id && d.month === x.month)), ...data])
+      if (!quiet) setNotice({ kind: 'success', text: 'Previsão de ' + (productById.get(productId)?.name || 'produto') + ' salva.' })
       await markStarted()
     }
-    setBusy(false)
+    if (!quiet) setBusy(false)
     return !error
   }
   async function removeForecast(farmId, productId) {
     if (!editable) return
     if (!window.confirm('Retirar este produto da previsão de todos os meses?')) return
     setBusy(true);setNotice(null)
+    const dbField = String(farmId).startsWith('budget:') ? 'budget_prospect_id' : 'farm_id'
+    const dbId = clientDbFields(farmId)[dbField]
     const { error } = await supabase.from('budget_items').delete()
-      .eq('cycle_id', cycleId).eq('seller_id', user.id).eq('farm_id', farmId).eq('product_id', productId)
+      .eq('cycle_id', cycleId).eq('seller_id', user.id).eq(dbField, dbId).eq('product_id', productId)
     if (error) setNotice({ kind: 'error', text: error.message })
-    else {setItems(prev => prev.filter(i => !(i.farm_id === farmId && i.product_id === productId)));setEditingProductId('');setNotice({ kind: 'success', text: 'Produto retirado da previsão deste cliente.' })}
+    else {setItems(prev => prev.filter(i => !(clientKey(i) === farmId && i.product_id === productId)));setNotice({ kind: 'success', text: 'Produto retirado da previsão deste cliente.' })}
     setBusy(false)
   }
   async function addHistoryRows(clientId = null) {
@@ -250,20 +281,22 @@ export default function Budget() {
   }
   async function toggleNoSales(farmId) {
     if (!editable) return
-    const exists = reviews.some(r => r.farm_id === farmId)
-    if (!exists && items.some(x => x.farm_id === farmId && Number(x.quantity_kg) > 0)) {
+    const exists = reviews.some(r => clientKey(r) === farmId)
+    if (!exists && items.some(x => clientKey(x) === farmId && Number(x.quantity_kg) > 0)) {
       setNotice({ kind: 'error', text: 'Este cliente tem volume previsto. Primeiro zere as quantidades.' });return
     }
     setBusy(true);setNotice(null)
     if (exists) {
-      const { error } = await supabase.from('budget_client_reviews').delete().eq('cycle_id', cycleId).eq('seller_id', user.id).eq('farm_id', farmId)
-      if (!error) setReviews(prev => prev.filter(r => r.farm_id !== farmId))
+      const field = String(farmId).startsWith('budget:') ? 'budget_prospect_id' : 'farm_id'
+      const { error } = await supabase.from('budget_client_reviews').delete()
+        .eq('cycle_id', cycleId).eq('seller_id', user.id).eq(field, clientDbFields(farmId)[field])
+      if (!error) setReviews(prev => prev.filter(r => clientKey(r) !== farmId))
       else setNotice({ kind: 'error', text: error.message })
     } else {
       const { data, error } = await supabase.from('budget_client_reviews').upsert({
-        cycle_id: cycleId, seller_id: user.id, farm_id: farmId, status: 'no_sales',
-      }, { onConflict: 'cycle_id,seller_id,farm_id' }).select().single()
-      if (!error) setReviews(prev => [...prev.filter(r => r.farm_id !== farmId), data])
+        cycle_id: cycleId, seller_id: user.id, ...clientDbFields(farmId), status: 'no_sales',
+      }, { onConflict: clientConflict(farmId) }).select().single()
+      if (!error) setReviews(prev => [...prev.filter(r => clientKey(r) !== farmId), data])
       else setNotice({ kind: 'error', text: error.message })
     }
     await markStarted()
@@ -276,22 +309,22 @@ export default function Budget() {
       setNotice({ kind: 'error', text: 'Este cliente já está na sua carteira. Encontre-o pela busca.' });return
     }
     setBusy(true);setNotice(null)
-    const id = crypto.randomUUID()
-    const { data, error } = await supabase.from('farms').insert({
-      id, name, seller_id: user.id, segment: newClient.segment,
-      city: newClient.city.trim() || null, prospect: true, status: 'ativo',
-    }).select('id,name,seller_id,prospect,segment,city').single()
+    const { data, error } = await supabase.from('budget_prospects').insert({
+      cycle_id: cycleId, seller_id: user.id, name, segment: newClient.segment,
+      city: newClient.city.trim() || null,
+    }).select('*').single()
     if (error) setNotice({ kind: 'error', text: 'Não foi possível cadastrar: ' + error.message })
     else {
-      setFarms(prev => [...prev, { ...data, assigned: true }].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))
-      setActiveFarm(data.id);setQuery('');setFilter('all')
+      setBudgetProspects(prev => [...prev, data])
+      setActiveFarm('budget:' + data.id);setQuery('');setFilter('all')
       setAddingClient(false);setNewClient({ name: '', segment: 'leite', city: '' })
-      setNotice({ kind: 'success', text: 'Cliente incluído como prospecto. Você já pode planejar produtos; complete o cadastro para efetuar pedidos.' })
+      setNotice({ kind: 'success', text: 'Cliente criado exclusivamente neste budget. O cadastro de clientes do Campo não foi alterado.' })
     }
     setBusy(false)
   }
   async function submit() {
     if (!editable || busy) return
+    await Promise.allSettled([...pendingWrites.current])
     if (!items.length && !reviews.length) {
       setNotice({ kind: 'error', text: 'Avalie ao menos um cliente antes de enviar.' });return
     }
@@ -309,9 +342,9 @@ export default function Budget() {
     }
     setBusy(false)
   }
-  const openClient = id => {setActiveFarm(old => old === id ? '' : id);setPicker(false);setChosenProductId('');setEditingProductId('');setProductQuery('')}
+  const openClient = id => {setActiveFarm(old => old === id ? '' : id);setPicker(false);setChosenProductId('');setProductQuery('')}
   const openNewProduct = id => {
-    setActiveFarm(id);setChosenProductId('');setProductQuery('');setEditingProductId('');setPicker(true)
+    setActiveFarm(id);setChosenProductId('');setProductQuery('');setPicker(true)
   }
   const sortedFarmProducts = [...new Set(farmItems.map(i => i.product_id))]
   return <main className="bfd-page">
