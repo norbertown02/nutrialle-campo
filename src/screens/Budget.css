@@ -282,3 +282,17 @@
   .bfd-inline-total{font-size:14px}
   .bfd-tab button{font-size:12px}
 }
+
+.bfd-approved-goals{
+ display:flex;
+ align-items:flex-start;
+ gap:11px;
+ padding:15px 17px;
+ border:1px solid #cfe7d6;
+ border-radius:12px;
+ background:#f1f9f3;
+ color:#267446;
+}
+.bfd-approved-goals>svg{flex-shrink:0;margin-top:2px}
+.bfd-approved-goals strong{font-size:12px;color:#286d42}
+.bfd-approved-goals p{margin-top:4px;font-size:11px;line-height:1.55;color:#548668}
