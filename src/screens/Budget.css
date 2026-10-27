@@ -168,7 +168,7 @@
 .bfd-modal-error{background:#fff2ec;border:1px solid #eec7b8;color:#a3422d;border-radius:9px;padding:10px;font-size:11px;line-height:1.5}
 
 @media(min-width:768px){
- .bfd-page{max-width:840px;margin:0 auto;padding:30px 28px 90px;gap:20px}
+ .bfd-page{width:100%;max-width:1320px;margin:0 auto;padding:30px clamp(24px,2.4vw,38px) 90px;gap:20px}
  .bfd-hero h1{font-size:32px}
  .bfd-summary strong{font-size:25px}
  .bfd-client-header{padding:16px}
