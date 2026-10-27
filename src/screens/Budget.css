@@ -247,3 +247,38 @@
  .bfd-inline-price input{width:64px}
  .bfd-inline-total{font-size:11px}
 }
+
+/* Desktop: leitura e edição de budget em largura de painel, sem escala mobile. */
+@media(min-width:1024px){
+  .bfd-page{max-width:1360px;gap:20px;padding-top:28px}
+  .bfd-hero h1{font-size:36px}
+  .bfd-hero p{max-width:700px;font-size:13px}
+  .bfd-overline{font-size:10px}
+  .bfd-current-cycle{padding:22px 24px}
+  .bfd-current-cycle strong{font-size:18px}
+  .bfd-current-cycle div>span{font-size:12px}
+  .bfd-current-cycle small{font-size:10px}
+  .bfd-summary>div{padding:20px 22px}
+  .bfd-summary small{font-size:12px}
+  .bfd-summary strong{font-size:30px}
+  .bfd-summary span{font-size:11px}
+  .bfd-summary-open{padding:17px 20px}
+  .bfd-summary-open strong{font-size:13px}
+  .bfd-summary-open small{font-size:11px}
+  .bfd-list-title h2{font-size:21px}
+  .bfd-client-header{padding:18px 20px;gap:13px}
+  .bfd-client-avatar{width:40px;height:40px;font-size:12px}
+  .bfd-client-text>strong{font-size:14px}
+  .bfd-client-text>small{font-size:11px}
+  .bfd-client-detail{padding:20px;gap:16px}
+  .bfd-client-tools h3{font-size:16px}
+  .bfd-inline-product{grid-template-columns:minmax(190px,1.15fr) minmax(0,3fr);padding:16px 20px;gap:16px}
+  .bfd-inline-name strong{font-size:13px}
+  .bfd-inline-name small{font-size:11px}
+  .bfd-inline-month>span{font-size:10px}
+  .bfd-inline-month>div{height:43px;padding:0 10px}
+  .bfd-inline-month input{font-size:15px}
+  .bfd-inline-price input{width:100px}
+  .bfd-inline-total{font-size:14px}
+  .bfd-tab button{font-size:12px}
+}
