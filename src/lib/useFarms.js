@@ -44,13 +44,18 @@ function fromDB(row) {
     prospect: row.prospect,
     notes: row.notes,
     marcaAtual: row.marca_atual,
+    ultraSyncStatus: row.ultra_sync_status || null,
+    ultraError: row.ultra_error || null,
+    ultraPartnerId: row.ultra_partner_id ?? null,
     pending: !!row._pending,
   }
 }
 
 function toDB(farm) {
-  const explicitDocTipo = String(farm.docTipo ?? '').trim().toLowerCase()
-  const docTipo = explicitDocTipo === 'cnpj' || farm.cnpj ? 'cnpj' : 'cpf'
+  const explicitDocTipo = String(farm.docTipo ?? farm.doc_tipo ?? '').trim().toLowerCase()
+  const docTipo = explicitDocTipo === 'cpf' || explicitDocTipo === 'cnpj'
+    ? explicitDocTipo
+    : farm.cnpj ? 'cnpj' : farm.cpf ? 'cpf' : undefined
 
   return {
     id: farm.id,
@@ -106,7 +111,8 @@ const FARM_COLUMNS = [
   'city','state','region','cep','street','street_number','bairro','complemento',
   'segment','herd_size','production','area','status','has_checklist','client_since',
   'created_at','updated_at','cpf_cnpj','ie','cad_pro','doc_tipo','cpf','cnpj',
-  'cadpro_1','cadpro_2','cadpro_3','owner','prospect','notes','marca_atual'
+  'cadpro_1','cadpro_2','cadpro_3','owner','prospect','notes','marca_atual',
+  'ultra_sync_status','ultra_error','ultra_partner_id'
 ].join(',')
 
 export function useFarms() {
@@ -206,9 +212,19 @@ export function useFarms() {
     payload.updated_at = updatedAt
 
     const cached = await db.farms_cache.get(id)
-    if (cached) await db.farms_cache.put({ ...cached, ...payload, _pending: true })
+    const docAlterado = cached && Object.prototype.hasOwnProperty.call(payload, 'cpf_cnpj') &&
+      payload.cpf_cnpj !== cached.cpf_cnpj
+    const ultraPendente = docAlterado
+      ? { ultra_sync_status: 'pendente', ultra_error: null }
+      : {}
+    if (cached) await db.farms_cache.put({ ...cached, ...payload, ...ultraPendente, _pending: true })
     setFarms(prev => prev.map(f =>
-      f.id === id ? { ...f, ...changes, updatedAt, pending: true } : f
+      f.id === id
+        ? {
+            ...f, ...changes, updatedAt, pending: true,
+            ...(docAlterado ? { ultraSyncStatus: 'pendente', ultraError: null } : {}),
+          }
+        : f
     ))
 
     await enqueue({ entity: 'farm', entityId: id, op: 'update', payload })
