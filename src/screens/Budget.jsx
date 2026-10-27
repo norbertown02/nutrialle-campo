@@ -195,7 +195,6 @@ export default function Budget() {
   const [filter, setFilter] = useState('all')
   const [picker, setPicker] = useState(false)
   const [productQuery, setProductQuery] = useState('')
-  const [chosenProductId, setChosenProductId] = useState('')
   const [addingClient, setAddingClient] = useState(false)
   const [newClient, setNewClient] = useState({ name: '', segment: 'leite', city: '' })
   const [busy, setBusy] = useState(false)
@@ -294,6 +293,11 @@ export default function Budget() {
       .update({ status: 'draft' }).eq('cycle_id', cycleId).eq('seller_id', user.id)
     if (!error) setAssignments(prev => prev.map(a => a.cycle_id === cycleId ? { ...a, status: 'draft' } : a))
   }
+  function registerSave(job) {
+    const promise = Promise.resolve(job)
+    pendingWrites.current.add(promise)
+    promise.finally(() => pendingWrites.current.delete(promise))
+  }
   async function upsertForecast(farmId, productId, values, unitPrice, source, quiet = false) {
     if (!editable) return false
     if (!farmById.has(farmId)) { setNotice({ kind: 'error', text: 'Cliente não está na sua carteira. Atualize a página.' });return false }
@@ -318,6 +322,12 @@ export default function Budget() {
     }
     if (!quiet) setBusy(false)
     return !error
+  }
+  async function addNewProduct(farmId, product) {
+    if (!editable || busy) return
+    const zero = Object.fromEntries(cycle.months.map(m => [m, 0]))
+    const ok = await upsertForecast(farmId, product.id, zero, Number(product.price_kg || 0), 'opportunity')
+    if (ok) {setPicker(false);setProductQuery('')}
   }
   async function removeForecast(farmId, productId) {
     if (!editable) return
@@ -405,7 +415,7 @@ export default function Budget() {
   async function submit() {
     if (!editable || busy) return
     await Promise.allSettled([...pendingWrites.current])
-    if (!items.length && !reviews.length) {
+    if (!items.some(i=>Number(i.quantity_kg)>0) && !reviews.length) {
       setNotice({ kind: 'error', text: 'Avalie ao menos um cliente antes de enviar.' });return
     }
     const message = remaining
@@ -422,9 +432,9 @@ export default function Budget() {
     }
     setBusy(false)
   }
-  const openClient = id => {setActiveFarm(old => old === id ? '' : id);setPicker(false);setChosenProductId('');setProductQuery('')}
+  const openClient = id => {setActiveFarm(old => old === id ? '' : id);setPicker(false);setProductQuery('')}
   const openNewProduct = id => {
-    setActiveFarm(id);setChosenProductId('');setProductQuery('');setPicker(true)
+    setActiveFarm(id);setProductQuery('');setPicker(true)
   }
   const sortedFarmProducts = [...new Set(farmItems.map(i => i.product_id))]
   return <main className="bfd-page">
@@ -446,8 +456,13 @@ export default function Budget() {
       {assignment?.feedback && <div className="bfd-feedback"><strong>Orientação da gestão</strong><p>{assignment.feedback}</p></div>}
       <div className="bfd-summary">
         <div><small>Previsão total</small><strong>{brl(plannedValue)}</strong><span>{num(plannedKg / 1000)} t previstas</span></div>
-        <div><small>Clientes avaliados</small><strong>{reviewedClients.size} <em>/ {myFarms.length}</em></strong><span>{remaining} aguardando análise</span></div>
+        <div><small>Clientes avaliados</small><strong>{reviewedCount} <em>/ {myFarms.length}</em></strong><span>{remaining} aguardando análise</span></div>
       </div>
+      <button type="button" className="bfd-summary-open" onClick={() => setView(view === 'summary' ? 'clients' : 'summary')}>
+        <IconChartBar size={18}/><span><strong>{view === 'summary' ? 'Voltar ao preenchimento' : 'Resumo do meu budget'}</strong>
+        <small>{growthAmount === null ? 'Sem base de pedidos para comparar' : 'Variação do faturamento: ' + variationText(growthAmount)}</small></span><IconArrowRight size={17}/>
+      </button>
+      {view === 'summary' ? <BudgetSummary cycle={cycle} items={items} baseline={baseline} products={products} onBack={() => setView('clients')}/> : <>
       {editable && <div className="bfd-main-actions">
         <button className="bfd-main-action primary" onClick={() => setAddingClient(true)}><IconUserPlus size={18}/><span><strong>Novo cliente</strong><small>Incluir no planejamento</small></span><IconPlus size={15}/></button>
         <button className="bfd-main-action" disabled={busy} onClick={() => addHistoryRows()}><IconRefresh size={17}/><span><strong>Usar histórico</strong><small>Pré-preencher médias</small></span></button>
@@ -460,22 +475,22 @@ export default function Budget() {
       <section className="bfd-client-list">
         {!filteredFarms.length && <div className="bfd-empty small"><IconSearch size={22}/><p>Não há clientes neste filtro.</p>{editable && <button onClick={() => setAddingClient(true)} className="bfd-btn bfd-btn-dark"><IconPlus size={14}/> Adicionar cliente</button>}</div>}
         {filteredFarms.map(f => {
-          const thisClientRows = items.filter(r => r.farm_id === f.id)
+          const thisClientRows = items.filter(r => clientKey(r) === f.id)
           const productCount = new Set(thisClientRows.map(r => r.product_id)).size
           const clientValue = thisClientRows.reduce((sum, r) => sum + Number(r.quantity_kg) * Number(r.unit_price), 0)
           const forecast = clientsWithForecast.has(f.id)
-          const reviewedZero = reviews.some(r => r.farm_id === f.id)
+          const reviewedZero = reviews.some(r => clientKey(r) === f.id)
           const open = activeFarm === f.id
           return <article key={f.id} className={'bfd-client ' + (open ? 'is-open' : '')}>
             <button type="button" className="bfd-client-header" onClick={() => openClient(f.id)} aria-expanded={open}>
               <span className="bfd-client-avatar">{f.name.slice(0, 2).toUpperCase()}</span>
-              <span className="bfd-client-text"><strong>{f.name}</strong><small>{reviewedZero ? 'Sem vendas previstas' : forecast ? productCount + ' produtos · ' + brl(clientValue) : f.prospect ? 'Prospecto · sem previsão' : 'Aguardando previsão'}</small></span>
+              <span className="bfd-client-text"><strong>{f.name}</strong><small>{reviewedZero ? 'Sem vendas previstas' : forecast ? productCount + ' produtos · ' + brl(clientValue) : f.budgetOnly ? 'Só no budget · sem previsão' : f.prospect ? 'Prospecto · sem previsão' : 'Aguardando previsão'}</small></span>
               {reviewedZero ? <span className="bfd-client-mark muted"><IconCheck size={14}/></span> : forecast ? <span className="bfd-client-mark"><IconCheck size={14}/></span> : null}
               {open ? <IconChevronUp size={17}/> : <IconChevronDown size={17}/>}
             </button>
             {open && <div className="bfd-client-detail">
               <div className="bfd-client-tools">
-                <div><span className="bfd-overline">PREVISÃO POR PRODUTO</span><h3>{f.name}</h3>{f.prospect && <button type="button" className="bfd-complete-customer" onClick={() => navigate('/clientes/' + f.id)}>Pré-cadastro · completar ficha <IconArrowRight size={13}/></button>}{f.assigned === false && <small>Cliente do seu histórico de vendas · carteira vinculada a outro responsável</small>}</div>
+                <div><span className="bfd-overline">PREVISÃO POR PRODUTO</span><h3>{f.name}</h3>{f.budgetOnly ? <small>Cadastro exclusivo deste budget · não integra o CRM</small> : f.prospect ? <button type="button" className="bfd-complete-customer" onClick={() => navigate('/clientes/' + f.id)}>Pré-cadastro comercial · completar ficha <IconArrowRight size={13}/></button> : null}{f.assigned === false && <small>Cliente do seu histórico de vendas · carteira vinculada a outro responsável</small>}</div>
                 {editable && <button className="bfd-btn bfd-btn-dark" disabled={busy} onClick={() => openNewProduct(f.id)}><IconPlus size={16}/> Produto</button>}
               </div>
               {editable && !reviewedZero && farmSuggestions.length > 0 && <div className="bfd-suggestions">
@@ -488,23 +503,17 @@ export default function Budget() {
                 <button disabled={busy} onClick={() => toggleNoSales(f.id)}>{reviewedZero ? 'Desfazer' : 'Marcar sem vendas'}</button>
               </div>}
               {picker && editable && <div className="bfd-product-picker">
-                <div className="bfd-picker-head"><strong>Adicionar produto ao cliente</strong><button className="bfd-icon" aria-label="Fechar seleção" onClick={() => {setPicker(false);setChosenProductId('')}}><IconX size={17}/></button></div>
-                {!chosenProductId ? <>
-                  <label className="bfd-picker-search"><IconSearch size={17}/><input autoFocus placeholder="Digite o nome ou código do produto" value={productQuery} onChange={e => setProductQuery(e.target.value)}/></label>
-                  <div className="bfd-product-results">
-                    {availableProducts.map(p => <button type="button" key={p.id} onClick={() => setChosenProductId(p.id)}>
-                      <span className="bfd-product-symbol"><IconPackage size={17}/></span><span><strong>{p.name}</strong><small>{p.ultra_codproduto ? 'Código ' + p.ultra_codproduto : 'Produto do catálogo'} · {Number(p.price_kg) > 0 ? brl(p.price_kg) + '/kg' : 'Sem preço de referência'}</small></span><IconPlus size={17}/></button>)}
-                    {!availableProducts.length && <p>Nenhum produto encontrado. Procure pelo nome ou pelo código.</p>}
-                    {availableProducts.length === 35 && <small className="bfd-picker-hint">Mostrando 35 produtos. Digite para refinar a busca.</small>}
-                  </div>
-                </> : <ForecastEditor key={f.id + ':' + chosenProductId} product={productById.get(chosenProductId)} months={cycle.months}
-                  rows={[]} history={suggestions.find(s => s.farm_id === f.id && s.product_id === chosenProductId)}
-                  newEntry editable={editable} saving={busy} onCancel={() => setChosenProductId('')}
-                  onSave={async (volumes, price, source) => {
-                    const ok = await upsertForecast(f.id, chosenProductId, volumes, price, source)
-                    if (ok) {setChosenProductId('');setPicker(false);setProductQuery('')}
-                  }}/>
-                }
+                <div className="bfd-picker-head"><strong>Adicionar produto ao cliente</strong><button className="bfd-icon" aria-label="Fechar seleção" onClick={() => setPicker(false)}><IconX size={17}/></button></div>
+                <label className="bfd-picker-search"><IconSearch size={17}/><input autoFocus placeholder="Buscar produto pelo nome ou código" value={productQuery} onChange={e => setProductQuery(e.target.value)}/></label>
+                <div className="bfd-product-results">
+                  {availableProducts.map(p => <button type="button" key={p.id} disabled={busy} onClick={() => addNewProduct(f.id,p)}>
+                    <span className="bfd-product-symbol"><IconPackage size={17}/></span>
+                    <span><strong>{p.name}</strong><small>{p.ultra_codproduto ? 'Cód. '+p.ultra_codproduto : 'Catálogo Nutrialle'} · {Number(p.price_kg)>0 ? brl(p.price_kg)+'/kg' : 'Definir preço depois'}</small></span><IconPlus size={17}/>
+                  </button>)}
+                  {!availableProducts.length && <p>Nenhum produto encontrado. Tente pelo nome ou código.</p>}
+                  {availableProducts.length === 35 && <small className="bfd-picker-hint">Mostrando 35 produtos. Refine a pesquisa para encontrar outros.</small>}
+                </div>
+                <p className="bfd-picker-hint">Ao tocar no produto, os campos dos meses aparecem imediatamente na lista abaixo.</p>
               </div>}
               <div className="bfd-product-list">
                 {sortedFarmProducts.length === 0 && !picker && <div className="bfd-first-product"><IconPackage size={25}/><strong>Ainda não há produtos previstos</strong><p>Você pode aplicar o histórico do cliente ou adicionar qualquer produto do catálogo.</p>{editable && <button className="bfd-btn bfd-btn-primary" onClick={() => openNewProduct(f.id)}><IconPlus size={16}/> Adicionar primeiro produto</button>}</div>}
@@ -512,22 +521,13 @@ export default function Budget() {
                   const product = productById.get(id)
                   if (!product) return null
                   const rows = farmItems.filter(r => r.product_id === id)
-                  const h = suggestions.find(s => s.farm_id === f.id && s.product_id === id)
-                  const total = rows.reduce((a, r) => a + Number(r.quantity_kg) * Number(r.unit_price), 0)
-                  const openedEditor = editingProductId === id
-                  return <div key={id} className="bfd-product-card">
-                    <button type="button" className="bfd-product-line" onClick={() => setEditingProductId(openedEditor ? '' : id)}>
-                      <span className="bfd-product-symbol"><IconPackage size={18}/></span>
-                      <span className="bfd-product-info"><strong>{product.name}</strong><small>{num(rows.reduce((sum, r) => sum + Number(r.quantity_kg), 0))} kg previstos · {brl(total)}</small></span>
-                      {openedEditor ? <IconChevronUp size={17}/> : <IconPencil size={16}/>}
-                    </button>
-                    {openedEditor && <ForecastEditor key={cycleId + id} product={product} rows={rows} months={cycle.months} history={h} editable={editable} saving={busy}
-                      onCancel={() => setEditingProductId('')}
-                      onRemove={() => removeForecast(f.id, id)}
-                      onSave={async (volumes, price, source) => {
-                        const ok = await upsertForecast(f.id, id, volumes, price, source)
-                        if (ok) setEditingProductId('')
-                      }}/>}
+                  const historyForProduct = suggestions.find(s => s.farm_id === f.id && s.product_id === id)
+                  return <div className="bfd-product-card" key={id}>
+                    <InlineBudgetProduct key={cycleId+':'+f.id+':'+id}
+                      product={product} months={cycle.months} rows={rows} history={historyForProduct}
+                      editable={editable} registerSave={registerSave}
+                      onSave={(volumes, price, source)=>upsertForecast(f.id,id,volumes,price,source,true)}
+                      onRemove={()=>removeForecast(f.id,id)}/>
                   </div>
                 })}
               </div>
@@ -536,17 +536,18 @@ export default function Budget() {
         })}
       </section>
       {editable && <div className="bfd-submit-panel"><div><IconClipboardCheck size={18}/><span><strong>Pronto para enviar?</strong><small>{remaining ? remaining + ' clientes ainda sem avaliação' : 'Sua carteira está revisada'}</small></span></div><button type="button" className="bfd-btn bfd-btn-primary" disabled={busy} onClick={submit}><IconSend size={16}/> Enviar para aprovação</button></div>}
-      <p className="bfd-footnote">A média considera produtos dos pedidos dos últimos três meses encerrados e serve apenas como referência. O budget não altera pedidos, metas ou faturamento.</p>
+      <p className="bfd-footnote">Os volumes por produto são salvos automaticamente ao sair dos campos. As médias usam pedidos dos três últimos meses encerrados. O budget não altera metas ou faturamento.</p>
+      </>}
     </>}
     {addingClient && editable && <div className="bfd-modal-overlay" onClick={() => !busy && setAddingClient(false)}>
       <div className="bfd-modal" role="dialog" aria-modal="true" aria-label="Adicionar novo cliente" onClick={e => e.stopPropagation()}>
         <div className="bfd-modal-grip"/>
         {notice?.kind === 'error' && <div className="bfd-modal-error" role="alert">{notice.text}</div>}
-        <div className="bfd-modal-heading"><div><span className="bfd-overline">OPORTUNIDADE COMERCIAL</span><h2>Novo cliente</h2><p>Crie um pré-cadastro para incluir imediatamente na sua previsão. Complete a ficha do cliente depois, antes de realizar pedidos.</p></div><button className="bfd-icon" onClick={() => setAddingClient(false)} aria-label="Fechar"><IconX size={18}/></button></div>
+        <div className="bfd-modal-heading"><div><span className="bfd-overline">OPORTUNIDADE COMERCIAL</span><h2>Cliente somente no budget</h2><p>Este registro serve apenas para rastrear a previsão comercial. Não será cadastrado na carteira de clientes nem no CRM do Campo.</p></div><button className="bfd-icon" onClick={() => setAddingClient(false)} aria-label="Fechar"><IconX size={18}/></button></div>
         <label>Nome do cliente / empresa <span>*</span><input autoFocus value={newClient.name} onChange={e => setNewClient(prev => ({ ...prev, name: e.target.value }))} placeholder="Nome da fazenda ou empresa"/></label>
         <label>Segmento<select value={newClient.segment} onChange={e => setNewClient(prev => ({ ...prev, segment: e.target.value }))}><option value="leite">Bovinos de leite</option><option value="corte">Bovinos de corte</option><option value="suinos">Suínos</option></select></label>
         <label>Cidade <small>Opcional</small><input value={newClient.city} onChange={e => setNewClient(prev => ({ ...prev, city: e.target.value }))} placeholder="Ex.: Cascavel"/></label>
-        <button className="bfd-btn bfd-btn-primary bfd-modal-submit" disabled={busy || newClient.name.trim().length < 3} onClick={createClient}><IconCheck size={17}/>{busy ? 'Cadastrando...' : 'Cadastrar e planejar'}</button>
+        <button className="bfd-btn bfd-btn-primary bfd-modal-submit" disabled={busy || newClient.name.trim().length < 3} onClick={createClient}><IconCheck size={17}/>{busy ? 'Cadastrando...' : 'Adicionar só ao budget'}</button>
       </div>
     </div>}
   </main>
