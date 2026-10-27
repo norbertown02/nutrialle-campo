@@ -177,3 +177,5 @@
  .bfd-modal{border-radius:19px;padding:23px 25px;max-height:86dvh}
  .bfd-modal-grip{display:none}
 }
+
+.bfd-remove-product{align-self:flex-start;border:0;background:transparent;padding:6px 0;color:#a55e55;display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:650}
