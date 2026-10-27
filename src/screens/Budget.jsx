@@ -56,43 +56,123 @@ function BudgetNotice({ message, dismiss }) {
     <button aria-label="Fechar aviso" onClick={dismiss}><IconX size={15}/></button>
   </div>
 }
-function ForecastEditor({ product, months, rows, history, editable, newEntry, onSave, onCancel, onRemove, saving }) {
-  const [quantity, setQuantity] = useState(() => Object.fromEntries(months.map(m => [
-    m, String(rows.find(r => r.month === m)?.quantity_kg ?? (newEntry && history ? Math.round(history.average * 1000) / 1000 : 0)),
-  ])))
-  const [unitPrice, setUnitPrice] = useState(() => String(rows[0]?.unit_price || history?.unit_price || product.price_kg || ''))
-  const source = rows[0]?.source || (history ? 'recurring' : 'opportunity')
-  const total = months.reduce((a, month) => a + decimal(quantity[month]) * decimal(unitPrice), 0)
-  const hasPositive = months.some(month => decimal(quantity[month]) > 0)
-  const invalidPrice = hasPositive && decimal(unitPrice) === 0
 
-  return <div className="bfd-editor">
-    <div className="bfd-editor-title">
-      <div><span className="bfd-overline">{newEntry ? 'NOVO PRODUTO NA PREVISÃO' : 'AJUSTAR PREVISÃO'}</span><h4>{product.name}</h4></div>
-      <button type="button" aria-label="Cancelar edição" className="bfd-icon" onClick={onCancel}><IconX size={18}/></button>
+function InlineBudgetProduct({ product, months, rows, history, editable, onSave, onRemove, registerSave }) {
+  const [values, setValues] = useState(() => Object.fromEntries(months.map(m => [
+    m, String(rows.find(r => r.month === m)?.quantity_kg ?? 0),
+  ])))
+  const [unitPrice, setUnitPrice] = useState(() => String(
+    rows.find(r => Number(r.unit_price) > 0)?.unit_price ?? history?.unit_price ?? product.price_kg ?? 0
+  ))
+  const [changed, setChanged] = useState(false)
+  const changedRef = useRef(false)
+  const queue = useRef(Promise.resolve())
+  const version = useRef(0)
+  const [status, setStatus] = useState('saved')
+  const source = rows[0]?.source || (history ? 'recurring' : 'opportunity')
+  const amount = months.reduce((a,m) => a + decimal(values[m]) * decimal(unitPrice), 0)
+  const needsPrice = months.some(m => decimal(values[m]) > 0) && !decimal(unitPrice)
+
+  function setField(month, value) {
+    changedRef.current = true
+    setChanged(true);setStatus('editing')
+    setValues(old => ({...old, [month]: value}))
+  }
+  function setPrice(value) {
+    changedRef.current = true
+    setChanged(true);setStatus('editing')
+    setUnitPrice(value)
+  }
+  function saveNow() {
+    if (!changedRef.current || !editable) return
+    if (needsPrice) {setStatus('price');return}
+    changedRef.current = false
+    setChanged(false)
+    const requestVersion = ++version.current
+    const quantities = Object.fromEntries(months.map(m => [m, decimal(values[m])]))
+    const priceValue = decimal(unitPrice)
+    setStatus('saving')
+    const job = queue.current.then(() => onSave(quantities, priceValue, source))
+    queue.current = job.catch(() => false)
+    registerSave(job)
+    job.then(ok => {
+      if (version.current === requestVersion) {
+        setStatus(ok ? 'saved' : 'error')
+        if (!ok) { changedRef.current = true;setChanged(true) }
+      }
+    }).catch(() => {setStatus('error');changedRef.current=true;setChanged(true)})
+  }
+  useEffect(() => {
+    if (!changed || !editable || needsPrice) return
+    const timer = setTimeout(saveNow, 1050)
+    return () => clearTimeout(timer)
+  }, [values, unitPrice, changed, editable, needsPrice])
+  return <div className="bfd-inline-product">
+    <div className="bfd-inline-head">
+      <div className="bfd-inline-name">
+        <strong>{product.name}</strong>
+        <small>{history ? 'Média histórica: ' + num(history.average) + ' kg/mês' : 'Nova oportunidade'}</small>
+      </div>
+      {editable && <button type="button" title="Retirar produto" aria-label={'Retirar '+product.name} className="bfd-inline-remove" onClick={onRemove}><IconTrash size={15}/></button>}
     </div>
-    {history && <div className="bfd-history-bar"><IconRefresh size={16}/><span>Média de pedidos: <strong>{num(history.average)} kg/mês</strong></span></div>}
-    <div className="bfd-editor-months">
-      {months.map(month => <label key={month} className="bfd-quantity-row">
-        <span>{monthName(month)}</span>
-        <div><input type="text" inputMode="decimal" value={quantity[month] ?? ''} disabled={!editable || saving}
-          aria-label={'Quantidade prevista de ' + product.name + ' em ' + monthName(month)}
-          onChange={e => setQuantity(prev => ({ ...prev, [month]: e.target.value }))}/><small>kg</small></div>
+    <div className="bfd-inline-month-grid" style={{gridTemplateColumns:'repeat('+months.length+',minmax(0,1fr))'}}>
+      {months.map(m => <label key={m} className="bfd-inline-month">
+        <span>{monthName(m)}</span>
+        <div><input type="text" inputMode="decimal" value={values[m] ?? ''}
+          onChange={e => setField(m, e.target.value)}
+          onBlur={saveNow}
+          aria-label={'Quantidade prevista de '+product.name+' em '+monthName(m)}
+          disabled={!editable}/><small>kg</small></div>
       </label>)}
     </div>
-    <label className="bfd-price">Preço de referência <small>(R$/kg)</small>
-      <input type="text" inputMode="decimal" disabled={!editable || saving} value={unitPrice} onChange={e => setUnitPrice(e.target.value)} placeholder="Ex.: 4,80"/>
-    </label>
-    {invalidPrice && <div className="bfd-inline-warning">Informe o preço para calcular o orçamento em reais.</div>}
-    <div className="bfd-editor-bottom">
-      <span><small>Total dos meses</small><strong>{brl(total)}</strong></span>
-      {editable && <button disabled={saving || invalidPrice} type="button" className="bfd-btn bfd-btn-primary"
-        onClick={() => onSave(Object.fromEntries(months.map(m => [m, decimal(quantity[m])])), decimal(unitPrice), source)}>
-        <IconCheck size={16}/>{saving ? 'Salvando...' : newEntry ? 'Adicionar ao budget' : 'Salvar alterações'}
-      </button>}
+    <div className="bfd-inline-foot">
+      <label className="bfd-inline-price"><span>R$/kg</span><input type="text" inputMode="decimal"
+        aria-label={'Preço por kg de '+product.name} value={unitPrice} onChange={e=>setPrice(e.target.value)} onBlur={saveNow} disabled={!editable}/></label>
+      <span className="bfd-inline-total">{brl(amount)}</span>
+      {editable && <span className={'bfd-save-state ' + status}>{status==='saving'?'Salvando…':status==='editing'?'Editando…':status==='price'?'Informe o preço':status==='error'?'Erro ao salvar':<><IconCheck size={12}/> Salvo</>}</span>}
     </div>
-    {editable && !newEntry && onRemove && <button type="button" className="bfd-remove-product" disabled={saving} onClick={onRemove}><IconTrash size={13}/> Remover este produto da previsão</button>}
   </div>
+}
+
+function BudgetSummary({ cycle, items, baseline, products, onBack }) {
+  const totalKg = items.reduce((a,i)=>a+Number(i.quantity_kg),0)
+  const totalAmount=items.reduce((a,i)=>a+Number(i.quantity_kg)*Number(i.unit_price),0)
+  const periodFactor=(cycle.months.length||0)/3
+  const prevKg=Number(baseline?.baseline_kg||0)*periodFactor
+  const prevAmount=Number(baseline?.baseline_amount||0)*periodFactor
+  const percent = (value,base) => base > 0 ? 100*(value/base-1) : null
+  const moneyGrowth=percent(totalAmount,prevAmount)
+  const volumeGrowth=percent(totalKg,prevKg)
+  const variation=(n)=>n === null?'Sem histórico':(n>0?'+':'')+n.toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'
+  const productNames=new Map(products.map(p=>[p.id,p.name]))
+  const byProduct = new Map()
+  for (const i of items) {
+    if(Number(i.quantity_kg)<=0)continue
+    const row=byProduct.get(i.product_id)||{id:i.product_id,kg:0,amount:0}
+    row.kg+=Number(i.quantity_kg)
+    row.amount+=Number(i.quantity_kg)*Number(i.unit_price)
+    byProduct.set(i.product_id,row)
+  }
+  return <section className="bfd-report">
+    <button type="button" className="bfd-back" onClick={onBack}><IconArrowLeft size={16}/> Voltar aos clientes</button>
+    <div className="bfd-report-heading"><span className="bfd-overline">VISÃO CONSOLIDADA</span><h2>Resumo do meu budget</h2><p>{cycle.months.map(monthName).join(' · ')}</p></div>
+    <div className="bfd-report-pair">
+      <article><small>Faturamento previsto</small><strong>{brl(totalAmount)}</strong><span>{num(totalKg/1000)} t no período</span></article>
+      <article><small>Pedidos no período de referência</small><strong>{brl(prevAmount)}</strong><span>{num(prevKg/1000)} t equivalentes</span></article>
+    </div>
+    <div className="bfd-report-pair">
+      <article className="bfd-report-difference"><small>Variação de faturamento</small><strong className={moneyGrowth===null?'neutral':moneyGrowth>=0?'positive':'negative'}>{variation(moneyGrowth)}</strong><span>Budget comparado com a base histórica</span></article>
+      <article className="bfd-report-difference"><small>Variação do volume</small><strong className={volumeGrowth===null?'neutral':volumeGrowth>=0?'positive':'negative'}>{variation(volumeGrowth)}</strong><span>Quantidade projetada em kg</span></article>
+    </div>
+    <div className="bfd-report-section"><h3>Projeção mês a mês</h3>{cycle.months.map(month=>{
+      const lines=items.filter(i=>i.month===month)
+      const amount=lines.reduce((s,i)=>s+Number(i.quantity_kg)*Number(i.unit_price),0)
+      const kg=lines.reduce((s,i)=>s+Number(i.quantity_kg),0)
+      return <div key={month} className="bfd-report-line"><span>{monthName(month)}</span><strong>{brl(amount)}</strong><small>{num(kg)} kg</small></div>
+    })}</div>
+    <div className="bfd-report-section"><h3>Principais produtos</h3>{[...byProduct.values()].sort((a,b)=>b.amount-a.amount).slice(0,15).map(p=><div className="bfd-report-line" key={p.id}><span>{productNames.get(p.id)||'Produto'}</span><strong>{brl(p.amount)}</strong><small>{num(p.kg)} kg</small></div>)}{!byProduct.size&&<p>Nenhum produto previsto até o momento.</p>}</div>
+    <p className="bfd-report-disclaimer">Comparação com pedidos de {baseline?.period_start?new Date(baseline.period_start+'T12:00:00').toLocaleDateString('pt-BR'):'início'} até {baseline?.period_end?new Date(baseline.period_end+'T12:00:00').toLocaleDateString('pt-BR'):'fim'}. A base tem três meses completos; quando o budget tem outra duração, a referência é ajustada proporcionalmente. São pedidos, não notas fiscais faturadas.</p>
+  </section>
 }
 
 export default function Budget() {
