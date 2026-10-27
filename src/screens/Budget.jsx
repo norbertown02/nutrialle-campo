@@ -115,7 +115,7 @@ function InlineBudgetProduct({ product, months, rows, history, editable, onSave,
       </div>
       {editable && <button type="button" title="Retirar produto" aria-label={'Retirar '+product.name} className="bfd-inline-remove" onClick={onRemove}><IconTrash size={15}/></button>}
     </div>
-    <div className="bfd-inline-month-grid" style={{gridTemplateColumns:'repeat('+months.length+',minmax(0,1fr))'}}>
+    <div className="bfd-inline-month-grid" style={{gridTemplateColumns:'repeat('+months.length+',minmax('+(months.length>3?'72px':'0px')+',1fr))'}}>
       {months.map(m => <label key={m} className="bfd-inline-month">
         <span>{monthName(m)}</span>
         <div><input type="text" inputMode="decimal" value={values[m] ?? ''}
@@ -296,7 +296,7 @@ export default function Budget() {
   function registerSave(job) {
     const promise = Promise.resolve(job)
     pendingWrites.current.add(promise)
-    promise.finally(() => pendingWrites.current.delete(promise))
+    promise.then(() => pendingWrites.current.delete(promise), () => pendingWrites.current.delete(promise))
   }
   async function upsertForecast(farmId, productId, values, unitPrice, source, quiet = false) {
     if (!editable) return false
