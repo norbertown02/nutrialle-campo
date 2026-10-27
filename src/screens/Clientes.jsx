@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   IconSearch, IconUserPlus, IconMapPin,
-  IconUsersGroup, IconCheck, IconClock, IconCloudUpload, IconLoader2
+  IconUsersGroup, IconCheck, IconClock, IconCloudUpload, IconLoader2, IconAlertTriangle
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useConfig } from '../lib/useConfig'
@@ -53,6 +53,7 @@ export default function Clientes() {
   }
 
   const isEmpty = !loading && farms.length === 0
+  const clientesDocumentoInvalido = farms.filter(f => f.ultraSyncStatus === 'documento_invalido').length
 
   return (
     <div className="content">
@@ -67,6 +68,18 @@ export default function Clientes() {
               : `${farms.length} ${farms.length === 1 ? 'fazenda' : 'fazendas'} em sua carteira${refreshing ? ' · atualizando...' : ''}`}
         </p>
       </div>
+
+      {!loading && clientesDocumentoInvalido > 0 && (
+        <div role="alert" style={{
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+          border: '1px solid var(--red)', background: 'var(--red-bg)',
+          borderRadius: 12, padding: '12px 14px', marginBottom: 14,
+          color: 'var(--red)', fontSize: 12, lineHeight: 1.5
+        }}>
+          <IconAlertTriangle size={19} style={{ flexShrink: 0 }} />
+          <span><strong>{clientesDocumentoInvalido} {clientesDocumentoInvalido === 1 ? 'cliente precisa' : 'clientes precisam'} corrigir o CPF/CNPJ.</strong> Toque no cadastro sinalizado para corrigir o documento e liberar o envio à Ultra.</span>
+        </div>
+      )}
 
       {loading ? (
         <LoadingClients />
@@ -148,7 +161,13 @@ export default function Clientes() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <span className="pill pill-silver">{SEGMENTS[f.segment] || f.segment}</span>
-                    {f.pending && <span className="pill pill-amber"><IconCloudUpload size={11} /> sincronizando</span>}
+                    {f.ultraSyncStatus === 'documento_invalido' ? (
+                      <span className="pill" style={{ background: 'var(--red-bg)', color: 'var(--red)', border: '1px solid var(--red)', display: 'flex', gap: 3, alignItems: 'center' }}>
+                        <IconAlertTriangle size={12} /> {f.docTipo === 'cnpj' ? 'CNPJ inválido' : 'CPF inválido'}
+                      </span>
+                    ) : f.pending ? (
+                      <span className="pill pill-amber"><IconCloudUpload size={11} /> enviando</span>
+                    ) : null}
                     {f.hasChecklist ? (
                       <span className="pill pill-green"><IconCheck size={11} /> avaliada</span>
                     ) : (
