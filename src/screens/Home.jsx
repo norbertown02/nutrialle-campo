@@ -12,6 +12,7 @@ import {
   IconTrendingUp,
   IconChevronRight,
   IconCircleCheck,
+  IconTarget,
 } from '@tabler/icons-react'
 
 import { useNavigate } from 'react-router-dom'
@@ -121,6 +122,11 @@ export default function Home() {
       icon: <IconClipboardList size={20} />,
       label: 'Checklist',
       path: '/checklist',
+    },
+    {
+      icon: <IconTarget size={20} />,
+      label: 'Meu Budget',
+      path: '/budget',
     },
     {
       icon: <IconSend size={20} />,
