@@ -38,6 +38,7 @@ const NovaCotacao = lazyWithRetry(() => import('./screens/NovaCotacao'))
 const DetalheCotacao = lazyWithRetry(() => import('./screens/DetalheCotacao'))
 const EditarCotacao = lazyWithRetry(() => import('./screens/EditarCotacao'))
 
+const Budget = lazyWithRetry(() => import('./screens/Budget'))
 const Precos = lazyWithRetry(() => import('./screens/Precos'))
 const Mercado = lazyWithRetry(() => import('./screens/Mercado'))
 
@@ -103,6 +104,7 @@ function AppContent() {
             <Route path="/prospeccao/:id/editar" element={<EditarCotacao />} />
 
             <Route path="/precos" element={<Precos />} />
+            <Route path="/budget" element={<Budget />} />
             <Route path="/mercado" element={<Mercado />} />
 
             <Route path="/dashboard-vendas" element={<DashboardVendas />} />
