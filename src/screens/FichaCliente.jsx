@@ -5,7 +5,7 @@ import {
   IconEdit, IconTrash, IconClipboardList, IconCalendarPlus,
   IconReceipt, IconUser, IconBuildingWarehouse, IconFileText,
   IconChecklist, IconRoute, IconCash, IconChartBar, IconDownload,
-  IconLock, IconCopy
+  IconLock, IconCopy, IconAlertTriangle
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { showToast } from '../lib/toast'
@@ -18,6 +18,7 @@ import { useSales } from '../lib/useSales'
 import { useConfig } from '../lib/useConfig'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/db'
+import { erroDocumento, somenteDigitos } from '../lib/documentValidation'
 
 const STATUS_COTACAO_CFG = {
   rascunho:   { label: 'Rascunho',   color: 'var(--text-faint)', bg: 'var(--surface-2)' },
@@ -268,6 +269,7 @@ export default function FichaCliente() {
       bairro:        farm.bairro || '',
       complemento:   farm.complemento || '',
 
+      docTipo:       farm.docTipo === 'cnpj' || somenteDigitos(farm.cpfCnpj).length === 14 ? 'cnpj' : 'cpf',
       cpfCnpj:       farm.cpfCnpj || '',
       ie:            farm.ie || '',
       cadPro:        farm.cadPro || '',
@@ -284,6 +286,16 @@ export default function FichaCliente() {
   }
 
   async function salvarEdicao() {
+    const tipo = editForm.docTipo === 'cnpj' ? 'cnpj' : 'cpf'
+    const problema = erroDocumento(tipo, editForm.cpfCnpj)
+    if (problema && (!farm.prospect || somenteDigitos(editForm.cpfCnpj))) {
+      showToast(problema, 'error', 7000)
+      return
+    }
+    if (!farm.prospect && tipo === 'cnpj' && String(editForm.ie || '').trim().length < 2) {
+      showToast('Informe a Inscrição Estadual (IE) do cliente com CNPJ.', 'error', 7000)
+      return
+    }
     const changes = {
       clientCode:    editForm.clientCode?.trim(),
       name:          editForm.name?.trim(),
@@ -302,6 +314,9 @@ export default function FichaCliente() {
       complemento:   editForm.complemento?.trim(),
 
       cpfCnpj:       editForm.cpfCnpj?.trim(),
+      docTipo:       tipo,
+      cpf:           tipo === 'cpf' ? editForm.cpfCnpj?.trim() || null : null,
+      cnpj:          tipo === 'cnpj' ? editForm.cpfCnpj?.trim() || null : null,
       ie:            editForm.ie?.trim(),
       cadPro:        editForm.cadPro?.trim(),
 
@@ -405,8 +420,21 @@ export default function FichaCliente() {
       </div>
 
       <div className="section-label">Documentos</div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>Tipo de documento</label>
+        <select value={editForm.docTipo || 'cpf'} onChange={e => setEditForm(p => ({ ...p, docTipo: e.target.value, cpfCnpj: '' }))}>
+          <option value="cpf">CPF — pessoa física</option>
+          <option value="cnpj">CNPJ — pessoa jurídica</option>
+        </select>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>{editForm.docTipo === 'cnpj' ? 'CNPJ' : 'CPF'}</label>
+        <input inputMode="numeric" value={editForm.cpfCnpj || ''} onChange={e => setEditForm(p => ({ ...p, cpfCnpj: e.target.value }))} />
+        {(!farm.prospect || somenteDigitos(editForm.cpfCnpj)) && erroDocumento(editForm.docTipo, editForm.cpfCnpj) && (
+          <p role="alert" style={{ marginTop: 6, color: 'var(--red)', fontSize: 12 }}>{erroDocumento(editForm.docTipo, editForm.cpfCnpj)}</p>
+        )}
+      </div>
       {[
-        { label: 'CPF / CNPJ', key: 'cpfCnpj' },
         { label: 'Inscrição Estadual', key: 'ie' },
         { label: 'CAD/PRO', key: 'cadPro' },
       ].map(f => (
@@ -523,6 +551,27 @@ export default function FichaCliente() {
           </div>
         </div>
       </div>
+
+      {farm.ultraSyncStatus === 'documento_invalido' && (
+        <div role="alert" style={{
+          display: 'flex', flexDirection: 'column', gap: 8, padding: 14,
+          border: '1px solid var(--red)', background: 'var(--red-bg)',
+          color: 'var(--red)', borderRadius: 12, marginTop: 12
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13 }}>
+            <IconAlertTriangle size={19} />
+            {farm.docTipo === 'cnpj' ? 'CNPJ inválido — ação necessária' : 'CPF inválido — ação necessária'}
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+            {farm.ultraError || 'O documento cadastrado não passou na validação.'}
+            {' '}A sincronização com a Ultra fica suspensa até a correção. Os dados e o histórico do cliente continuam salvos.
+          </div>
+          <button type="button" onClick={handleEditar} className="btn btn-primary"
+            style={{ alignSelf: 'flex-start', fontSize: 12, padding: '9px 13px' }}>
+            <IconEdit size={16} /> Corrigir CPF/CNPJ
+          </button>
+        </div>
+      )}
 
       <div style={{
             display: 'grid',
