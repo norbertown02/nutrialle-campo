@@ -163,3 +163,6 @@
  .bfd-client-tools .bfd-btn{padding:8px}
  .bfd-editor-bottom{flex-direction:column;align-items:stretch}
 }
+
+.bfd-complete-customer{border:0;background:transparent;color:#c77230;padding:3px 0;display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;text-align:left;max-width:100%}
+.bfd-modal-error{background:#fff2ec;border:1px solid #eec7b8;color:#a3422d;border-radius:9px;padding:10px;font-size:11px;line-height:1.5}
