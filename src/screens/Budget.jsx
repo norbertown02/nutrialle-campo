@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   IconArrowLeft, IconChevronDown, IconChevronUp, IconPlus, IconSearch, IconCheck,
   IconArrowRight, IconRefresh, IconSend, IconCalendarMonth, IconBuildingStore,
-  IconX, IconUserPlus, IconAlertCircle, IconPackage, IconPencil, IconClipboardCheck
+  IconX, IconUserPlus, IconAlertCircle, IconPackage, IconPencil, IconClipboardCheck, IconTrash
 } from '@tabler/icons-react'
 import './Budget.css'
 
@@ -50,7 +50,7 @@ function BudgetNotice({ message, dismiss }) {
     <button aria-label="Fechar aviso" onClick={dismiss}><IconX size={15}/></button>
   </div>
 }
-function ForecastEditor({ product, months, rows, history, editable, newEntry, onSave, onCancel, saving }) {
+function ForecastEditor({ product, months, rows, history, editable, newEntry, onSave, onCancel, onRemove, saving }) {
   const [quantity, setQuantity] = useState(() => Object.fromEntries(months.map(m => [
     m, String(rows.find(r => r.month === m)?.quantity_kg ?? (newEntry && history ? Math.round(history.average * 1000) / 1000 : 0)),
   ])))
@@ -85,6 +85,7 @@ function ForecastEditor({ product, months, rows, history, editable, newEntry, on
         <IconCheck size={16}/>{saving ? 'Salvando...' : newEntry ? 'Adicionar ao budget' : 'Salvar alterações'}
       </button>}
     </div>
+    {editable && !newEntry && onRemove && <button type="button" className="bfd-remove-product" disabled={saving} onClick={onRemove}><IconTrash size={13}/> Remover este produto da previsão</button>}
   </div>
 }
 
@@ -208,6 +209,16 @@ export default function Budget() {
     }
     setBusy(false)
     return !error
+  }
+  async function removeForecast(farmId, productId) {
+    if (!editable) return
+    if (!window.confirm('Retirar este produto da previsão de todos os meses?')) return
+    setBusy(true);setNotice(null)
+    const { error } = await supabase.from('budget_items').delete()
+      .eq('cycle_id', cycleId).eq('seller_id', user.id).eq('farm_id', farmId).eq('product_id', productId)
+    if (error) setNotice({ kind: 'error', text: error.message })
+    else {setItems(prev => prev.filter(i => !(i.farm_id === farmId && i.product_id === productId)));setEditingProductId('');setNotice({ kind: 'success', text: 'Produto retirado da previsão deste cliente.' })}
+    setBusy(false)
   }
   async function addHistoryRows(clientId = null) {
     if (!editable) return
@@ -399,6 +410,7 @@ export default function Budget() {
                     </button>
                     {openedEditor && <ForecastEditor key={cycleId + id} product={product} rows={rows} months={cycle.months} history={h} editable={editable} saving={busy}
                       onCancel={() => setEditingProductId('')}
+                      onRemove={() => removeForecast(f.id, id)}
                       onSave={async (volumes, price, source) => {
                         const ok = await upsertForecast(f.id, id, volumes, price, source)
                         if (ok) setEditingProductId('')
