@@ -5,7 +5,7 @@ import { db } from './db'
 import { enqueue, onSyncChange } from './syncEngine'
 import { logError } from './logError'
 
-const fromDB = row => row ? ({ id: row.id, farmId: row.farm_id, visitDate: row.visit_date, outcome: row.outcome, notes: row.notes, nextVisitDate: row.next_visit_date, createdAt: row.created_at, pending: !!row._pending }) : null
+const fromDB = row => row ? ({ id: row.id, farmId: row.farm_id, visitDate: row.visit_date, outcome: row.outcome, notes: row.notes, visitPurpose: row.visit_purpose || '', outcomeReasons: row.outcome_reasons || [], relatedProductId: row.related_product_id || '', nextVisitDate: row.next_visit_date, createdAt: row.created_at, pending: !!row._pending }) : null
 
 export function useVisits() {
   const { user } = useAuth()
@@ -37,7 +37,7 @@ export function useVisits() {
 
   const addVisit = useCallback(async (data) => {
     if (!user?.id) throw new Error('Entre novamente na conta para salvar.')
-    const record = { id: 'v' + crypto.randomUUID(), farm_id: data.farmId, visit_date: data.visitDate, outcome: data.outcome, notes: data.notes, next_visit_date: data.nextVisitDate || null, seller_id: user.id, created_at: new Date().toISOString() }
+    const record = { id: 'v' + crypto.randomUUID(), farm_id: data.farmId, visit_date: data.visitDate, outcome: data.outcome, notes: data.notes, visit_purpose: data.visitPurpose, outcome_reasons: data.outcomeReasons || [], related_product_id: data.relatedProductId || null, next_visit_date: data.nextVisitDate || null, seller_id: user.id, created_at: new Date().toISOString() }
     await db.visits_cache.put({...record, _pending:true})
     setVisits(prev => [fromDB({...record, _pending:true}), ...prev])
     await enqueue({entity:'visit', entityId:record.id, op:'upsert', payload:record})
