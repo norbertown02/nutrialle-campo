@@ -7,6 +7,7 @@ import {
 import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
 import { useAppointments } from '../lib/useAppointments'
+import { VISIT_PURPOSES, VISIT_REASONS } from '../data/visitReasons'
 
 function todayISO() {
   return new Date().toISOString().split('T')[0]
@@ -40,10 +41,13 @@ export default function NovaVisita() {
   const [visitDate,     setVisitDate]     = useState(todayISO())
   const [outcome,       setOutcome]       = useState('')
   const [notes,         setNotes]         = useState('')
+  const [visitPurpose, setVisitPurpose] = useState('')
+  const [outcomeReasons, setOutcomeReasons] = useState([])
+  const [relatedProductId, setRelatedProductId] = useState('')
   const [nextVisitDate, setNextVisitDate] = useState(addDays(todayISO(), 15))
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
-  const isValid = farmId && outcome && visitDate
+  const isValid = farmId && outcome && visitDate && visitPurpose && outcomeReasons.length > 0
 
   const handleSave = async () => {
     if (!isValid || saving) return
@@ -52,7 +56,7 @@ export default function NovaVisita() {
     try {
 
     // Salva a visita
-    await addVisit({ farmId, visitDate, outcome, notes: notes.trim(), nextVisitDate: nextVisitDate || null })
+    await addVisit({ farmId, visitDate, outcome, notes: notes.trim(), visitPurpose, outcomeReasons, relatedProductId: relatedProductId || null, nextVisitDate: nextVisitDate || null })
 
     // Cria compromisso automático para a próxima visita
     if (nextVisitDate) {
@@ -125,7 +129,7 @@ export default function NovaVisita() {
           const isSelected = outcome === o.id
           const Icon = o.Icon
           return (
-            <button key={o.id} type="button" onClick={() => setOutcome(o.id)} style={{
+            <button key={o.id} type="button" onClick={() => { setOutcome(o.id); setOutcomeReasons([]) }} style={{
               padding: '14px 8px', borderRadius: 12,
               border: '1px solid ' + (isSelected ? o.color : 'var(--line)'),
               background: isSelected ? o.bg : 'var(--surface-2)',
@@ -145,6 +149,27 @@ export default function NovaVisita() {
         </div>
       )}
 
+      <div className="section-label">Objetivo principal da visita *</div>
+      <div style={{marginBottom:16}}>
+        <select value={visitPurpose} onChange={e=>setVisitPurpose(e.target.value)} aria-label="Objetivo principal da visita">
+          <option value="">Selecione o objetivo...</option>
+          {VISIT_PURPOSES.map(([id,label])=><option key={id} value={id}>{label}</option>)}
+        </select>
+      </div>
+      {outcome && <section style={{marginBottom:18}}>
+        <div className="section-label">Motivos do resultado *</div>
+        <p style={{fontSize:12,color:'var(--text-dim)',margin:'0 0 10px'}}>Selecione um ou mais motivos ({outcomeReasons.length} selecionados).</p>
+        <div style={{display:'grid',gap:6}}>
+          {VISIT_REASONS[outcome].map(([id,label])=><label key={id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'var(--surface-2)',border:'1px solid var(--line)',borderRadius:9,fontSize:12,cursor:'pointer'}}>
+            <input type="checkbox" style={{width:18,height:18,flexShrink:0}} checked={outcomeReasons.includes(id)} onChange={e=>setOutcomeReasons(prev=>e.target.checked?[...prev,id]:prev.filter(x=>x!==id))}/>
+            <span>{label}</span>
+          </label>)}
+        </div>
+      </section>}
+      <div className="section-label">Produto relacionado (opcional)</div>
+      <div style={{marginBottom:14}}>
+        <input type="text" value={relatedProductId} onChange={e=>setRelatedProductId(e.target.value)} placeholder="Código ou nome do produto relacionado" aria-label="Produto relacionado"/>
+      </div>
       <div className="section-label">Anotações</div>
       <div style={{ marginBottom: 14 }}>
         <textarea
@@ -169,8 +194,7 @@ export default function NovaVisita() {
       <button
         className="btn btn-primary"
         style={{ marginTop: 18, opacity: isValid ? 1 : 0.45, cursor: isValid ? 'pointer' : 'not-allowed' }}
-        disabled={!isValid}
-        onClick={handleSave} disabled={saving}
+        onClick={handleSave} disabled={saving || !isValid}
       >
         <IconCheck size={18} /> Salvar visita
       </button>
