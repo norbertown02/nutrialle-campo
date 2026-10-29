@@ -203,8 +203,14 @@ export default function DetalheCotacao() {
       if (error || !data) throw error || new Error('Cotação não encontrada ou já finalizada')
 
       const atualizada = { ...quote, ...data, _pending: false }
-      await db.quotes_cache.put(atualizada)
       setQuote(atualizada)
+      try {
+        await db.quotes_cache.put(atualizada)
+      } catch (cacheError) {
+        // A gravação remota já foi confirmada: a falha do cache local não
+        // deve reabrir uma cotação nem indicar um cancelamento inexistente.
+        console.warn('Não foi possível atualizar cache da cotação cancelada:', cacheError)
+      }
       setCancelamentoAberto(false)
       setMotivosSelecionados([])
       showToast('Cotação cancelada e motivos registrados', 'success')
