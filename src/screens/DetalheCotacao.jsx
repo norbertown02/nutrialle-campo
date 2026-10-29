@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
 import { db } from '../lib/db'
 import { showToast } from '../lib/toast'
-import { confirmDialog } from '../lib/confirm'
+import { QUOTE_CANCELLATION_REASONS } from '../lib/quoteCancellationReasons'
+import '../styles/quote-cancellation.css'
 import { useSales } from '../lib/useSales'
 import {
   IconFileText,
@@ -103,6 +104,8 @@ export default function DetalheCotacao() {
   const [produtosPorId, setProdutosPorId] = useState({})
   const [loading, setLoading] = useState(true)
   const [atualizando, setAtualizando] = useState(false)
+  const [cancelamentoAberto, setCancelamentoAberto] = useState(false)
+  const [motivosSelecionados, setMotivosSelecionados] = useState([])
 
   async function carregar() {
     setLoading(true)
@@ -168,6 +171,55 @@ export default function DetalheCotacao() {
 
     setQuote(prev => ({ ...prev, status }))
     setAtualizando(false)
+  }
+
+  function alternarMotivo(motivo) {
+    setMotivosSelecionados(prev =>
+      prev.includes(motivo) ? prev.filter(item => item !== motivo) : [...prev, motivo]
+    )
+  }
+
+  function fecharCancelamento() {
+    if (atualizando) return
+    setCancelamentoAberto(false)
+    setMotivosSelecionados([])
+  }
+
+  async function cancelarCotacao() {
+    if (atualizando || !motivosSelecionados.length || !['rascunho', 'enviada'].includes(quote?.status)) return
+    setAtualizando(true)
+    try {
+      const payload = {
+        status: 'cancelada',
+        cancellation_reasons: QUOTE_CANCELLATION_REASONS.filter(motivo => motivosSelecionados.includes(motivo)),
+        cancelled_at: new Date().toISOString(),
+      }
+      const { data, error } = await supabase.from('quotes')
+        .update(payload)
+        .eq('id', id)
+        .in('status', ['rascunho', 'enviada'])
+        .select('id,status,cancellation_reasons,cancelled_at')
+        .single()
+      if (error || !data) throw error || new Error('Cotação não encontrada ou já finalizada')
+
+      const atualizada = { ...quote, ...data, _pending: false }
+      setQuote(atualizada)
+      try {
+        await db.quotes_cache.put(atualizada)
+      } catch (cacheError) {
+        // A gravação remota já foi confirmada: a falha do cache local não
+        // deve reabrir uma cotação nem indicar um cancelamento inexistente.
+        console.warn('Não foi possível atualizar cache da cotação cancelada:', cacheError)
+      }
+      setCancelamentoAberto(false)
+      setMotivosSelecionados([])
+      showToast('Cotação cancelada e motivos registrados', 'success')
+    } catch (error) {
+      console.error('Falha ao cancelar cotação:', error)
+      showToast('Não foi possível cancelar. Verifique a conexão e tente novamente.', 'error')
+    } finally {
+      setAtualizando(false)
+    }
   }
 
   // Renova a validade da cotação por mais 15 dias sem exigir nenhuma
@@ -706,6 +758,41 @@ export default function DetalheCotacao() {
 
   return (
     <div className="screen-content">
+      {cancelamentoAberto && (
+        <div className="quote-cancel-overlay" onMouseDown={event => {
+          if (event.target === event.currentTarget) fecharCancelamento()
+        }}>
+          <div className="quote-cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="quote-cancel-title" onKeyDown={event => {
+            if (event.key === 'Escape') fecharCancelamento()
+          }}>
+            <div className="quote-cancel-header">
+              <div>
+                <span className="quote-cancel-eyebrow">Cotações / Encerramento</span>
+                <h2 id="quote-cancel-title">Cancelar cotação</h2>
+                <p>Selecione um ou mais motivos. Nenhuma observação é necessária.</p>
+              </div>
+              <button type="button" className="quote-cancel-close" aria-label="Fechar" onClick={fecharCancelamento} disabled={atualizando}>×</button>
+            </div>
+            <div className="quote-cancel-options">
+              {QUOTE_CANCELLATION_REASONS.map((motivo, index) => (
+                <label className="quote-cancel-option" key={motivo}>
+                  <input type="checkbox" autoFocus={index === 0} checked={motivosSelecionados.includes(motivo)} onChange={() => alternarMotivo(motivo)} disabled={atualizando} />
+                  <span>{motivo}</span>
+                </label>
+              ))}
+            </div>
+            <div className="quote-cancel-footer">
+              <div className="quote-cancel-counter">{motivosSelecionados.length} motivo{motivosSelecionados.length === 1 ? '' : 's'} selecionado{motivosSelecionados.length === 1 ? '' : 's'}</div>
+              <div className="quote-cancel-actions">
+                <button type="button" className="btn btn-ghost" onClick={fecharCancelamento} disabled={atualizando}>Voltar</button>
+                <button type="button" className="quote-cancel-confirm" onClick={cancelarCotacao} disabled={atualizando || motivosSelecionados.length === 0}>
+                  {atualizando ? 'Cancelando...' : 'Confirmar cancelamento'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <button
@@ -911,6 +998,15 @@ export default function DetalheCotacao() {
           </div>
         )}
 
+        {quote.status === 'cancelada' && Array.isArray(quote.cancellation_reasons) && quote.cancellation_reasons.length > 0 && (
+          <div className="quote-cancel-reasons">
+            <div className="quote-cancel-reasons-title">Motivos do cancelamento</div>
+            <div className="quote-cancel-reasons-list">
+              {quote.cancellation_reasons.map(motivo => <span key={motivo}>{motivo}</span>)}
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 110 }}>
           {(quote.status === 'rascunho' || quote.status === 'enviada') && (
             <button
@@ -1015,12 +1111,8 @@ export default function DetalheCotacao() {
                 padding: '12px 16px',
                 color: 'var(--red)',
               }}
-              onClick={async () => {
-                const ok = await confirmDialog('Cancelar esta cotação?', {
-                  title: 'Cancelar cotação', confirmLabel: 'Cancelar cotação', danger: true,
-                })
-                if (ok) mudarStatus('cancelada')
-              }}
+              onClick={() => setCancelamentoAberto(true)}
+              disabled={atualizando}
             >
               Cancelar cotação
             </button>
