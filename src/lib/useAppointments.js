@@ -10,11 +10,14 @@ const fromDB = row => row ? ({ id: row.id, farmId: row.farm_id, title: row.title
 export function useAppointments() {
   const { user } = useAuth()
   const [appointments, setAppointments] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
-    if (!user?.id) { setAppointments([]); return () => { active = false } }
+    if (!user?.id) { setAppointments([]); setLoading(false); return () => { active = false } }
+    setLoading(true)
     const load = async () => {
+      try {
       const local = await db.appointments_cache.where('seller_id').equals(user.id).toArray()
       if (active) setAppointments(local.map(fromDB))
       const { data, error } = await supabase.from('appointments').select('*').eq('seller_id', user.id).order('appointment_date', {ascending:true})
@@ -27,6 +30,9 @@ export function useAppointments() {
       if (!active) return
       await db.appointments_cache.bulkPut([...merged.values()])
       if (active) setAppointments([...merged.values()].map(fromDB))
+      } finally {
+        if (active) setLoading(false)
+      }
     }
     load().catch(error => logError('appointments_load', error))
     const unsub = onSyncChange(() => { load().catch(console.warn) })
@@ -61,5 +67,27 @@ export function useAppointments() {
     setAppointments(prev => prev.map(a => a.id === id ? {...a, status:'realizado', doneAt, pending:true} : a))
     await enqueue({ entity:'appointment', entityId:id, op:'update', payload:{status:'realizado',done_at:doneAt} })
   }, [user?.id])
-  return { appointments, addAppointment, removeAppointment, markAsDone }
+
+  const updateAppointment = useCallback(async (id, changes) => {
+    if (!user?.id) throw new Error('Faça login para editar o compromisso.')
+    const allowed = {
+      ...(Object.hasOwn(changes, 'title') ? { title: changes.title } : {}),
+      ...(Object.hasOwn(changes, 'appointmentDate') ? { appointment_date: changes.appointmentDate } : {}),
+      ...(Object.hasOwn(changes, 'appointmentTime') ? { appointment_time: changes.appointmentTime || null } : {}),
+      ...(Object.hasOwn(changes, 'farmId') ? { farm_id: changes.farmId || null } : {}),
+      ...(Object.hasOwn(changes, 'kind') ? { kind: changes.kind } : {}),
+      ...(Object.hasOwn(changes, 'notes') ? { notes: changes.notes } : {}),
+      ...(Object.hasOwn(changes, 'status') ? { status: changes.status } : {}),
+    }
+    const existing = await db.appointments_cache.get(id)
+    if (!existing || existing.seller_id !== user.id) throw new Error('Compromisso não encontrado.')
+    await db.appointments_cache.put({ ...existing, ...allowed, _pending: true })
+    setAppointments(prev => prev.map(a => a.id === id
+      ? fromDB({ ...existing, ...allowed, _pending: true }) : a))
+    await enqueue({ entity: 'appointment', entityId: id, op: 'update', payload: allowed })
+  }, [user?.id])
+
+  const cancelAppointment = useCallback(async id =>
+    updateAppointment(id, { status: 'cancelado' }), [updateAppointment])
+  return { appointments, loading, addAppointment, updateAppointment, cancelAppointment, removeAppointment, markAsDone }
 }

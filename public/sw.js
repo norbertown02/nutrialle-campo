@@ -1,4 +1,4 @@
-const CACHE = 'nutrialle-v19'
+const CACHE = 'nutrialle-v20'
 const APP_SHELL = '/index.html'
 const STATIC = [
   '/icon-192.png',
@@ -125,16 +125,31 @@ self.addEventListener('periodicsync', event => {
 
 self.addEventListener('push', event => {
   if (!event.data) return
-  const data = event.data.json()
-  event.waitUntil(self.registration.showNotification(data.title || 'Nutrialle', {
+  let data = {}
+  try { data = event.data.json() } catch { data = { body: event.data.text() } }
+  const pathname = typeof data.url === 'string' && data.url.startsWith('/') && !data.url.startsWith('//')
+    ? data.url : '/agenda'
+  event.waitUntil(self.registration.showNotification(data.title || 'Nutrialle Campo', {
     body: data.body || '',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
-    vibrate: [200, 100, 200]
+    tag: data.tag || undefined,
+    data: { url: pathname },
+    vibrate: [160, 80, 160]
   }))
 })
 
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-  event.waitUntil(clients.openWindow('/'))
+  const url = new URL(event.notification.data?.url || '/agenda', self.location.origin)
+  if (url.origin !== self.location.origin) return
+  event.waitUntil((async () => {
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const current = list.find(client => new URL(client.url).origin === self.location.origin)
+    if (current) {
+      await current.navigate(url.href)
+      return current.focus()
+    }
+    return self.clients.openWindow(url.href)
+  })())
 })

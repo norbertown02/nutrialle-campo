@@ -1,579 +1,319 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  IconPlus, IconCalendar, IconMapPin, IconClock,
-  IconAlertTriangle, IconCheck, IconChevronLeft, IconChevronRight,
-  IconCalendarEvent, IconBuildingWarehouse
+  IconAlertTriangle, IconArrowRight, IconBell, IconBellOff, IconCalendar,
+  IconCalendarCheck, IconCalendarEvent, IconCalendarPlus, IconCheck, IconChevronLeft,
+  IconChevronRight, IconClock, IconEdit, IconMapPin, IconPlus, IconX,
 } from '@tabler/icons-react'
+import { useAuth } from '../lib/useAuth.jsx'
 import { useVisits } from '../lib/useVisits'
 import { useAppointments } from '../lib/useAppointments'
 import { useFarms } from '../lib/useFarms'
+import { usePushReminders } from '../lib/usePushReminders'
+import { hojeLocal, deslocarData, diasRelativos, formatarDia, itensAgenda, visitasDeAmanha } from '../lib/agendaUtils'
+import '../styles/agenda-nova.css'
 
-const FORGOTTEN_DAYS = 45
+const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+const MONTHS = ['janeiro','fevereiro','março','abril','maio','junho',
+  'julho','agosto','setembro','outubro','novembro','dezembro']
 
-function todayISO() {
-  return new Date().toISOString().split('T')[0]
+function calendarioMes(year, month) {
+  const first = new Date(year, month, 1).getDay()
+  const last = new Date(year, month + 1, 0).getDate()
+  return [
+    ...Array.from({ length:first }, (_,i) => ({ key:'empty-'+i, empty:true })),
+    ...Array.from({ length:last }, (_,i) => {
+      const dia = i + 1
+      return { key:dia, day:dia,
+        date:year+'-'+String(month+1).padStart(2,'0')+'-'+String(dia).padStart(2,'0') }
+    }),
+  ]
 }
-
-function daysBetween(isoA, isoB) {
-  const a = new Date(isoA + 'T12:00:00')
-  const b = new Date(isoB + 'T12:00:00')
-  return Math.round((b - a) / 86400000)
-}
-
-function formatDateBR(iso) {
-  if (!iso) return ''
-  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-  })
-}
-
-function buildCalendarMonth(year, month) {
-  // month 0-indexed
-  const firstDay = new Date(year, month, 1)
-  const lastDay = new Date(year, month + 1, 0)
-  const startWeekday = firstDay.getDay() // 0=domingo
-  const totalDays = lastDay.getDate()
-
-  const cells = []
-  // Empty cells before day 1
-  for (let i = 0; i < startWeekday; i++) cells.push(null)
-  // Days of the month
-  for (let d = 1; d <= totalDays; d++) {
-    const iso =
-      year + '-' +
-      String(month + 1).padStart(2, '0') + '-' +
-      String(d).padStart(2, '0')
-    cells.push({ day: d, iso })
-  }
-  return cells
-}
-
-const MONTH_NAMES = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-]
-const WEEKDAY_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
 export default function Agenda() {
   const navigate = useNavigate()
-  const visitsHook = useVisits()
-  const visits = visitsHook.visits
-  const apptsHook = useAppointments()
-  const appointments = apptsHook.appointments
-  const markAsDone = apptsHook.markAsDone
-  const farmsHook = useFarms()
-  const farms = farmsHook.farms
-  const getFarm = farmsHook.getFarm
+  const [params] = useSearchParams()
+  const { user } = useAuth()
+  const { visits, loading: visitasLoading } = useVisits()
+  const { appointments, loading: compromissosLoading, markAsDone, cancelAppointment, updateAppointment } = useAppointments()
+  const { farms, loading: clientesLoading } = useFarms()
+  const push = usePushReminders(user?.id)
 
-  const today = todayISO()
-  const todayParts = today.split('-').map(Number)
+  const today = hojeLocal()
+  const tomorrow = deslocarData(today,1)
+  const dateFromUrl = params.get('date')
+  const dateValida = dateFromUrl && /^\d{4}-\d{2}-\d{2}$/.test(dateFromUrl) ? dateFromUrl : ''
+  const [selectedDate, setSelectedDate] = useState(dateValida)
+  const inicio = (selectedDate || today).split('-').map(Number)
+  const [year,setYear] = useState(inicio[0])
+  const [month,setMonth] = useState(inicio[1]-1)
+  const [tab,setTab] = useState('proximos')
+  const [editing,setEditing] = useState('')
+  const [draft,setDraft] = useState({ title:'',date:'',time:'',notes:'' })
+  const [busy,setBusy] = useState('')
+  const [notice,setNotice] = useState('')
+  const [showAll,setShowAll] = useState(false)
 
-  const [calYear, setCalYear] = useState(todayParts[0])
-  const [calMonth, setCalMonth] = useState(todayParts[1] - 1) // 0-indexed
-  const [selectedDate, setSelectedDate] = useState(null)
+  const all = useMemo(() => {
+    const dados = itensAgenda(appointments, visits)
+    const manuais = new Set(dados.filter(i => !i.automatico && i.kind === 'visita' && i.status === 'agendado')
+      .map(i => i.farmId+'@'+i.date))
+    return dados.filter(i => !i.automatico || !manuais.has(i.farmId+'@'+i.date))
+  },[appointments, visits])
 
-  // 1. Compromissos automáticos a partir das visitas
-  const visitAppointments = visits
-    .filter(v => v.nextVisitDate)
-    .map(v => ({
-      id: 'vapt_' + v.id,
-      type: 'visita',
-      date: v.nextVisitDate,
-      time: null,
-      farmId: v.farmId,
-      title: 'Visita de retorno',
-      notes: v.notes || '',
-      status: 'agendado',
-    }))
+  const isScheduled = i => i.status === 'agendado'
+  const proximos = all.filter(i => isScheduled(i) && i.date >= today)
+  const atrasados = all.filter(i => isScheduled(i) && i.date < today)
+  const historico = all.filter(i => i.status === 'realizado' || i.status === 'cancelado')
+    .sort((a,b)=>b.date.localeCompare(a.date))
+  const visitasAmanha = visitasDeAmanha(appointments, visits, today)
+  const hojeCount = proximos.filter(i => i.date === today).length
+  const loading = visitasLoading || compromissosLoading || clientesLoading
 
-  // 2. Compromissos manuais
-  const manualAppointments = appointments.map(a => ({
-    ...a,
-    type: 'manual',
-    date: a.appointmentDate,
-    time: a.appointmentTime,
-  }))
-
-  // 3. Fazendas esquecidas
-  const forgottenFarms = farms.filter(f => {
-    const farmVisits = visits.filter(v => v.farmId === f.id)
-    if (farmVisits.length === 0) {
-      if (!f.createdAt) return false
-      const created = f.createdAt.split('T')[0]
-      return daysBetween(created, today) >= FORGOTTEN_DAYS
-    }
-    const lastVisit = farmVisits.map(v => v.visitDate).sort().reverse()[0]
-    return daysBetween(lastVisit, today) >= FORGOTTEN_DAYS
+  const dateSet = new Map()
+  all.forEach(i => {
+    const data = dateSet.get(i.date) || { scheduled:0,done:0,late:0 }
+    if (i.status === 'agendado') {
+      data.scheduled += 1
+      if (i.date < today) data.late += 1
+    } else data.done += 1
+    dateSet.set(i.date,data)
   })
 
-  const allItems = [...visitAppointments, ...manualAppointments]
+  const baseItems = tab === 'atrasados' ? atrasados : tab === 'historico' ? historico : proximos
+  const filtrados = selectedDate ? baseItems.filter(i => i.date === selectedDate) : baseItems
+  const visiveis = showAll ? filtrados : filtrados.slice(0,12)
+  const fazenda = farmId => farms.find(f => f.id === farmId)
 
-  // Datas que têm compromisso (set para lookup rápido)
-  const datesWithItems = new Set(allItems.map(i => i.date))
-
-  // Filtra para a lista
-  let listItems = allItems
-  if (selectedDate) {
-    listItems = allItems.filter(i => i.date === selectedDate)
-  } else {
-    // Sem dia selecionado: mostra próximos compromissos (não passados)
-    listItems = allItems.filter(i =>
-      i.status === 'agendado' && daysBetween(today, i.date) >= 0
-    )
+  function changeMonth(direction) {
+    const next = new Date(year, month + direction, 1)
+    setYear(next.getFullYear()); setMonth(next.getMonth())
+    setSelectedDate(''); setShowAll(false)
   }
-
-  listItems = listItems.sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-
-  // KPIs
-  const atrasados = allItems.filter(i =>
-    i.status === 'agendado' && daysBetween(today, i.date) < 0
-  ).length
-
-  const hoje = allItems.filter(i =>
-    i.date === today && i.status === 'agendado'
-  ).length
-
-  // Calendário
-  const cells = buildCalendarMonth(calYear, calMonth)
-  const monthLabel = MONTH_NAMES[calMonth] + ' de ' + calYear
-
-  const prevMonth = () => {
-    if (calMonth === 0) {
-      setCalMonth(11)
-      setCalYear(calYear - 1)
-    } else {
-      setCalMonth(calMonth - 1)
-    }
-    setSelectedDate(null)
+  function selecionar(date) {
+    setSelectedDate(v => v === date ? '' : date)
+    setShowAll(false)
   }
-
-  const nextMonth = () => {
-    if (calMonth === 11) {
-      setCalMonth(0)
-      setCalYear(calYear + 1)
-    } else {
-      setCalMonth(calMonth + 1)
-    }
-    setSelectedDate(null)
+  function selecionarAmanha() {
+    setYear(Number(tomorrow.slice(0,4)))
+    setMonth(Number(tomorrow.slice(5,7))-1)
+    setTab('proximos')
+    setSelectedDate(tomorrow); setShowAll(false)
   }
-
-  const handleDayClick = (cell) => {
-    if (!cell) return
-    if (selectedDate === cell.iso) {
-      setSelectedDate(null) // toggle off
-    } else {
-      setSelectedDate(cell.iso)
-    }
+  function editar(i) {
+    setEditing(i.id)
+    setNotice('')
+    setDraft({title:i.title||'',date:i.date,time:i.time||'',notes:i.notes||''})
   }
-
-  const isEmpty = allItems.length === 0 && forgottenFarms.length === 0
-
-  const renderItem = (item) => {
-    const farm = item.farmId ? getFarm(item.farmId) : null
-    const farmName = farm ? farm.name : ''
-    const daysDiff = daysBetween(today, item.date)
-    const isLate = daysDiff < 0 && item.status === 'agendado'
-
-    return (
-      <div
-        key={item.id}
-        className="row-item"
-        onClick={() => {
-          if (farm) navigate('/clientes/' + farm.id)
-        }}
-        style={{ cursor: farm ? 'pointer' : 'default' }}
-      >
-        <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
-          <div style={{
-            width: 44,
-            minHeight: 44,
-            borderRadius: 12,
-            background: isLate
-              ? 'var(--red-bg)'
-              : item.type === 'visita'
-                ? 'rgba(240,125,26,0.13)'
-                : 'rgba(91,151,200,0.14)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: isLate
-              ? 'var(--red)'
-              : item.type === 'visita'
-                ? 'var(--orange)'
-                : 'var(--blue)',
-            flexShrink: 0,
-            flexDirection: 'column',
-            padding: '4px'
-          }}>
-            <div style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontWeight: 700,
-              fontSize: 16,
-              lineHeight: 1
-            }}>
-              {formatDateBR(item.date).split(' ')[0]}
-            </div>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', marginTop: 1 }}>
-              {formatDateBR(item.date).split(' ')[1]}
-            </div>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>
-              {farmName || item.title}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>
-              {item.title}{item.time ? ' · ' + item.time : ''}
-            </div>
-            <div style={{
-              fontSize: 11,
-              color: isLate ? 'var(--red)' : 'var(--text-faint)',
-              marginTop: 4,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4
-            }}>
-              {isLate ? (
-                <>
-                  <IconAlertTriangle size={11} />
-                  Atrasado ha {Math.abs(daysDiff)} {Math.abs(daysDiff) === 1 ? 'dia' : 'dias'}
-                </>
-              ) : (
-                <>
-                  <IconClock size={11} />
-                  {daysDiff === 0
-                    ? 'Hoje'
-                    : daysDiff === 1
-                      ? 'Amanha'
-                      : 'Em ' + daysDiff + ' dias'}
-                </>
-              )}
-            </div>
-            {farm ? (
-              <div style={{
-                fontSize: 11, color: 'var(--text-faint)', marginTop: 2,
-                display: 'flex', alignItems: 'center', gap: 4
-              }}>
-                <IconMapPin size={11} /> {farm.city}, {farm.state}
-              </div>
-            ) : null}
-          </div>
-          {item.type === 'manual' && item.status === 'agendado' ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                markAsDone(item.id)
-              }}
-              style={{
-                background: 'var(--green-bg)',
-                border: 'none',
-                color: 'var(--green)',
-                width: 30, height: 30, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0
-              }}
-            >
-              <IconCheck size={14} />
-            </button>
-          ) : null}
-        </div>
-      </div>
-    )
+  async function salvarEdicao(i) {
+    if (!draft.title.trim() || !draft.date || busy) return
+    setBusy(i.id)
+    setNotice('')
+    try {
+      await updateAppointment(i.id, {
+        title:draft.title.trim(), appointmentDate:draft.date,
+        appointmentTime:draft.time||null, notes:draft.notes,
+        ...(i.status === 'agendado' ? {} : {}),
+      })
+      setEditing('')
+      setNotice('Compromisso atualizado.')
+    } catch(e) { setNotice(e.message||'Falha ao reagendar.') }
+    finally { setBusy('') }
+  }
+  async function cancelar(i) {
+    if (busy || !window.confirm('Cancelar o compromisso "' + i.title + '"?')) return
+    setBusy(i.id); setNotice('')
+    try { await cancelAppointment(i.id); setNotice('Compromisso cancelado.') }
+    catch(e){ setNotice(e.message||'Não foi possível cancelar.') }
+    finally { setBusy('') }
+  }
+  async function concluirLembrete(i) {
+    if (busy) return
+    setBusy(i.id); setNotice('')
+    try { await markAsDone(i.id); setNotice('Lembrete concluído.') }
+    catch(e){ setNotice(e.message||'Não foi possível concluir.') }
+    finally { setBusy('') }
+  }
+  function registrarVisita(i) {
+    let url = '/visitas/nova?'
+    const query = new URLSearchParams()
+    if (i.farmId) query.set('farm',i.farmId)
+    if (!i.automatico) query.set('appointment',i.id)
+    url += query.toString()
+    navigate(url)
   }
 
   return (
-    <div className="content">
-      <div className="page-head">
-        <div className="eyebrow">Sua semana</div>
-        <h2>Agenda</h2>
-        <p>
-          {isEmpty
-            ? 'Adicione compromissos ou agende a partir das visitas'
-            : hoje + ' compromissos hoje, ' + atrasados + ' atrasados'}
-        </p>
-      </div>
-
-      {/* CALENDÁRIO */}
-      <div className="card" style={{ padding: 14, marginBottom: 14 }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 12
-        }}>
-          <button
-            onClick={prevMonth}
-            style={{
-              background: 'var(--surface-2)', border: 'none', cursor: 'pointer',
-              width: 30, height: 30, borderRadius: 9,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--silver)'
-            }}
-          >
-            <IconChevronLeft size={16} />
-          </button>
-          <div style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontWeight: 600, fontSize: 16,
-            textTransform: 'capitalize', letterSpacing: 0.3
-          }}>
-            {monthLabel}
+    <main className="agenda-pro">
+      <header className="agenda-pro__hero">
+        <span className="agenda-pro__eyebrow">ORGANIZAÇÃO COMERCIAL</span>
+        <div className="agenda-pro__hero-line">
+          <div>
+            <h1>Minha agenda</h1>
+            <p>Compromissos, visitas e relacionamento em um só lugar.</p>
           </div>
-          <button
-            onClick={nextMonth}
-            style={{
-              background: 'var(--surface-2)', border: 'none', cursor: 'pointer',
-              width: 30, height: 30, borderRadius: 9,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--silver)'
-            }}
-          >
-            <IconChevronRight size={16} />
+          <button type="button" className="agenda-pro__hero-add" onClick={()=>navigate('/agenda/novo')} aria-label="Novo compromisso">
+            <IconPlus size={23}/>
           </button>
         </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 4,
-          marginBottom: 6
-        }}>
-          {WEEKDAY_SHORT.map((w, i) => (
-            <div
-              key={i}
-              style={{
-                textAlign: 'center',
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--text-faint)',
-                letterSpacing: 0.5,
-                padding: '4px 0'
-              }}
-            >
-              {w}
-            </div>
-          ))}
+        <div className="agenda-pro__summary">
+          <button type="button" onClick={() => {setTab('proximos');setSelectedDate(today);setShowAll(false)}}>
+            <strong>{hojeCount}</strong><small>Hoje</small>
+          </button>
+          <button type="button" onClick={selecionarAmanha}>
+            <strong>{visitasAmanha.length}</strong><small>Visitas amanhã</small>
+          </button>
+          <button type="button" onClick={() => {setTab('atrasados');setSelectedDate('');setShowAll(false)}}>
+            <strong>{atrasados.length}</strong><small>Atrasados</small>
+          </button>
         </div>
+      </header>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 4
-        }}>
-          {cells.map((cell, idx) => {
-            if (!cell) {
-              return <div key={'e' + idx} style={{ aspectRatio: '1' }}></div>
-            }
-            const isToday = cell.iso === today
-            const isSelected = cell.iso === selectedDate
-            const hasItems = datesWithItems.has(cell.iso)
-            const isPast = daysBetween(today, cell.iso) < 0
-            const hasLate = isPast && hasItems
+      <div className="agenda-pro__content">
+        {visitasAmanha.length > 0 && (
+          <button className="agenda-pro__tomorrow" type="button" onClick={selecionarAmanha}>
+            <span className="agenda-pro__tomorrow-icon"><IconBell size={20}/></span>
+            <span><strong>{visitasAmanha.length === 1 ? 'Você tem uma visita amanhã' : 'Você tem '+visitasAmanha.length+' visitas amanhã'}</strong><small>Confira sua programação e prepare o atendimento.</small></span>
+            <IconChevronRight size={18} />
+          </button>
+        )}
 
-            return (
-              <button
-                key={cell.iso}
-                onClick={() => handleDayClick(cell)}
-                style={{
-                  aspectRatio: '1',
-                  borderRadius: 9,
-                  border: isToday ? '1.5px solid var(--orange)' : '1px solid transparent',
-                  background: isSelected
-                    ? 'var(--orange)'
-                    : hasItems
-                      ? 'var(--surface-2)'
-                      : 'transparent',
-                  color: isSelected
-                    ? '#1a0d00'
-                    : isPast
-                      ? 'var(--text-faint)'
-                      : 'var(--text)',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  fontSize: 13,
-                  fontWeight: isToday || isSelected ? 700 : 500,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  padding: 0
-                }}
-              >
-                <span>{cell.day}</span>
-                {hasItems ? (
-                  <span style={{
-                    position: 'absolute',
-                    bottom: 4,
-                    width: 4,
-                    height: 4,
-                    borderRadius: '50%',
-                    background: isSelected
-                      ? '#1a0d00'
-                      : hasLate
-                        ? 'var(--red)'
-                        : 'var(--orange)'
-                  }}></span>
-                ) : null}
+        <section className="agenda-pro__calendar" aria-label="Calendário de compromissos">
+          <div className="agenda-pro__calendar-head">
+            <div><span>CALENDÁRIO</span><h2>{MONTHS[month]} <b>{year}</b></h2></div>
+            <div className="agenda-pro__month-actions">
+              <button type="button" aria-label="Mês anterior" onClick={()=>changeMonth(-1)}><IconChevronLeft size={18}/></button>
+              <button type="button" aria-label="Mês seguinte" onClick={()=>changeMonth(1)}><IconChevronRight size={18}/></button>
+            </div>
+          </div>
+          <div className="agenda-pro__days">
+            {WEEKDAYS.map((d,i)=><span key={i}>{d}</span>)}
+            {calendarioMes(year,month).map(cell=>cell.empty
+              ? <span key={cell.key} aria-hidden="true"/>
+              : <button key={cell.key} type="button" aria-pressed={selectedDate===cell.date}
+                  onClick={()=>selecionar(cell.date)}
+                  className={[
+                    cell.date===today?'agenda-pro__day--today':'',
+                    selectedDate===cell.date?'agenda-pro__day--selected':'',
+                  ].join(' ')}
+                  aria-label={formatarDia(cell.date,true)}>
+                  {cell.day}
+                  {dateSet.has(cell.date) && <i className={dateSet.get(cell.date).late?'is-late':''}/>}
+                </button>
+            )}
+          </div>
+          {selectedDate && (
+            <button type="button" className="agenda-pro__date-clear" onClick={()=>setSelectedDate('')}>
+              <IconX size={13}/> {formatarDia(selectedDate,true)} · Limpar data
+            </button>
+          )}
+        </section>
+
+        <section className="agenda-pro__push" aria-label="Notificações de compromissos">
+          <span className="agenda-pro__push-icon">{push.state==='on'?<IconBell size={19}/>:<IconBellOff size={19}/>}</span>
+          <div>
+            <strong>Lembretes de visitas</strong>
+            <small>Receba uma notificação no dia anterior</small>
+          </div>
+          {push.state==='on' ?
+            <button type="button" disabled={push.state==='busy'} onClick={push.desativar}>Ativadas</button>
+            : <button type="button" disabled={push.state==='busy'||push.state==='checking'||push.state==='unsupported'} onClick={push.ativar}>
+                {push.state==='busy'?'Ativando':push.state==='unsupported'?'Indisponível':'Ativar'}
+              </button>}
+        </section>
+        {push.message && <p className="agenda-pro__feedback" role="status">{push.message}</p>}
+        {push.state==='unsupported' && <p className="agenda-pro__feedback">Para receber push, use um navegador compatível e instale o Campo na tela inicial quando necessário.</p>}
+        {notice && <p className="agenda-pro__feedback" role="status">{notice}</p>}
+
+        <section className="agenda-pro__schedule">
+          <div className="agenda-pro__section-top">
+            <div>
+              <span className="agenda-pro__section-kicker">SEU PLANEJAMENTO</span>
+              <h2>Compromissos</h2>
+            </div>
+            <button type="button" onClick={()=>navigate('/agenda/novo')}><IconPlus size={15}/> Novo</button>
+          </div>
+          <div className="agenda-pro__tabs" role="group" aria-label="Filtrar compromissos">
+            {[{id:'proximos',label:'Próximos',total:proximos.length},
+              {id:'atrasados',label:'Atrasados',total:atrasados.length},
+              {id:'historico',label:'Histórico',total:historico.length}].map(t=>
+              <button key={t.id} type="button" aria-pressed={tab===t.id}
+                className={tab===t.id?'is-active':''}
+                onClick={()=>{setTab(t.id);setShowAll(false)}}>
+                {t.label}<span>{t.total}</span>
               </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* KPIs e alertas */}
-      {!isEmpty ? (
-        <>
-          <div className="stat-grid">
-            <div className="stat">
-              <div className="label">Hoje</div>
-              <div className="value orange">{hoje}</div>
-              <div className="sub">compromissos</div>
-            </div>
-            <div className="stat">
-              <div className="label">Atrasados</div>
-              <div className="value" style={{ color: atrasados > 0 ? 'var(--red)' : undefined }}>
-                {atrasados}
-              </div>
-              <div className="sub">pendentes</div>
-            </div>
+            )}
           </div>
 
-          {forgottenFarms.length > 0 ? (
-            <div style={{ marginTop: 14 }}>
-              <div className="hint" style={{
-                background: 'var(--amber-bg)',
-                borderColor: 'rgba(224,165,46,0.3)',
-                color: 'var(--amber)'
-              }}>
-                <IconAlertTriangle size={16} />
-                <div>
-                  <strong>
-                    {forgottenFarms.length} {forgottenFarms.length === 1 ? 'fazenda esquecida' : 'fazendas esquecidas'}
-                  </strong>
-                  <div style={{ fontSize: 11, marginTop: 3 }}>
-                    Sem visita ha mais de {FORGOTTEN_DAYS} dias.
+          {loading ? (
+            <div className="agenda-pro__empty">Carregando compromissos...</div>
+          ) : visiveis.length === 0 ? (
+            <div className="agenda-pro__empty">
+              <IconCalendarCheck size={33}/>
+              <strong>{selectedDate?'Nenhum compromisso nesse dia':tab==='atrasados'?'Nenhum compromisso atrasado':tab==='historico'?'Seu histórico aparecerá aqui':'Sua agenda está livre'}</strong>
+              <p>{selectedDate?'Selecione outra data ou remova o filtro.':tab==='proximos'?'Comece organizando sua próxima visita.':'Nada para exibir nesse período.'}</p>
+              {tab==='proximos'&&!selectedDate&&<button type="button" onClick={()=>navigate('/agenda/novo')}>Agendar visita <IconArrowRight size={15}/></button>}
+            </div>
+          ) : (
+            <div className="agenda-pro__entries">
+              {visiveis.map(i=>{
+                const farm=fazenda(i.farmId)
+                const delta=diasRelativos(i.date,today)
+                const late=i.status==='agendado'&&delta<0
+                const isVisit=i.kind==='visita'
+                return <article key={i.id} className={'agenda-pro__entry'+(late?' is-late':'')}>
+                  <div className="agenda-pro__entry-row">
+                    <div className="agenda-pro__datebox">
+                      <strong>{i.date?.slice(-2)}</strong><small>{i.date?MONTHS[Number(i.date.slice(5,7))-1].slice(0,3):''}</small>
+                    </div>
+                    <div className="agenda-pro__entry-copy">
+                      <strong>{farm?.name || i.title || 'Compromisso'}</strong>
+                      <span>{farm?i.title:(isVisit?'Visita':'Lembrete')}{i.time?' · '+i.time.slice(0,5):''}</span>
+                      {farm?.city&&<small><IconMapPin size={12}/>{farm.city}{farm.state?' · '+farm.state:''}</small>}
+                    </div>
+                    <span className={'agenda-pro__entry-state'+(late?' is-late':'')}>
+                      {i.status==='cancelado'?'Cancelado':i.status==='realizado'?'Concluído':late?Math.abs(delta)+'d atraso':delta===0?'Hoje':delta===1?'Amanhã':'Agendado'}
+                    </span>
                   </div>
-                </div>
-              </div>
-              {forgottenFarms.map(f => {
-                const farmVisits = visits.filter(v => v.farmId === f.id)
-                const lastDate = farmVisits.length > 0
-                  ? farmVisits.map(v => v.visitDate).sort().reverse()[0]
-                  : f.createdAt ? f.createdAt.split('T')[0] : null
-                const daysSince = lastDate ? daysBetween(lastDate, today) : 0
-                return (
-                  <div
-                    key={f.id}
-                    className="row-item"
-                    onClick={() => navigate('/clientes/' + f.id)}
-                    style={{ marginTop: 6 }}
-                  >
-                    <div style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
-                      <div style={{
-                        width: 36, height: 36, borderRadius: 10,
-                        background: 'var(--amber-bg)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'var(--amber)', flexShrink: 0
-                      }}>
-                        <IconBuildingWarehouse size={18} />
+                  {i.notes && <p className="agenda-pro__note">{i.notes}</p>}
+                  {i.status==='agendado'&& (
+                    <div className="agenda-pro__entry-actions">
+                      {isVisit&&<button type="button" onClick={()=>registrarVisita(i)}><IconCheck size={15}/> Registrar visita</button>}
+                      {!isVisit&&!i.automatico&&<button type="button" onClick={()=>concluirLembrete(i)} disabled={busy===i.id}><IconCheck size={15}/> Concluir</button>}
+                      {!i.automatico&&<button type="button" onClick={()=>editar(i)}><IconEdit size={15}/> Reagendar</button>}
+                      {!i.automatico&&<button type="button" className="agenda-pro__cancel" disabled={busy===i.id} onClick={()=>cancelar(i)}><IconX size={15}/> Cancelar</button>}
+                      {i.automatico&&<span className="agenda-pro__automatic">Retorno sugerido no registro de visita</span>}
+                    </div>
+                  )}
+                  {editing===i.id&&(
+                    <div className="agenda-pro__edit">
+                      <label>Descrição<input value={draft.title} onChange={e=>setDraft(d=>({...d,title:e.target.value}))}/></label>
+                      <div className="agenda-pro__edit-grid">
+                        <label>Nova data<input type="date" value={draft.date} onChange={e=>setDraft(d=>({...d,date:e.target.value}))}/></label>
+                        <label>Horário<input type="time" value={draft.time} onChange={e=>setDraft(d=>({...d,time:e.target.value}))}/></label>
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{f.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 1 }}>
-                          {farmVisits.length === 0
-                            ? 'Nunca visitada'
-                            : 'Ultima visita ha ' + daysSince + ' dias'}
-                        </div>
+                      <label>Observações<textarea rows={2} value={draft.notes} onChange={e=>setDraft(d=>({...d,notes:e.target.value}))}/></label>
+                      <div className="agenda-pro__edit-actions">
+                        <button type="button" onClick={()=>setEditing('')}>Voltar</button>
+                        <button type="button" disabled={!draft.date||!draft.title.trim()||!!busy} onClick={()=>salvarEdicao(i)}>
+                          <IconCheck size={15}/> Salvar alterações
+                        </button>
                       </div>
                     </div>
-                  </div>
-                )
+                  )}
+                </article>
               })}
+              {!showAll&&filtrados.length>12&&<button className="agenda-pro__more" type="button" onClick={()=>setShowAll(true)}>
+                Mostrar mais {filtrados.length-12} compromissos <IconChevronRight size={16}/>
+              </button>}
             </div>
-          ) : null}
-        </>
-      ) : null}
-
-      {/* LISTA */}
-      <div className="section-label" style={{ marginTop: 18 }}>
-        {selectedDate
-          ? 'Compromissos de ' + formatDateBR(selectedDate)
-          : 'Proximos compromissos'}
-        {selectedDate ? (
-          <button
-            onClick={() => setSelectedDate(null)}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--orange)', fontSize: 11, fontWeight: 600,
-              marginLeft: 'auto', fontFamily: 'inherit'
-            }}
-          >
-            limpar filtro
-          </button>
-        ) : null}
+          )}
+        </section>
+        <div className="agenda-pro__bottom">
+          <IconCalendarEvent size={16}/>
+          Visitas registradas e compromissos agendados são controles diferentes. O agendamento não conta como visita realizada.
+        </div>
       </div>
-
-      {listItems.length === 0 ? (
-        isEmpty ? (
-          <div style={{
-            background: 'var(--surface)',
-            border: '2px dashed var(--line)',
-            borderRadius: 16,
-            padding: '40px 24px',
-            textAlign: 'center'
-          }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: 20,
-              background: 'rgba(240,125,26,0.13)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--orange)', margin: '0 auto 16px'
-            }}>
-              <IconCalendarEvent size={36} />
-            </div>
-            <h3 style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: 22, fontWeight: 600, marginBottom: 6
-            }}>
-              Sua agenda esta vazia
-            </h3>
-            <p style={{
-              fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5,
-              marginBottom: 20, maxWidth: 280, margin: '0 auto 20px'
-            }}>
-              Quando registrar visita com data de retorno, ela aparece aqui.
-              Voce tambem pode adicionar compromissos manualmente.
-            </p>
-            <button
-              className="btn btn-primary"
-              style={{ maxWidth: 240, margin: '0 auto' }}
-              onClick={() => navigate('/agenda/novo')}
-            >
-              <IconPlus size={18} />
-              Adicionar compromisso
-            </button>
-          </div>
-        ) : (
-          <div className="empty">
-            <IconCalendar />
-            <p>
-              {selectedDate
-                ? 'Nenhum compromisso neste dia'
-                : 'Nenhum compromisso futuro'}
-            </p>
-          </div>
-        )
-      ) : (
-        listItems.map(renderItem)
-      )}
-
-      {!isEmpty ? (
-        <button
-          className="fab"
-          onClick={() => navigate('/agenda/novo')}
-        >
-          <IconPlus />
-        </button>
-      ) : null}
-    </div>
+    </main>
   )
 }

@@ -16,6 +16,8 @@ import {
 } from '@tabler/icons-react'
 
 import { useNavigate } from 'react-router-dom'
+import ClientesSemVisita from '../components/ClientesSemVisita'
+import LembreteVisitasAmanha from '../components/LembreteVisitasAmanha'
 import { useAuth } from '../lib/useAuth.jsx'
 import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
@@ -60,8 +62,8 @@ export default function Home() {
   const navigate = useNavigate()
 
   const { user } = useAuth()
-  const { farms } = useFarms()
-  const { visits } = useVisits()
+  const { farms, loading: farmsLoading } = useFarms()
+  const { visits, loading: visitsLoading } = useVisits()
   const { sales } = useSales()
   const { appointments } = useAppointments()
 
@@ -281,6 +283,16 @@ export default function Home() {
             </button>
           ))}
         </div>
+
+        <LembreteVisitasAmanha appointments={appointments} visits={visits} farms={farms} />
+
+        <ClientesSemVisita
+          farms={farms}
+          visits={visits}
+          appointments={appointments}
+          userId={user?.id}
+          loading={farmsLoading || visitsLoading}
+        />
 
         <div className="home-agenda-card">
           <div className="home-agenda-card__header">
