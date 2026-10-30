@@ -7,10 +7,11 @@ import {
 import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
 import { useAppointments } from '../lib/useAppointments'
+import { hojeLocal } from '../lib/agendaUtils'
 import { VISIT_PURPOSES, VISIT_REASONS } from '../data/visitReasons'
 
 function todayISO() {
-  return new Date().toISOString().split('T')[0]
+  return hojeLocal()
 }
 
 function addDays(isoDate, days) {
@@ -30,8 +31,9 @@ export default function NovaVisita() {
   const [searchParams] = useSearchParams()
   const { farms, getFarm } = useFarms()
   const { addVisit } = useVisits()
-  const { addAppointment } = useAppointments()
+  const { addAppointment, markAsDone } = useAppointments()
 
+  const compromissoOrigem = searchParams.get('appointment')
   const preselectedFarmId = searchParams.get('farm')
   const preselectedFarm   = preselectedFarmId ? getFarm(preselectedFarmId) : null
 
@@ -57,6 +59,12 @@ export default function NovaVisita() {
 
     // Salva a visita
     await addVisit({ farmId, visitDate, outcome, notes: notes.trim(), visitPurpose, outcomeReasons, relatedProductId: relatedProductId || null, nextVisitDate: nextVisitDate || null })
+
+    // Conclui o agendamento original somente depois da visita de fato registrada.
+    if (compromissoOrigem) {
+      try { await markAsDone(compromissoOrigem) }
+      catch (erro) { console.warn('Visita salva, mas agendamento não foi concluído:', erro) }
+    }
 
     // Cria compromisso automático para a próxima visita
     if (nextVisitDate) {
