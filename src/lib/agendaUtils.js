@@ -40,8 +40,10 @@ export function itensAgenda(appointments, visits) {
     ...a, date: a.appointmentDate, time: a.appointmentTime || '',
     kind: a.kind || 'visita', automatico: false,
   }))
-  // Um compromisso de retorno só é concluído se existir registro posterior de visita.
-  return [...manuais, ...automáticos].sort((a,b) =>
+  // Evita duplicar o retorno: NovaVisita grava um compromisso e a data de retorno da visita.
+  const diasManuais = new Set(manuais.filter(a => a.kind === 'visita' && a.farmId)
+    .map(a => a.farmId + '@' + a.date))
+  return [...manuais, ...automáticos.filter(a => !diasManuais.has(a.farmId + '@' + a.date))].sort((a,b) =>
     (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''))
 }
 export function visitasDeAmanha(appointments, visits, hoje = hojeLocal()) {
