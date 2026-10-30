@@ -292,10 +292,6 @@ export default function FichaCliente() {
       showToast(problema, 'error', 7000)
       return
     }
-    if (somenteDigitos(editForm.cpfCnpj) && tipo === 'cnpj' && String(editForm.ie || '').trim().length < 2) {
-      showToast('Informe a Inscrição Estadual (IE) do cliente com CNPJ.', 'error', 7000)
-      return
-    }
     const changes = {
       clientCode:    editForm.clientCode?.trim(),
       name:          editForm.name?.trim(),
@@ -435,7 +431,7 @@ export default function FichaCliente() {
         )}
       </div>
       {[
-        { label: 'Inscrição Estadual', key: 'ie' },
+        { label: 'Inscrição Estadual (opcional até a venda)', key: 'ie' },
         { label: 'CAD/PRO', key: 'cadPro' },
       ].map(f => (
         <div key={f.key} style={{ marginBottom: 12 }}>
