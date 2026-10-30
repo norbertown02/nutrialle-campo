@@ -18,18 +18,18 @@ export function useVisits() {
     setLoading(true)
     const load = async () => {
       try {
-      const local = await db.visits_cache.where('seller_id').equals(user.id).toArray()
-      if (active) setVisits(local.map(fromDB))
-      const { data, error } = await supabase.from('visits').select('*').eq('seller_id', user.id).order('visit_date', {ascending:false})
-      if (error) { logError('visits_load', error); return }
-      const pending = await db.outbox.where('entity').equals('visit').toArray()
-      const pendingIds = new Set(pending.map(x => x.entity_id))
-      const preserved = local.filter(x => pendingIds.has(x.id))
-      const merged = new Map(data.map(x => [x.id, {...x, _pending:false}]))
-      for (const row of preserved) merged.set(row.id, row)
-      if (!active) return
-      await db.visits_cache.bulkPut([...merged.values()])
-      if (active) setVisits([...merged.values()].map(fromDB))
+        const local = await db.visits_cache.where('seller_id').equals(user.id).toArray()
+        if (active) setVisits(local.map(fromDB))
+        const { data, error } = await supabase.from('visits').select('*').eq('seller_id', user.id).order('visit_date', { ascending: false })
+        if (error) { logError('visits_load', error); return }
+        const pending = await db.outbox.where('entity').equals('visit').toArray()
+        const pendingIds = new Set(pending.map(x => x.entity_id))
+        const preserved = local.filter(x => pendingIds.has(x.id))
+        const merged = new Map(data.map(x => [x.id, { ...x, _pending: false }]))
+        for (const row of preserved) merged.set(row.id, row)
+        if (!active) return
+        await db.visits_cache.bulkPut([...merged.values()])
+        if (active) setVisits([...merged.values()].map(fromDB))
       } finally {
         if (active) setLoading(false)
       }
