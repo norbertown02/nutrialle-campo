@@ -10,11 +10,14 @@ const fromDB = row => row ? ({ id: row.id, farmId: row.farm_id, visitDate: row.v
 export function useVisits() {
   const { user } = useAuth()
   const [visits, setVisits] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
-    if (!user?.id) { setVisits([]); return () => { active = false } }
+    if (!user?.id) { setVisits([]); setLoading(false); return () => { active = false } }
+    setLoading(true)
     const load = async () => {
+      try {
       const local = await db.visits_cache.where('seller_id').equals(user.id).toArray()
       if (active) setVisits(local.map(fromDB))
       const { data, error } = await supabase.from('visits').select('*').eq('seller_id', user.id).order('visit_date', {ascending:false})
@@ -27,6 +30,9 @@ export function useVisits() {
       if (!active) return
       await db.visits_cache.bulkPut([...merged.values()])
       if (active) setVisits([...merged.values()].map(fromDB))
+      } finally {
+        if (active) setLoading(false)
+      }
     }
     load().catch(error => logError('visits_load', error))
     const unsub = onSyncChange(() => { load().catch(console.warn) })
@@ -54,5 +60,5 @@ export function useVisits() {
   }, [user?.id])
 
   const getVisitsByFarm = useCallback((farmId) => visits.filter(v => v.farmId === farmId).sort((a,b) => (b.visitDate || '').localeCompare(a.visitDate || '')), [visits])
-  return { visits, addVisit, removeVisit, getVisitsByFarm }
+  return { visits, loading, addVisit, removeVisit, getVisitsByFarm }
 }
