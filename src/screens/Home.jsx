@@ -62,7 +62,7 @@ export default function Home() {
 
   const { user } = useAuth()
   const { farms, loading: farmsLoading } = useFarms()
-  const { visits } = useVisits()
+  const { visits, loading: visitsLoading } = useVisits()
   const { sales } = useSales()
   const { appointments } = useAppointments()
 
@@ -288,7 +288,7 @@ export default function Home() {
           visits={visits}
           appointments={appointments}
           userId={user?.id}
-          loading={farmsLoading}
+          loading={farmsLoading || visitsLoading}
         />
 
         <div className="home-agenda-card">
