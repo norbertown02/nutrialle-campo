@@ -288,11 +288,11 @@ export default function FichaCliente() {
   async function salvarEdicao() {
     const tipo = editForm.docTipo === 'cnpj' ? 'cnpj' : 'cpf'
     const problema = erroDocumento(tipo, editForm.cpfCnpj)
-    if (problema && (!farm.prospect || somenteDigitos(editForm.cpfCnpj))) {
+    if (problema && somenteDigitos(editForm.cpfCnpj)) {
       showToast(problema, 'error', 7000)
       return
     }
-    if (!farm.prospect && tipo === 'cnpj' && String(editForm.ie || '').trim().length < 2) {
+    if (somenteDigitos(editForm.cpfCnpj) && tipo === 'cnpj' && String(editForm.ie || '').trim().length < 2) {
       showToast('Informe a Inscrição Estadual (IE) do cliente com CNPJ.', 'error', 7000)
       return
     }
@@ -430,7 +430,7 @@ export default function FichaCliente() {
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>{editForm.docTipo === 'cnpj' ? 'CNPJ' : 'CPF'}</label>
         <input inputMode="numeric" value={editForm.cpfCnpj || ''} onChange={e => setEditForm(p => ({ ...p, cpfCnpj: e.target.value }))} />
-        {(!farm.prospect || somenteDigitos(editForm.cpfCnpj)) && erroDocumento(editForm.docTipo, editForm.cpfCnpj) && (
+        {somenteDigitos(editForm.cpfCnpj) && erroDocumento(editForm.docTipo, editForm.cpfCnpj) && (
           <p role="alert" style={{ marginTop: 6, color: 'var(--red)', fontSize: 12 }}>{erroDocumento(editForm.docTipo, editForm.cpfCnpj)}</p>
         )}
       </div>
