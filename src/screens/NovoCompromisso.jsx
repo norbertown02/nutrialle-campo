@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { IconArrowLeft, IconCheck, IconRoute, IconBell } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { useAppointments } from '../lib/useAppointments'
@@ -17,16 +17,18 @@ const backBtnStyle = {
 
 export default function NovoCompromisso() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const farmPreselecionada = searchParams.get('farm') || ''
   const { farms } = useFarms()
   const { addAppointment } = useAppointments()
 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [kind, setKind] = useState('visita') // visita | lembrete
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState(farmPreselecionada ? 'Visita de acompanhamento' : '')
   const [appointmentDate, setAppointmentDate] = useState(todayISO())
   const [appointmentTime, setAppointmentTime] = useState('')
-  const [farmId, setFarmId] = useState('')
+  const [farmId, setFarmId] = useState(farmPreselecionada)
   const [notes, setNotes] = useState('')
 
   const isValid = title.trim().length >= 3 && appointmentDate
