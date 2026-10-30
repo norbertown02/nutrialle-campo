@@ -8,6 +8,7 @@ function fromDB(row) {
   if (!row) return null
   return {
     id: row.id,
+    sellerId: row.seller_id,
     clientCode: row.client_code,
     name: row.name,
     ownerRole: row.owner_role,
@@ -107,7 +108,7 @@ function generateClientCode(farms) {
 }
 
 const FARM_COLUMNS = [
-  'id','client_code','name','owner_role','phone','email','auth_user_id',
+  'id','client_code','seller_id','name','owner_role','phone','email','auth_user_id',
   'city','state','region','cep','street','street_number','bairro','complemento',
   'segment','herd_size','production','area','status','has_checklist','client_since',
   'created_at','updated_at','cpf_cnpj','ie','cad_pro','doc_tipo','cpf','cnpj',
