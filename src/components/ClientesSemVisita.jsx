@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   IconAlertCircle, IconCalendarPlus, IconChevronDown,
   IconChevronRight, IconChevronUp, IconCircleCheck,
-  IconClipboardCheck, IconClock, IconMapPin, IconUsers,
+  IconClipboardCheck, IconClock, IconMapPin,
 } from '@tabler/icons-react'
 import '../styles/clientes-sem-visita.css'
 
