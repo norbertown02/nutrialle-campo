@@ -144,13 +144,11 @@ export default function NovaFazenda() {
   const documentoValido = validarDocumento(form.docTipo, documentoInformado)
   const mensagemDocumento = documentoInformado ? erroDocumento(form.docTipo, documentoInformado) : null
 
-  const ieObrigatoriaValida = form.docTipo !== 'cnpj' || form.cnpjIE.trim().length >= 2
+    const cadastroCompletoValido = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
+    form.city.trim().length >= 2 && (cidadeVerificada || !online) && (!somenteDigitos(documentoInformado) || documentoValido)
 
-  const cadastroCompletoValido = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
-    form.city.trim().length >= 2 && (cidadeVerificada || !online) && documentoValido && ieObrigatoriaValida
-
-  // Prospecto usado apenas para cotação: somente o nome é obrigatório.
-  // O cadastro completo continua obrigatório no fluxo de venda.
+  // Documento opcional para operação comercial; se preenchido, precisa ser válido.
+  // A sincronização com o Ultra deve validar o documento separadamente.
   const isValid = isProspect
     ? form.name.trim().length >= 3 && (!somenteDigitos(documentoInformado) || documentoValido)
     : cadastroCompletoValido
@@ -238,7 +236,7 @@ export default function NovaFazenda() {
 
       {form.docTipo==='cpf' ? (
         <>
-          <Field label={isProspect ? 'CPF' : 'CPF *'}>
+          <Field label={'CPF (opcional)'}>
             <input value={form.cpf} onChange={e=>setField('cpf',maskCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric"/>
           </Field>
           <Field label="CAD/PRO (Cadastro de Produtor Rural)">
@@ -247,10 +245,10 @@ export default function NovaFazenda() {
         </>
       ) : (
         <>
-          <Field label={isProspect ? 'CNPJ' : 'CNPJ *'}>
+          <Field label={'CNPJ (opcional)'}>
             <input value={form.cnpj} onChange={e=>setField('cnpj',maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" inputMode="numeric"/>
           </Field>
-          <Field label={isProspect ? 'Inscrição Estadual (IE)' : 'Inscrição Estadual (IE) *'}>
+          <Field label={'Inscrição Estadual (IE) (opcional)'}>
             <input value={form.cnpjIE||''} onChange={e=>setField('cnpjIE',e.target.value)} placeholder="Ex.: 123.456.789-0"/>
           </Field>
         </>
@@ -334,7 +332,7 @@ export default function NovaFazenda() {
       <div className="hint" style={{ marginTop:18 }}>
         {isProspect
           ? 'Para criar uma cotação, somente o nome é obrigatório. Os demais dados podem ser completados depois, antes de transformar a cotação em venda.'
-          : 'Campos com * são obrigatórios. Para CNPJ, a Inscrição Estadual também é obrigatória. A cidade é validada automaticamente pelo IBGE.'}
+          : 'O CPF/CNPJ é opcional para o trabalho comercial, mas será necessário para sincronizar o cliente com o Ultra. A cidade é validada pelo IBGE.'}
       </div>
 
       {!online && (
