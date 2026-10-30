@@ -17,6 +17,7 @@ import {
 
 import { useNavigate } from 'react-router-dom'
 import ClientesSemVisita from '../components/ClientesSemVisita'
+import LembreteVisitasAmanha from '../components/LembreteVisitasAmanha'
 import { useAuth } from '../lib/useAuth.jsx'
 import { useFarms } from '../lib/useFarms'
 import { useVisits } from '../lib/useVisits'
@@ -282,6 +283,8 @@ export default function Home() {
             </button>
           ))}
         </div>
+
+        <LembreteVisitasAmanha appointments={appointments} visits={visits} farms={farms} />
 
         <ClientesSemVisita
           farms={farms}
