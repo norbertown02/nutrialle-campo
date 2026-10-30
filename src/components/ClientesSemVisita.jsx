@@ -91,7 +91,7 @@ export default function ClientesSemVisita({ farms, visits, appointments, userId,
         </div>
         <div className="home-gap-card__heading">
           <div>
-            <h3>Clientes sem visita <span>há 30+ dias</span></h3>
+            <h3>Clientes sem visita <span>há mais de 30 dias</span></h3>
             <p>Priorize o relacionamento com sua carteira.</p>
           </div>
           <div className="home-gap-card__total" aria-label={String(pendentes.length) + ' clientes pendentes'}>
@@ -171,7 +171,7 @@ export default function ClientesSemVisita({ farms, visits, appointments, userId,
             </button>
           )}
           <p className="home-gap-card__footnote">
-            Contagem desde a última visita registrada; sem histórico, desde o cadastro. Agendamentos não substituem visitas realizadas.
+            Considera visitas registradas no Campo pelo vendedor. Sem histórico, conta desde o cadastro. Agendamentos não substituem visitas realizadas.
           </p>
         </div>
       )}
