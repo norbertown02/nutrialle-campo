@@ -254,6 +254,8 @@ export default function DetalheCotacao() {
     const isPessoaJuridica = farm?.doc_tipo === 'cnpj' || !!farm?.cnpj || digitosDoc.length === 14
 
     if (!farm?.cpf_cnpj) camposFaltando.push('CPF/CNPJ')
+    // A IE é opcional no cadastro e na cotação, mas obrigatória para emitir venda com CNPJ.
+    if (isPessoaJuridica && String(farm?.ie || '').trim().length < 2) camposFaltando.push('Inscrição Estadual (IE)')
     if (!isPessoaJuridica && !farm?.cad_pro) camposFaltando.push('CAD/PRO')
     if (!farm?.street && !farm?.address) camposFaltando.push('Endereço')
     if (!farm?.city) camposFaltando.push('Município')
