@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   IconArrowRight, IconBuildingStore, IconCalendarPlus, IconCheck,
@@ -7,6 +7,8 @@ import {
 } from '@tabler/icons-react'
 import '../styles/lojas-carteira.css'
 import { hojeLocal } from '../lib/agendaUtils'
+import { useAuth } from '../lib/useAuth.jsx'
+import { supabase } from '../lib/supabase'
 
 function dateLabel(value) {
   if (!value) return ''
@@ -18,6 +20,9 @@ function dateLabel(value) {
 
 export default function StorePortfolio({ store, farms, visits, checklists, appointments, updateFarm }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const podeVerEquipe = ['admin', 'gestor', 'gestor_comercial'].includes(user?.role)
+  const [remoteActivity, setRemoteActivity] = useState(null)
   const [showLink, setShowLink] = useState(false)
   const [selected, setSelected] = useState('')
   const [saving, setSaving] = useState(false)
@@ -28,7 +33,40 @@ export default function StorePortfolio({ store, farms, visits, checklists, appoi
     [farms, store.id]
   )
   const childIds = useMemo(() => new Set(children.map(f => f.id)), [children])
-  const childrenVisits = visits.filter(v => childIds.has(v.farmId))
+  const childrenKey = children.map(f => f.id).join(',')
+  // Gestores acompanham visitas e agendamentos de toda a carteira da loja;
+  // vendedores continuam com seus dados e registros offline.
+  useEffect(() => {
+    if (!podeVerEquipe || !childrenKey) {
+      setRemoteActivity(null)
+      return
+    }
+    let active = true
+    const ids = childrenKey.split(',')
+    Promise.all([
+      supabase.from('visits').select('id,farm_id,visit_date').in('farm_id', ids),
+      supabase.from('appointments').select('id,farm_id,appointment_date,status').in('farm_id', ids),
+    ]).then(([v, a]) => {
+      if (!active) return
+      setRemoteActivity({
+        visits: v.error ? null : (v.data || []).map(row => ({
+          id: row.id, farmId: row.farm_id, visitDate: row.visit_date,
+        })),
+        appointments: a.error ? null : (a.data || []).map(row => ({
+          id: row.id, farmId: row.farm_id,
+          appointmentDate: row.appointment_date, status: row.status,
+        })),
+      })
+    }).catch(() => { if (active) setRemoteActivity(null) })
+    return () => { active = false }
+  }, [podeVerEquipe, childrenKey])
+  const relevantVisits = remoteActivity?.visits
+    ? [...remoteActivity.visits, ...visits.filter(v => v.pending)]
+    : visits
+  const relevantAppointments = remoteActivity?.appointments
+    ? [...remoteActivity.appointments, ...appointments.filter(a => a.pending)]
+    : appointments
+  const childrenVisits = relevantVisits.filter(v => childIds.has(v.farmId))
   const childrenChecklists = checklists.filter(c => childIds.has(c.farmId))
   const available = farms.filter(f =>
     f.id !== store.id && f.segment !== 'loja' && !f.parentStoreId &&
@@ -112,7 +150,7 @@ export default function StorePortfolio({ store, farms, visits, checklists, appoi
               const farmVisits = childrenVisits.filter(v => v.farmId === f.id)
               const last = farmVisits.map(v => v.visitDate).filter(Boolean).sort().at(-1)
               const farmChecklists = childrenChecklists.filter(c => c.farmId === f.id)
-              const next = appointments
+              const next = relevantAppointments
                 .filter(a => a.farmId === f.id && a.status === 'agendado' && a.appointmentDate >= hojeLocal())
                 .map(a => a.appointmentDate).sort()[0]
               return (
