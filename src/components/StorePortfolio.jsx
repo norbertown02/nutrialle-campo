@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   IconArrowRight, IconBuildingStore, IconCalendarPlus, IconCheck,
   IconClipboardCheck, IconHierarchy2, IconLink, IconMapPin, IconPlus,
-  IconRoute, IconUsers, IconX,
+  IconRoute, IconUsers, IconX, IconFlask2,
 } from '@tabler/icons-react'
 import '../styles/lojas-carteira.css'
 import { hojeLocal } from '../lib/agendaUtils'
@@ -173,6 +173,7 @@ export default function StorePortfolio({ store, farms, visits, checklists, appoi
                     <button type="button" onClick={() => navigate('/visitas/nova?farm=' + encodeURIComponent(f.id))}><IconRoute size={15}/> Visita</button>
                     <button type="button" onClick={() => navigate('/agenda/novo?farm=' + encodeURIComponent(f.id))}><IconCalendarPlus size={15}/> Agendar</button>
                     <button type="button" onClick={() => navigate('/clientes/' + encodeURIComponent(f.id) + '/checklist')}><IconClipboardCheck size={15}/> Checklist</button>
+                    <button type="button" onClick={() => navigate('/nutricao?farm=' + encodeURIComponent(f.id))}><IconFlask2 size={15}/> TMR</button>
                   </div>
                 </article>
               )
