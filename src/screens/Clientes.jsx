@@ -9,6 +9,8 @@ import { useConfig } from '../lib/useConfig'
 
 const SEGMENT_TABS = [
   { id: 'todos', label: 'Todos' },
+  { id: 'loja', label: 'Lojas' },
+  { id: 'assistidas', label: 'Via lojas' },
   { id: 'leite', label: 'Leite' },
   { id: 'corte', label: 'Corte' },
   { id: 'suinos', label: 'Suínos' },
@@ -42,17 +44,21 @@ export default function Clientes() {
   const [segment, setSegment] = useState('todos')
 
   let filtered = farms
-  if (segment !== 'todos') filtered = filtered.filter(f => f.segment === segment)
+  if (segment === 'assistidas') filtered = filtered.filter(f => Boolean(f.parentStoreId))
+  else if (segment !== 'todos') filtered = filtered.filter(f => f.segment === segment)
   if (search.trim()) {
     const q = search.toLowerCase().trim()
     filtered = filtered.filter(f =>
       (f.name || '').toLowerCase().includes(q) ||
       (f.owner && f.owner.toLowerCase().includes(q)) ||
-      (f.city && f.city.toLowerCase().includes(q))
+      (f.city && f.city.toLowerCase().includes(q)) ||
+      (f.parentStoreId && (farms.find(loja => loja.id === f.parentStoreId)?.name || '').toLowerCase().includes(q))
     )
   }
 
   const isEmpty = !loading && farms.length === 0
+  const numLojas = farms.filter(f => f.segment === 'loja').length
+  const numAssistidas = farms.filter(f => f.parentStoreId).length
   const clientesDocumentoInvalido = farms.filter(f => f.ultraSyncStatus === 'documento_invalido').length
 
   return (
@@ -65,7 +71,7 @@ export default function Clientes() {
             ? 'Carregando sua carteira...'
             : isEmpty
               ? 'Cadastre seu primeiro cliente para começar'
-              : `${farms.length} ${farms.length === 1 ? 'fazenda' : 'fazendas'} em sua carteira${refreshing ? ' · atualizando...' : ''}`}
+              : `${farms.length} cadastros · ${numLojas} ${numLojas === 1 ? 'loja' : 'lojas'} · ${numAssistidas} ${numAssistidas === 1 ? 'fazenda assistida' : 'fazendas assistidas'}${refreshing ? ' · atualizando...' : ''}`}
         </p>
       </div>
 
@@ -142,7 +148,7 @@ export default function Clientes() {
           </div>
 
           {filtered.length === 0 ? (
-            <div className="empty"><IconSearch /><p>Nenhuma fazenda encontrada</p></div>
+            <div className="empty"><IconSearch /><p>Nenhum cadastro encontrado</p></div>
           ) : (
             filtered.map(f => (
               <div key={f.id} className="row-item" onClick={() => navigate(`/clientes/${f.id}`)}>
@@ -155,13 +161,21 @@ export default function Clientes() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{f.name}</div>
                     {f.owner && <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 1 }}>{f.owner}</div>}
+                    {f.parentStoreId && <div style={{color:'#c36c2e',fontSize:11,fontWeight:700,marginTop:5}}>
+                      Via loja · {farms.find(loja => loja.id === f.parentStoreId)?.name || 'Loja vinculada'}
+                    </div>}
+                    {f.segment === 'loja' && <div style={{color:'#9a846e',fontSize:11,marginTop:5}}>
+                      {farms.filter(child => child.parentStoreId === f.id).length} fazendas assistidas
+                    </div>}
                     <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <IconMapPin size={11} /> {f.city || 'Cidade não informada'}{f.state ? `, ${f.state}` : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                     <span className="pill pill-silver">{SEGMENTS[f.segment] || f.segment}</span>
-                    {f.ultraSyncStatus === 'documento_invalido' ? (
+                    {f.supportOnly ? (
+                      <span className="pill" style={{background:'#fff1e5',color:'#b7692f'}}>Apoio técnico</span>
+                    ) : f.ultraSyncStatus === 'documento_invalido' ? (
                       <span className="pill" style={{ background: 'var(--red-bg)', color: 'var(--red)', border: '1px solid var(--red)', display: 'flex', gap: 3, alignItems: 'center' }}>
                         <IconAlertTriangle size={12} /> {f.docTipo === 'cnpj' ? 'CNPJ inválido' : 'CPF inválido'}
                       </span>
