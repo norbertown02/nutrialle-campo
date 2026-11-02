@@ -657,6 +657,32 @@ export default function FichaCliente() {
             )}
           </div>
 
+      {farm.segment !== 'loja' && (
+        <button
+          type="button"
+          onClick={() => navigate('/nutricao?farm=' + encodeURIComponent(farm.id))}
+          style={{
+            display: 'flex', width: '100%', alignItems: 'center', gap: 13,
+            textAlign: 'left', border: '1px solid #352b25', borderRadius: 15,
+            background: 'linear-gradient(130deg,#14120f,#272019)',
+            color: '#fff', marginTop: 12, marginBottom: 14,
+            padding: '15px 16px', cursor: 'pointer', fontFamily: 'inherit'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: '#e87722' }}>
+            <IconChartBar size={21} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <strong style={{ display: 'block', fontSize: 13, fontWeight: 800 }}>Nutrição e TMR</strong>
+            <small style={{ display: 'block', color: '#c5b6ab', fontSize: 10.5, lineHeight: 1.4, marginTop: 4 }}>
+              Abrir lotes, dietas, formulações e relatórios desta fazenda
+            </small>
+          </span>
+          <IconArrowRight size={19} color="#e99457" />
+        </button>
+      )}
+
       <div className="section-label">Produtor</div>
       <div className="card">
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
