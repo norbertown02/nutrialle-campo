@@ -238,6 +238,7 @@ export function useFarms() {
 
   const removeFarm = useCallback(async (id) => {
     const { error } = await supabase.from('farms').delete().eq('id', id)
+    if (error) throw error
     if (!error) {
       setFarms(prev => prev.filter(f => f.id !== id))
       await db.farms_cache.delete(id)
