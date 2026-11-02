@@ -155,13 +155,13 @@ function BudgetSummary({ cycle, items, baseline, products, onBack }) {
   }
   return <section className="bfd-report">
     <button type="button" className="bfd-back" onClick={onBack}><IconArrowLeft size={16}/> Voltar aos clientes</button>
-    <div className="bfd-report-heading"><span className="bfd-overline">VISÃO CONSOLIDADA</span><h2>Resumo do meu budget</h2><p>{cycle.months.map(monthName).join(' · ')}</p></div>
+    <div className="bfd-report-heading"><span className="bfd-overline">VISÃO CONSOLIDADA</span><h2>Resumo da previsão</h2><p>{cycle.months.map(monthName).join(' · ')}</p></div>
     <div className="bfd-report-pair">
       <article><small>Faturamento previsto</small><strong>{brl(totalAmount)}</strong><span>{num(totalKg/1000)} t no período</span></article>
       <article><small>Pedidos no período de referência</small><strong>{brl(prevAmount)}</strong><span>{num(prevKg/1000)} t equivalentes</span></article>
     </div>
     <div className="bfd-report-pair">
-      <article className="bfd-report-difference"><small>Variação de faturamento</small><strong className={moneyGrowth===null?'neutral':moneyGrowth>=0?'positive':'negative'}>{variation(moneyGrowth)}</strong><span>Budget comparado com a base histórica</span></article>
+      <article className="bfd-report-difference"><small>Variação de faturamento</small><strong className={moneyGrowth===null?'neutral':moneyGrowth>=0?'positive':'negative'}>{variation(moneyGrowth)}</strong><span>Previsão comparada com a base histórica</span></article>
       <article className="bfd-report-difference"><small>Variação do volume</small><strong className={volumeGrowth===null?'neutral':volumeGrowth>=0?'positive':'negative'}>{variation(volumeGrowth)}</strong><span>Quantidade projetada em kg</span></article>
     </div>
     <div className="bfd-report-section"><h3>Projeção mês a mês</h3>{cycle.months.map(month=>{
@@ -222,12 +222,12 @@ export default function Budget() {
     setHistory(h.data || [])
     setBudgetProspects(bc.data || [])
     setBaseline((bs.data || []).find(x => x.seller_id === user.id) || null)
-    setCycleId(old => old || (c.data || []).find(cycle => (a.data || []).some(a => a.cycle_id === cycle.id))?.id || '')
+    setCycleId(old => (c.data || []).some(cycle => cycle.id === old && cycle.status !== 'cancelled') ? old : (c.data || []).find(cycle => cycle.status !== 'cancelled' && (a.data || []).some(a => a.cycle_id === cycle.id))?.id || '')
     setLoading(false)
   }
   useEffect(() => { load() }, [user?.id])
 
-  const availableCycles = cycles.filter(c => assignments.some(a => a.cycle_id === c.id))
+  const availableCycles = cycles.filter(c => c.status !== 'cancelled' && assignments.some(a => a.cycle_id === c.id))
   const cycle = availableCycles.find(c => c.id === cycleId)
   const assignment = assignments.find(a => a.cycle_id === cycleId)
   const editable = Boolean(cycle?.status === 'open' &&
@@ -416,7 +416,7 @@ export default function Budget() {
       setBudgetProspects(prev => [...prev, data])
       setActiveFarm('budget:' + data.id);setQuery('');setFilter('all')
       setAddingClient(false);setNewClient({ name: '', segment: 'leite', city: '' })
-      setNotice({ kind: 'success', text: 'Cliente criado exclusivamente neste budget. O cadastro de clientes do Campo não foi alterado.' })
+      setNotice({ kind: 'success', text: 'Cliente criado exclusivamente nesta previsão. O cadastro de clientes do Campo não foi alterado.' })
     }
     setBusy(false)
   }
@@ -436,8 +436,8 @@ export default function Budget() {
       setNotice({ kind: 'error', text: 'Avalie ao menos um cliente antes de enviar.' });return
     }
     const message = remaining
-      ? 'Ainda existem ' + remaining + ' clientes sem avaliação. Deseja enviar o budget mesmo assim?'
-      : 'Enviar budget para aprovação? Depois do envio ele ficará bloqueado para edição.'
+      ? 'Ainda existem ' + remaining + ' clientes sem avaliação. Deseja enviar a previsão mesmo assim?'
+      : 'Enviar previsão para aprovação? Depois do envio ele ficará bloqueado para edição.'
     if (!window.confirm(message)) return
     setBusy(true)
     const { error } = await supabase.from('budget_cycle_sellers')
@@ -445,7 +445,7 @@ export default function Budget() {
     if (error) setNotice({ kind: 'error', text: error.message })
     else {
       setAssignments(prev => prev.map(a => a.cycle_id === cycleId ? { ...a, status: 'submitted' } : a))
-      setNotice({ kind: 'success', text: 'Budget enviado para aprovação.' })
+      setNotice({ kind: 'success', text: 'Previsão enviada para aprovação.' })
     }
     setBusy(false)
   }
@@ -458,12 +458,12 @@ export default function Budget() {
     <button type="button" className="bfd-back" onClick={() => navigate('/')}><IconArrowLeft size={16}/> Início</button>
     <header className="bfd-hero">
       <span className="bfd-overline">PLANEJAMENTO DE VENDAS</span>
-      <h1>Meu Budget</h1>
+      <h1>Previsão de Vendas</h1>
       <p>Monte sua previsão cliente por cliente, com sugestões baseadas nos pedidos dos últimos três meses completos.</p>
     </header>
     <BudgetNotice message={notice} dismiss={() => setNotice(null)}/>
     {loading && <div className="bfd-empty"><IconRefresh size={24}/><h3>Carregando planejamento...</h3></div>}
-    {!loading && !availableCycles.length && <div className="bfd-empty"><IconCalendarMonth size={27}/><h3>Aguardando liberação</h3><p>Os meses do budget serão exibidos quando a gestão liberar um ciclo para você.</p></div>}
+    {!loading && !availableCycles.length && <div className="bfd-empty"><IconCalendarMonth size={27}/><h3>Aguardando liberação</h3><p>Os meses da previsão serão exibidos quando a gestão liberar um ciclo para você.</p></div>}
     {!loading && cycle && <>
       {availableCycles.length > 1 && <label className="bfd-cycle-picker">Ciclo<select value={cycleId} onChange={e => {setCycleId(e.target.value);setActiveFarm('');setQuery('')}}>{availableCycles.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label>}
       <div className="bfd-current-cycle">
@@ -471,13 +471,13 @@ export default function Budget() {
         <span className={'bfd-state ' + (editable ? 'open' : 'closed')}>{editable ? 'Liberado' : assignment?.status === 'approved' ? 'Aprovado' : assignment?.status === 'submitted' ? 'Enviado' : cycle.status === 'draft' ? 'Aguardando liberação' : 'Somente leitura'}</span>
       </div>
       {assignment?.feedback && <div className="bfd-feedback"><strong>Orientação da gestão</strong><p>{assignment.feedback}</p></div>}
-      {assignment?.status === 'approved' && <div className="bfd-approved-goals"><IconCheck size={18}/><div><strong>Budget aprovado · Metas definidas</strong><p>Os valores aprovados de cada mês são agora suas metas comerciais oficiais. Consulte a aba Metas no aplicativo Gestão.</p></div></div>}
+      {assignment?.status === 'approved' && <div className="bfd-approved-goals"><IconCheck size={18}/><div><strong>Previsão aprovada · Metas definidas</strong><p>Os valores aprovados de cada mês são agora suas metas comerciais oficiais. Consulte a aba Metas no aplicativo Gestão.</p></div></div>}
       <div className="bfd-summary">
         <div><small>Previsão total</small><strong>{brl(plannedValue)}</strong><span>{num(plannedKg / 1000)} t previstas</span></div>
         <div><small>Clientes avaliados</small><strong>{reviewedCount} <em>/ {myFarms.length}</em></strong><span>{remaining} aguardando análise</span></div>
       </div>
       <button type="button" className="bfd-summary-open" onClick={() => setView(view === 'summary' ? 'clients' : 'summary')}>
-        <IconChartBar size={18}/><span><strong>{view === 'summary' ? 'Voltar ao preenchimento' : 'Resumo do meu budget'}</strong>
+        <IconChartBar size={18}/><span><strong>{view === 'summary' ? 'Voltar ao preenchimento' : 'Resumo da previsão'}</strong>
         <small>{growthAmount === null ? 'Sem base de pedidos para comparar' : 'Variação do faturamento: ' + variationText(growthAmount)}</small></span><IconArrowRight size={17}/>
       </button>
       {view === 'summary' ? <BudgetSummary cycle={cycle} items={items} baseline={baseline} products={products} onBack={() => setView('clients')}/> : <>
@@ -508,7 +508,7 @@ export default function Budget() {
             </button>
             {open && <div className="bfd-client-detail">
               <div className="bfd-client-tools">
-                <div><span className="bfd-overline">PREVISÃO POR PRODUTO</span><h3>{f.name}</h3>{f.budgetOnly ? <small>Cadastro exclusivo deste budget · não integra o CRM</small> : f.prospect ? <button type="button" className="bfd-complete-customer" onClick={() => navigate('/clientes/' + f.id)}>Pré-cadastro comercial · completar ficha <IconArrowRight size={13}/></button> : null}{f.assigned === false && <small>Cliente do seu histórico de vendas · carteira vinculada a outro responsável</small>}</div>
+                <div><span className="bfd-overline">PREVISÃO POR PRODUTO</span><h3>{f.name}</h3>{f.budgetOnly ? <small>Cadastro exclusivo desta previsão · não integra o CRM</small> : f.prospect ? <button type="button" className="bfd-complete-customer" onClick={() => navigate('/clientes/' + f.id)}>Pré-cadastro comercial · completar ficha <IconArrowRight size={13}/></button> : null}{f.assigned === false && <small>Cliente do seu histórico de vendas · carteira vinculada a outro responsável</small>}</div>
                 {editable && <button className="bfd-btn bfd-btn-dark" disabled={busy} onClick={() => openNewProduct(f.id)}><IconPlus size={16}/> Produto</button>}
               </div>
               {editable && !reviewedZero && farmSuggestions.length > 0 && <div className="bfd-suggestions">
@@ -561,7 +561,7 @@ export default function Budget() {
       <div className="bfd-modal" role="dialog" aria-modal="true" aria-label="Adicionar novo cliente" onClick={e => e.stopPropagation()}>
         <div className="bfd-modal-grip"/>
         {notice?.kind === 'error' && <div className="bfd-modal-error" role="alert">{notice.text}</div>}
-        <div className="bfd-modal-heading"><div><span className="bfd-overline">OPORTUNIDADE COMERCIAL</span><h2>Cliente somente no budget</h2><p>Este registro serve apenas para rastrear a previsão comercial. Não será cadastrado na carteira de clientes nem no CRM do Campo.</p></div><button className="bfd-icon" onClick={() => setAddingClient(false)} aria-label="Fechar"><IconX size={18}/></button></div>
+        <div className="bfd-modal-heading"><div><span className="bfd-overline">OPORTUNIDADE COMERCIAL</span><h2>Cliente exclusivo da previsão</h2><p>Este registro serve apenas para rastrear a previsão comercial. Não será cadastrado na carteira de clientes nem no CRM do Campo.</p></div><button className="bfd-icon" onClick={() => setAddingClient(false)} aria-label="Fechar"><IconX size={18}/></button></div>
         <label>Nome do cliente / empresa <span>*</span><input autoFocus value={newClient.name} onChange={e => setNewClient(prev => ({ ...prev, name: e.target.value }))} placeholder="Nome da fazenda ou empresa"/></label>
         <label>Segmento<select value={newClient.segment} onChange={e => setNewClient(prev => ({ ...prev, segment: e.target.value }))}><option value="leite">Bovinos de leite</option><option value="corte">Bovinos de corte</option><option value="suinos">Suínos</option></select></label>
         <label>Cidade <small>Opcional</small><input value={newClient.city} onChange={e => setNewClient(prev => ({ ...prev, city: e.target.value }))} placeholder="Ex.: Cascavel"/></label>
