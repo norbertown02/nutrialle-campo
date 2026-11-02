@@ -186,6 +186,7 @@ export default function NovaFazenda() {
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
       prospect: isProspect && !atendimentoViaLoja,
+      sellerId: lojaSelecionada?.sellerId || undefined,
       parentStoreId: atendimentoViaLoja ? parentStoreId : null,
       supportOnly: atendimentoViaLoja,
     })
