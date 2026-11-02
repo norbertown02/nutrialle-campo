@@ -9,6 +9,8 @@ function fromDB(row) {
   return {
     id: row.id,
     sellerId: row.seller_id,
+    parentStoreId: row.parent_store_id ?? null,
+    supportOnly: !!row.support_only,
     clientCode: row.client_code,
     name: row.name,
     ownerRole: row.owner_role,
@@ -77,10 +79,12 @@ function toDB(farm) {
     herd_size: farm.herdSize,
     production: farm.production,
     area: farm.area,
-    status: farm.status ?? 'ativo',
-    has_checklist: farm.hasChecklist ?? false,
+    status: farm.status,
+    has_checklist: farm.hasChecklist,
     client_since: farm.clientSince,
     seller_id: farm.sellerId,
+    parent_store_id: Object.prototype.hasOwnProperty.call(farm, 'parentStoreId') ? farm.parentStoreId || null : undefined,
+    support_only: typeof farm.supportOnly === 'boolean' ? farm.supportOnly : undefined,
     cpf_cnpj: farm.cpfCnpj,
     ie: farm.ie,
     cad_pro: farm.cadPro,
@@ -108,7 +112,7 @@ function generateClientCode(farms) {
 }
 
 const FARM_COLUMNS = [
-  'id','client_code','seller_id','name','owner_role','phone','email','auth_user_id',
+  'id','client_code','seller_id','parent_store_id','support_only','name','owner_role','phone','email','auth_user_id',
   'city','state','region','cep','street','street_number','bairro','complemento',
   'segment','herd_size','production','area','status','has_checklist','client_since',
   'created_at','updated_at','cpf_cnpj','ie','cad_pro','doc_tipo','cpf','cnpj',
