@@ -6,6 +6,7 @@ import {
   IconRoute, IconUsers, IconX,
 } from '@tabler/icons-react'
 import '../styles/lojas-carteira.css'
+import { hojeLocal } from '../lib/agendaUtils'
 
 function dateLabel(value) {
   if (!value) return ''
@@ -112,7 +113,7 @@ export default function StorePortfolio({ store, farms, visits, checklists, appoi
               const last = farmVisits.map(v => v.visitDate).filter(Boolean).sort().at(-1)
               const farmChecklists = childrenChecklists.filter(c => c.farmId === f.id)
               const next = appointments
-                .filter(a => a.farmId === f.id && a.status === 'agendado' && a.appointmentDate >= new Date().toLocaleDateString('en-CA'))
+                .filter(a => a.farmId === f.id && a.status === 'agendado' && a.appointmentDate >= hojeLocal())
                 .map(a => a.appointmentDate).sort()[0]
               return (
                 <article key={f.id} className="store-portfolio__item">
