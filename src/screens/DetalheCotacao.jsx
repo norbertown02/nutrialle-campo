@@ -243,6 +243,10 @@ export default function DetalheCotacao() {
   }
 
   async function converterEmVenda() {
+    if (farm?.support_only) {
+      showToast('Esta fazenda recebe suporte por meio de uma loja. A venda deve ser registrada no cliente comprador.', 'error', 7500)
+      return
+    }
     const camposFaltando = []
 
     // CAD/PRO é o Cadastro de Produtor Rural — só se aplica a pessoa física
