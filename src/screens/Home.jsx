@@ -127,7 +127,7 @@ export default function Home() {
     },
     {
       icon: <IconTarget size={20} />,
-      label: 'Meu Budget',
+      label: 'Previsão de Vendas',
       path: '/budget',
     },
     {
