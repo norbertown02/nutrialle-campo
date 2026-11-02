@@ -441,7 +441,7 @@ export default function FichaCliente() {
         </div>
       )}
       <div className="section-label">Documentos</div>
-      <div style={{ marginBottom: 12 }>
+      <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>Tipo de documento</label>
         <select value={editForm.docTipo || 'cpf'} onChange={e => setEditForm(p => ({ ...p, docTipo: e.target.value, cpfCnpj: '' }))}>
           <option value="cpf">CPF — pessoa física</option>
