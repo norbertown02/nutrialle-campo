@@ -1,0 +1,55 @@
+/* Nutrialle Campo · carteira de lojas e fazendas assistidas */
+.store-link-chooser{background:#fff6ed;border:1px solid #f3ddc7;border-radius:15px;padding:14px;margin-bottom:20px}
+.store-link-chooser label{display:block;color:#8c4e27;font-size:11px;font-weight:750;margin-bottom:9px}
+.store-link-chooser select,.store-portfolio__link select{width:100%;min-width:0;border:1px solid #e9d8c8;border-radius:10px;padding:12px 9px;background:#fff;color:#2e2925;font-size:12px;font-weight:600;font-family:inherit}
+.store-link-chooser p{font-size:11px;line-height:1.5;color:#926e56;margin:9px 0 0}
+.store-portfolio{margin-top:15px;border:1px solid rgba(231,226,220,.96);border-radius:21px;box-shadow:0 10px 27px rgba(20,18,16,.055);overflow:hidden;background:#fff;font-family:'Inter',sans-serif}
+.store-portfolio__hero{padding:20px 17px 15px;color:#fff;background:radial-gradient(circle at 100% 0,rgba(234,119,32,.16),transparent 140px),linear-gradient(130deg,#0a0a0a,#201915)}
+.store-portfolio__eyebrow{font-size:10px;font-weight:750;letter-spacing:1.15px;color:#e89454;display:flex;align-items:center;gap:7px}
+.store-portfolio__topline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:15px}
+.store-portfolio__topline>div:first-child{min-width:0;flex:1}
+.store-portfolio__topline strong{display:block;font-size:19px;font-weight:800;letter-spacing:-.5px;color:#fff;line-height:1.15}
+.store-portfolio__topline p{font-size:11px;line-height:1.45;color:rgba(255,255,255,.58);margin:7px 0 0}
+.store-portfolio__metric{width:65px;height:65px;flex:0 0 65px;border:1px solid rgba(255,255,255,.1);border-radius:14px;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(255,255,255,.06);font-size:27px;font-weight:800;line-height:1}
+.store-portfolio__metric small{font-size:9px;color:rgba(255,255,255,.65);margin-top:5px}
+.store-portfolio__stats{border-top:1px solid rgba(255,255,255,.1);margin-top:15px;padding-top:12px;display:flex;gap:18px;flex-wrap:wrap}
+.store-portfolio__stats span{display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.72);font-size:11px;font-weight:500}
+.store-portfolio__stats svg{color:#e89555}
+.store-portfolio__stats strong{font-size:13px;color:#fff}
+.store-portfolio__body{padding:13px 13px 15px}
+.store-portfolio__actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.store-portfolio__actions button{padding:11px 8px;min-height:42px;display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;background:#e87722;color:#fff;font-family:inherit;font-size:11px;font-weight:750;cursor:pointer}
+.store-portfolio__actions button.store-portfolio__secondary{background:#fff4ea;border:1px solid #f6e4d5;color:#ae602a}
+.store-portfolio__link{margin-top:12px;padding:14px;background:#faf7f4;border:1px solid #ede3da;border-radius:13px}
+.store-portfolio__linkhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.store-portfolio__linkhead strong{font-size:12px;color:#322a23;line-height:1.35}
+.store-portfolio__linkhead button{border:0;background:transparent;color:#8b7c70;cursor:pointer;display:flex}
+.store-portfolio__link p{font-size:10.5px;color:#84786c;line-height:1.55;margin:8px 0 10px}
+.store-portfolio__confirm{min-height:38px;width:100%;border:0;margin-top:10px;border-radius:10px;background:#1d1a18;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:750;font-size:11px;cursor:pointer}
+.store-portfolio__confirm:disabled{opacity:.45;cursor:not-allowed}
+.store-portfolio__message{font-size:11px;color:#806247;background:#fff7eb;border:1px solid #f4e4d4;padding:10px;margin-top:9px;border-radius:9px;line-height:1.4}
+.store-portfolio__empty{padding:28px 12px;display:flex;align-items:center;flex-direction:column;text-align:center;gap:8px}
+.store-portfolio__empty svg{color:#d9874c}
+.store-portfolio__empty strong{font-size:13px;color:#312b26}
+.store-portfolio__empty span{font-size:11px;max-width:280px;line-height:1.5;color:#9c8e80}
+.store-portfolio__list{display:flex;flex-direction:column;margin-top:6px}
+.store-portfolio__item{padding:14px 3px 12px;border-bottom:1px solid #eee8e1}
+.store-portfolio__item:last-child{border-bottom:0}
+.store-portfolio__itemhead{width:100%;display:flex;align-items:center;gap:10px;border:0;padding:0;background:transparent;cursor:pointer;text-align:left;font-family:inherit}
+.store-portfolio__avatar{height:40px;width:40px;flex:0 0 40px;border-radius:12px;background:#fff0e4;color:#d8772b;display:flex;align-items:center;justify-content:center}
+.store-portfolio__identity{min-width:0;flex:1;display:flex;flex-direction:column}
+.store-portfolio__identity strong{color:#25211c;font-size:13px;font-weight:760;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-portfolio__identity small{color:#96887d;font-size:10.5px;display:flex;align-items:center;gap:4px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.store-portfolio__arrow{color:#b3a699;flex:none}
+.store-portfolio__info{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0 10px}
+.store-portfolio__info span{border-radius:7px;background:#f6f3f0;padding:5px 7px;color:#76695d;font-size:10px;font-weight:550}
+.store-portfolio__info span.store-portfolio__next{background:#eaf8ef;color:#36714b}
+.store-portfolio__quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.store-portfolio__quick button{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;background:#faf8f5;color:#6b5a4d;border:1px solid #eae3dd;border-radius:9px;min-height:34px;cursor:pointer;font-family:inherit;font-weight:700;font-size:10.5px;padding:5px}
+.store-portfolio__quick button:first-child{background:#fff4e9;color:#b96322;border-color:#f6e2d0}
+.store-child-path{margin:13px 0 11px;padding:13px 14px;background:#fff5eb;border:1px solid #f3ddc9;border-radius:14px}
+.store-child-path__intro{color:#bc6d32;font-size:10px;letter-spacing:1px;font-weight:760;display:flex;align-items:center;gap:5px}
+.store-child-path__parent{width:100%;border:0;padding:8px 0 0;background:transparent;color:#332921;display:flex;align-items:center;justify-content:space-between;text-align:left;font-size:13px;font-weight:780;cursor:pointer;gap:8px;font-family:inherit}
+.store-child-path p{font-size:10.5px;line-height:1.5;color:#947963;margin:7px 0 0}
+@media(min-width:680px){.store-portfolio__hero{padding:22px 26px 17px}.store-portfolio__body{padding:14px 22px 20px}.store-portfolio__actions{max-width:440px}.store-portfolio__list{display:grid;grid-template-columns:1fr 1fr;column-gap:18px}.store-portfolio__item{padding-left:0;padding-right:0}.store-portfolio__item:nth-last-child(2){border-bottom:0}}
+@media(max-width:390px){.store-portfolio__quick{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.store-portfolio__quick button{font-size:10px}.store-portfolio__actions button{font-size:10.2px}}

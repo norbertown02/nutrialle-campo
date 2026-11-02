@@ -423,7 +423,7 @@ function ProductSearchSelect({ products, value, onChange }) {
 }
 
 function cadastroCompletoParaVenda(farm) {
-  if (!farm) return false
+  if (!farm || farm.supportOnly) return false
   const doc = String(farm.cpfCnpj || farm.cpf_cnpj || farm.cpf || farm.cnpj || '').replace(/\D/g, '')
   const isCnpj = farm.docTipo === 'cnpj' || farm.doc_tipo === 'cnpj' || !!farm.cnpj || doc.length === 14
   const documentoValido = isCnpj ? doc.length === 14 : doc.length === 11

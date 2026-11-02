@@ -4,6 +4,7 @@ import { useAuth } from '../lib/useAuth.jsx'
 import { useFarms } from '../lib/useFarms'
 import { useProducts } from '../lib/useProducts'
 import { useOnlineStatus } from '../lib/useOnlineStatus'
+import { showToast } from '../lib/toast'
 import { db } from '../lib/db'
 import { enqueue } from '../lib/syncEngine'
 import { IconPlus, IconTrash, IconChevronDown, IconSearch, IconCloudOff } from '@tabler/icons-react'
@@ -51,10 +52,10 @@ export default function NovaCotacao() {
     if (!aindaValido) setPagamento(paymentTerms[0].id)
   }, [paymentTerms])
 
-  const farmsFiltradas = farms.filter(f =>
+  const farmsFiltradas = farms.filter(f => !f.supportOnly && (
     f.name?.toLowerCase().includes(buscaFarm.toLowerCase()) ||
     f.city?.toLowerCase().includes(buscaFarm.toLowerCase())
-  ).slice(0, 8)
+  )).slice(0, 8)
 
   const prodsFiltrados = products.filter(p =>
     p.name?.toLowerCase().includes(buscaProd.toLowerCase())
@@ -106,6 +107,10 @@ export default function NovaCotacao() {
   const validUntil = new Date(Date.now() + 10*86400000).toISOString().split('T')[0]
 
   async function salvar(status = 'rascunho') {
+    if (farm?.supportOnly) {
+      showToast('Esta fazenda recebe suporte via loja. Para cotar produtos, selecione a loja compradora.', 'error', 7000)
+      return
+    }
     if (!farmSel || items.length === 0 || !pagamento || salvando) return
     setSalvando(true)
 

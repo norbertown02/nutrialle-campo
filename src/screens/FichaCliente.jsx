@@ -5,13 +5,16 @@ import {
   IconEdit, IconTrash, IconClipboardList, IconCalendarPlus,
   IconReceipt, IconUser, IconBuildingWarehouse, IconFileText,
   IconChecklist, IconRoute, IconCash, IconChartBar, IconDownload,
-  IconLock, IconCopy, IconAlertTriangle
+  IconLock, IconCopy, IconAlertTriangle, IconBuildingStore, IconArrowRight
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
 import { showToast } from '../lib/toast'
 import { criarAcessoCliente } from '../lib/clienteAcesso'
 import { useVisits } from '../lib/useVisits'
 import { useChecklists } from '../lib/useChecklists'
+import { useAppointments } from '../lib/useAppointments'
+import StorePortfolio from '../components/StorePortfolio'
+import '../styles/lojas-carteira.css'
 import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
 import { CHECKLIST_TEMPLATES } from '../data/checklists'
 import { useSales } from '../lib/useSales'
@@ -156,9 +159,11 @@ export default function FichaCliente() {
   const navigate = useNavigate()
   const farmsHook = useFarms()
   const getFarm = farmsHook.getFarm
+  const allFarms = farmsHook.farms
   const removeFarm = farmsHook.removeFarm
   const updateFarm = farmsHook.updateFarm
   const visitsHook = useVisits()
+  const { appointments } = useAppointments()
   const getVisitsByFarm = visitsHook.getVisitsByFarm
   const checklistsHook = useChecklists()
   const getChecklistsByFarm = checklistsHook.getChecklistsByFarm
@@ -171,6 +176,7 @@ export default function FichaCliente() {
   const [farmQuotes, setFarmQuotes] = useState([])
 
   const farm = getFarm(id)
+  const parentStore = farm?.parentStoreId ? allFarms.find(f => f.id === farm.parentStoreId) : null
   const farmVisits = farm ? getVisitsByFarm(farm.id) : []
   const farmChecklists = farm ? getChecklistsByFarm(farm.id) : []
   const farmSales = farm ? getSalesByFarm(farm.id) : []
@@ -225,13 +231,18 @@ export default function FichaCliente() {
 
   const segmentColor = SEGMENT_COLORS[farm.segment]
 
-  const handleRemove = () => {
-    if (!confirmRemove) {
-      setConfirmRemove(true)
+  const handleRemove = async () => {
+    if (allFarms.some(f => f.parentStoreId === farm.id)) {
+      showToast('Esta loja possui fazendas vinculadas. Antes de excluir, reorganize os vínculos da carteira.', 'error', 7000)
       return
     }
-    removeFarm(farm.id)
-    navigate('/clientes')
+    if (!confirmRemove) { setConfirmRemove(true); return }
+    try {
+      await removeFarm(farm.id)
+      navigate('/clientes')
+    } catch (error) {
+      showToast('Não foi possível excluir o cadastro: ' + (error?.message || 'Erro desconhecido'), 'error', 7000)
+    }
   }
 
   const handleVisita = () => {
@@ -281,6 +292,7 @@ export default function FichaCliente() {
 
       notes:         farm.notes || '',
       segment:       farm.segment || 'leite',
+      parentStoreId: farm.parentStoreId || '',
     })
     setEditando(true)
   }
@@ -323,6 +335,10 @@ export default function FichaCliente() {
 
       notes:         editForm.notes,
       segment:       editForm.segment,
+      ...(farm.segment !== 'loja' ? {
+        parentStoreId: editForm.parentStoreId || null,
+        supportOnly: farm.supportOnly && Boolean(editForm.parentStoreId),
+      } : {}),
     }
 
     const { error } = await updateFarm(farm.id, changes)
@@ -402,7 +418,7 @@ export default function FichaCliente() {
 
       <div className="section-label">Segmento</div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-        {(SEGMENT_OPTIONS || []).map(opt => (
+        {(SEGMENT_OPTIONS || []).filter(opt => !farm.parentStoreId || opt.value !== 'loja').map(opt => (
           <button key={opt.value} type="button" onClick={() => setEditForm(p => ({ ...p, segment: opt.value }))} style={{
             flex: '1 1 auto', padding: '12px 8px', borderRadius: 10,
             border: '1px solid ' + (editForm.segment === opt.value ? 'var(--orange)' : 'var(--line)'),
@@ -415,6 +431,20 @@ export default function FichaCliente() {
         ))}
       </div>
 
+      {farm.segment !== 'loja' && (
+        <div className="store-link-chooser">
+          <label htmlFor="editar-loja-responsavel">Loja responsável pelo atendimento</label>
+          <select id="editar-loja-responsavel" value={editForm.parentStoreId || ''}
+            onChange={e => setEditForm(p => ({ ...p, parentStoreId: e.target.value, segment: e.target.value && p.segment === 'loja' ? 'leite' : p.segment }))}>
+            {!farm.supportOnly && <option value="">Nenhuma · cliente direto</option>}
+            {allFarms.filter(f => f.segment === 'loja' && f.status !== 'inativo' &&
+              (f.sellerId == null || f.sellerId === farm.sellerId)).map(loja => (
+              <option key={loja.id} value={loja.id}>{loja.name}</option>
+            ))}
+          </select>
+          <p>{farm.supportOnly ? 'Fazenda de suporte: troque a loja quando necessário. Para converter em cliente direto, use um fluxo comercial específico.' : 'O vínculo técnico não modifica o cadastro de venda no Ultra.'}</p>
+        </div>
+      )}
       <div className="section-label">Documentos</div>
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>Tipo de documento</label>
@@ -548,6 +578,29 @@ export default function FichaCliente() {
         </div>
       </div>
 
+      {parentStore && (
+        <div className="store-child-path">
+          <div className="store-child-path__intro"><IconBuildingStore size={15}/> ATENDIMENTO VIA LOJA</div>
+          <button type="button" className="store-child-path__parent"
+            onClick={() => navigate('/clientes/' + encodeURIComponent(parentStore.id))}>
+            <span>{parentStore.name}</span><IconArrowRight size={17}/>
+          </button>
+          <p>{farm.supportOnly
+            ? 'Fazenda de suporte técnico. Visitas, checklists e agendamentos são individuais; a compra ocorre por meio da loja.'
+            : 'Fazenda vinculada à loja para acompanhamento. O cadastro comercial permanece independente.'}</p>
+        </div>
+      )}
+      {farm.segment === 'loja' && (
+        <StorePortfolio
+          store={farm}
+          farms={allFarms}
+          visits={visitsHook.visits}
+          checklists={checklistsHook.checklists}
+          appointments={appointments}
+          updateFarm={updateFarm}
+        />
+      )}
+
       {farm.ultraSyncStatus === 'documento_invalido' && (
         <div role="alert" style={{
           display: 'flex', flexDirection: 'column', gap: 8, padding: 14,
@@ -571,7 +624,7 @@ export default function FichaCliente() {
 
       <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
+            gridTemplateColumns: farm.supportOnly ? 'repeat(4, minmax(0, 1fr))' : 'repeat(5, minmax(0, 1fr))',
             gap: 6,
             marginTop: 12
           }}>
@@ -583,19 +636,52 @@ export default function FichaCliente() {
               <IconCalendarPlus size={20} />
               <span>Visita</span>
             </button>
-            <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleCotacao}>
-              <IconFileText size={20} />
-              <span>Cotação</span>
-            </button>
+            {farm.supportOnly ? (
+              <button className="btn btn-ghost" style={actionBtnStyle}
+                onClick={() => navigate('/agenda/novo?farm=' + encodeURIComponent(farm.id))}>
+                <IconCalendarPlus size={20} /><span>Agendar</span>
+              </button>
+            ) : (
+              <button className="btn btn-ghost" style={actionBtnStyle} onClick={handleCotacao}>
+                <IconFileText size={20} /><span>Cotação</span>
+              </button>
+            )}
             <button className="btn btn-ghost" style={actionBtnStyle} onClick={() => navigate('/fazenda-dados/' + farm.id)}>
               <IconChartBar size={20} />
               <span>Dados</span>
             </button>
-            <button className="btn btn-primary" style={actionBtnStyle} onClick={handleVenda}>
-              <IconReceipt size={20} />
-              <span>Venda</span>
-            </button>
+            {!farm.supportOnly && (
+              <button className="btn btn-primary" style={actionBtnStyle} onClick={handleVenda}>
+                <IconReceipt size={20} /><span>Venda</span>
+              </button>
+            )}
           </div>
+
+      {farm.segment !== 'loja' && (
+        <button
+          type="button"
+          onClick={() => navigate('/nutricao?farm=' + encodeURIComponent(farm.id))}
+          style={{
+            display: 'flex', width: '100%', alignItems: 'center', gap: 13,
+            textAlign: 'left', border: '1px solid #352b25', borderRadius: 15,
+            background: 'linear-gradient(130deg,#14120f,#272019)',
+            color: '#fff', marginTop: 12, marginBottom: 14,
+            padding: '15px 16px', cursor: 'pointer', fontFamily: 'inherit'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: '#e87722' }}>
+            <IconChartBar size={21} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <strong style={{ display: 'block', fontSize: 13, fontWeight: 800 }}>Nutrição e TMR</strong>
+            <small style={{ display: 'block', color: '#c5b6ab', fontSize: 10.5, lineHeight: 1.4, marginTop: 4 }}>
+              Abrir lotes, dietas, formulações e relatórios desta fazenda
+            </small>
+          </span>
+          <IconArrowRight size={19} color="#e99457" />
+        </button>
+      )}
 
       <div className="section-label">Produtor</div>
       <div className="card">

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { IconFileText, IconFlask2, IconChevronRight, IconArrowLeft } from '@tabler/icons-react'
 
 function CardOpcao({ icon, titulo, descricao, onClick }) {
@@ -42,11 +43,13 @@ const TITULOS = {
 }
 
 export default function Nutricao() {
+  const [params] = useSearchParams()
+  const linkedFarmId = params.get('farm')
   // null = mostra os dois cards de escolha; 'introducao'/'nutricional' =
   // mostra o Nutrialle Planos dentro de um iframe em tela cheia (mesma
   // origem, appcampo.nutrialle.com.br/planos -- a sessao do Supabase já
   // fica compartilhada sozinha via localStorage, sem precisar de token).
-  const [modo, setModo] = useState(null)
+  const [modo, setModo] = useState(() => linkedFarmId ? 'nutricional' : null)
 
   if (modo) {
     return (
@@ -68,7 +71,7 @@ export default function Nutricao() {
         </div>
         <iframe
           title={TITULOS[modo]}
-          src={`/planos?modo=${modo}&embed=1`}
+          src={`/planos?modo=${modo}&embed=1${linkedFarmId && modo === 'nutricional' ? '&farm_id='+encodeURIComponent(linkedFarmId) : ''}`}
           style={{ flex: 1, width: '100%', border: 'none' }}
         />
       </div>
