@@ -1,3 +1,4 @@
+import '../styles/lojas-carteira.css'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { IconArrowLeft, IconCheck, IconMapPin, IconX, IconCloudOff } from '@tabler/icons-react'
@@ -104,7 +105,12 @@ export default function NovaFazenda() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isProspect = searchParams.get('prospect') === 'true'
-  const { addFarm } = useFarms()
+  const { farms, addFarm } = useFarms()
+  const lojas = farms.filter(f => f.segment === 'loja' && f.status !== 'inativo')
+  const lojaInicial = searchParams.get('loja') || ''
+  const [parentStoreId, setParentStoreId] = useState(lojaInicial)
+  const lojaSelecionada = lojas.find(f => f.id === parentStoreId)
+  const atendimentoViaLoja = Boolean(parentStoreId)
   const { SEGMENT_OPTIONS, STATES, inferRegion } = useConfig()
   const online = useOnlineStatus()
 
@@ -117,6 +123,7 @@ export default function NovaFazenda() {
 
   const [cidadeVerificada, setCidadeVerificada] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   function maskCPF(v) {
     return v.replace(/\D/g,'').slice(0,11)
@@ -144,18 +151,24 @@ export default function NovaFazenda() {
   const documentoValido = validarDocumento(form.docTipo, documentoInformado)
   const mensagemDocumento = documentoInformado ? erroDocumento(form.docTipo, documentoInformado) : null
 
-    const cadastroCompletoValido = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
+  const cadastroCompletoValido = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
     form.city.trim().length >= 2 && (cidadeVerificada || !online) && (!somenteDigitos(documentoInformado) || documentoValido)
 
   // Documento opcional para operação comercial; se preenchido, precisa ser válido.
   // A sincronização com o Ultra deve validar o documento separadamente.
-  const isValid = isProspect
-    ? form.name.trim().length >= 3 && (!somenteDigitos(documentoInformado) || documentoValido)
-    : cadastroCompletoValido
+  const documentoOk = !somenteDigitos(documentoInformado) || documentoValido
+  const isValid = atendimentoViaLoja
+    ? Boolean(lojaSelecionada) && form.segment !== 'loja' && form.name.trim().length >= 3 && documentoOk &&
+      (!form.city.trim() || cidadeVerificada || !online)
+    : isProspect
+      ? form.name.trim().length >= 3 && documentoOk
+      : cadastroCompletoValido
 
   const handleSave = async () => {
     if (!isValid || salvando) return
     setSalvando(true)
+    setSaveError('')
+    try {
     const cpfCnpjConsolidado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
     const cadProConsolidado = form.cadPro?.trim() || null
 
@@ -172,9 +185,14 @@ export default function NovaFazenda() {
       bairro: form.bairro?.trim()||null, complemento: form.complemento?.trim()||null,
       region: inferRegion(form.city, form.state),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
-      prospect: isProspect,
+      prospect: isProspect && !atendimentoViaLoja,
+      parentStoreId: atendimentoViaLoja ? parentStoreId : null,
+      supportOnly: atendimentoViaLoja,
     })
-    navigate(isProspect ? `/prospeccao/nova?farm=${newFarm.id}` : '/clientes')
+    navigate(atendimentoViaLoja ? '/clientes/' + encodeURIComponent(parentStoreId) : isProspect ? `/prospeccao/nova?farm=${newFarm.id}` : '/clientes')
+    } catch (error) {
+      setSaveError(error?.message || 'Não foi possível cadastrar. Tente novamente.')
+    } finally { setSalvando(false) }
   }
 
   return (
@@ -184,14 +202,33 @@ export default function NovaFazenda() {
       </button>
 
       <div className="page-head">
-        <div className="eyebrow">{isProspect ? 'Novo lead' : 'Novo Cliente'}</div>
-        <h2>{isProspect ? 'Cadastrar prospecto' : 'Cadastrar cliente'}</h2>
+        <div className="eyebrow">{atendimentoViaLoja ? 'Suporte técnico · loja' : isProspect ? 'Novo lead' : 'Novo Cliente'}</div>
+        <h2>{atendimentoViaLoja ? 'Fazenda atendida por loja' : isProspect ? 'Cadastrar prospecto' : 'Cadastrar cliente'}</h2>
         <p>
-          {isProspect
-            ? 'Esse cadastro entra como prospecto — vira cliente ativo automaticamente quando a primeira cotação for convertida em venda.'
-            : 'Preencha os dados básicos. Você pode completar depois.'}
+          {atendimentoViaLoja
+            ? 'Cadastre a propriedade para organizar visitas, agenda e checklists. A compra e o faturamento continuam ligados à loja.'
+            : isProspect
+              ? 'Esse cadastro entra como prospecto — vira cliente ativo automaticamente quando a primeira cotação for convertida em venda.'
+              : 'Preencha os dados básicos. Você pode completar depois.'}
         </p>
       </div>
+
+      {!isProspect && lojas.length > 0 && (
+        <div className="store-link-chooser">
+          <label htmlFor="loja-parceira">Loja responsável pelo atendimento</label>
+          <select id="loja-parceira" value={parentStoreId} onChange={e => {
+            setParentStoreId(e.target.value)
+            if (e.target.value && form.segment === 'loja') setField('segment', 'leite')
+          }}>
+            <option value="">Nenhuma — cliente direto da Nutrialle</option>
+            {lojas.map(loja => <option key={loja.id} value={loja.id}>{loja.name}</option>)}
+          </select>
+          {atendimentoViaLoja && <p>Atendimento técnico vinculado à <strong>{lojaSelecionada?.name || 'loja selecionada'}</strong>. Não será enviado como cliente ao Ultra.</p>}
+        </div>
+      )}
+      {atendimentoViaLoja && !lojaSelecionada && (
+        <div className="hint">Carregando a loja responsável. Verifique a seleção antes de salvar.</div>
+      )}
 
       <div className="section-label">Identificação</div>
 
@@ -199,7 +236,7 @@ export default function NovaFazenda() {
         <input value={form.name} onChange={e => setField('name', e.target.value)} placeholder="Ex.: Fazenda Boa Vista" />
       </Field>
 
-      <Field label={isProspect ? 'Nome do produtor' : 'Nome do produtor *'}>
+      <Field label={isProspect || atendimentoViaLoja ? 'Nome do produtor (opcional)' : 'Nome do produtor *'}>
         <input value={form.owner} onChange={e => setField('owner', e.target.value)} placeholder="Ex.: João Marquezini" />
       </Field>
 
@@ -268,7 +305,7 @@ export default function NovaFazenda() {
 
       <Field label={isProspect ? 'Segmento' : 'Segmento *'}>
         <div style={{ display:'flex', gap:6 }}>
-          {SEGMENT_OPTIONS.map(opt => (
+          {SEGMENT_OPTIONS.filter(opt => !atendimentoViaLoja || opt.value !== 'loja').map(opt => (
             <button key={opt.value} type="button" onClick={() => setField('segment', opt.value)} style={{
               flex:1, padding:'12px 8px', borderRadius:10,
               border:'1px solid '+(form.segment===opt.value?'var(--orange)':'var(--line)'),
@@ -288,7 +325,7 @@ export default function NovaFazenda() {
             {STATES.map(s => <option key={s.value} value={s.value}>{s.value}</option>)}
           </select>
         </Field>
-        <Field label={isProspect ? 'Cidade' : 'Cidade *'}>
+        <Field label={isProspect || atendimentoViaLoja ? 'Cidade (opcional)' : 'Cidade *'}>
           <CidadeInput
             value={form.city}
             uf={form.state}
@@ -332,7 +369,9 @@ export default function NovaFazenda() {
       <div className="hint" style={{ marginTop:18 }}>
         {isProspect
           ? 'Para criar uma cotação, somente o nome é obrigatório. Os demais dados podem ser completados depois, antes de transformar a cotação em venda.'
-          : 'O CPF/CNPJ é opcional para o trabalho comercial, mas será necessário para sincronizar o cliente com o Ultra. A cidade é validada pelo IBGE.'}
+          : atendimentoViaLoja
+            ? 'Fazenda de suporte técnico: basta informar o nome. CPF/CNPJ e dados completos são opcionais. Não enviamos esta propriedade ao Ultra; as visitas e checklists ficam registrados normalmente.'
+            : 'O CPF/CNPJ é opcional para o trabalho comercial, mas será necessário para sincronizar o cliente com o Ultra. A cidade é validada pelo IBGE.'}
       </div>
 
       {!online && (
@@ -341,9 +380,10 @@ export default function NovaFazenda() {
         </div>
       )}
 
+      {saveError && <div role="alert" style={{color:'var(--red)',fontSize:12,marginTop:12}}>{saveError}</div>}
       <button className="btn btn-primary" style={{ marginTop:18, opacity:(isValid && !salvando)?1:0.45, cursor:(isValid && !salvando)?'pointer':'not-allowed' }}
         disabled={!isValid || salvando} onClick={handleSave}>
-        <IconCheck size={18} /> {salvando ? 'Salvando...' : (isProspect ? 'Cadastrar prospecto' : 'Cadastrar cliente')}
+        <IconCheck size={18} /> {salvando ? 'Salvando...' : atendimentoViaLoja ? 'Cadastrar fazenda da loja' : (isProspect ? 'Cadastrar prospecto' : 'Cadastrar cliente')}
       </button>
     </div>
   )
