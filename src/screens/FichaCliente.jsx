@@ -231,13 +231,18 @@ export default function FichaCliente() {
 
   const segmentColor = SEGMENT_COLORS[farm.segment]
 
-  const handleRemove = () => {
-    if (!confirmRemove) {
-      setConfirmRemove(true)
+  const handleRemove = async () => {
+    if (allFarms.some(f => f.parentStoreId === farm.id)) {
+      showToast('Esta loja possui fazendas vinculadas. Antes de excluir, reorganize os vínculos da carteira.', 'error', 7000)
       return
     }
-    removeFarm(farm.id)
-    navigate('/clientes')
+    if (!confirmRemove) { setConfirmRemove(true); return }
+    try {
+      await removeFarm(farm.id)
+      navigate('/clientes')
+    } catch (error) {
+      showToast('Não foi possível excluir o cadastro: ' + (error?.message || 'Erro desconhecido'), 'error', 7000)
+    }
   }
 
   const handleVisita = () => {
