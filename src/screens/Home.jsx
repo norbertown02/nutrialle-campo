@@ -177,7 +177,7 @@ export default function Home() {
           </h2>
 
           <p className="home-hero__subtitle">
-            Pronto para mais um dia de resultados.
+            Sua operação comercial, com o essencial em destaque.
           </p>
 
           <div className="home-today-card">
@@ -189,7 +189,7 @@ export default function Home() {
               <strong>
                 <span>{proximosCompromissos.length}</span>
                 {' '}
-                compromisso{proximosCompromissos.length === 1 ? '' : 's'} hoje
+                compromisso{proximosCompromissos.length === 1 ? '' : 's'} em breve
               </strong>
 
               <p>
