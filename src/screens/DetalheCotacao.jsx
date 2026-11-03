@@ -292,11 +292,11 @@ export default function DetalheCotacao() {
     const itensVenda = (quote.items || []).map(it => ({
       productId: it.product_id,
       productName: it.product_name,
-      unit: it.unit,
+      unit: 'kg',
       bagKg: Number(it.bag_kg) || 0,
-      priceKg: Number(it.price_kg) || 0,
-      unitPrice: Number(it.unit_price) || 0,
-      quantity: Number(it.quantity) || 0,
+      priceKg: Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / Number(it.bag_kg || 25)) || 0,
+      unitPrice: Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / Number(it.bag_kg || 25)) || 0,
+      quantity: Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : Number(it.bag_kg || 25)),
       discount: Number(it.discount) || 0,
       subtotal: Number(it.subtotal) || 0,
     }))
@@ -476,32 +476,22 @@ export default function DetalheCotacao() {
       startY: y,
       head: [[
         'Produto',
-        'Qtd.',
-        'Total kg',
+        'Quantidade (kg)',
         'R$/kg',
-        'R$/saco',
         'Subtotal',
       ]],
       body: items.map(item => {
         const produto = produtosPorId[item.product_id]
-        const quantidade = Number(item.quantity || 0)
         const bagKg = Number(item.bag_kg || produto?.bag_kg || 25)
-        const totalKg = quantidade * bagKg
-        const valorSaco = Number(item.unit_price || 0)
-        const valorKg = item.price_kg
-          ? Number(item.price_kg)
-          : produto?.price_kg
-            ? Number(produto.price_kg)
-            : bagKg > 0
-              ? valorSaco / bagKg
-              : 0
+        const totalKg = Number(item.quantity || 0) * (item.unit === 'kg' ? 1 : bagKg)
+        const valorKg = Number(item.price_kg) || (
+          item.unit === 'kg' ? Number(item.unit_price || 0) : Number(item.unit_price || 0) / bagKg
+        ) || Number(produto?.price_kg || 0)
 
         return [
           item.product_name || '—',
-          quantidade.toLocaleString('pt-BR'),
           `${totalKg.toLocaleString('pt-BR')} kg`,
           moeda(valorKg),
-          moeda(valorSaco),
           moeda(item.subtotal),
         ]
       }),
@@ -926,7 +916,7 @@ export default function DetalheCotacao() {
                 </div>
 
                 <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
-                  {it.quantity} {it.unit} × R$ {fmt(it.unit_price)}
+                  {(Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : Number(it.bag_kg || 25))).toLocaleString('pt-BR')} kg × R$ {fmt(Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / Number(it.bag_kg || 25)))}/kg
                   {Number(it.discount) > 0 && (
                     <span
                       style={{
