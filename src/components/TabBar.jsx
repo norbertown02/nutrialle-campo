@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   IconHome, IconUsers, IconFileText, IconCalendar, IconReceipt,
   IconTag, IconFlask2, IconChartBar, IconTarget, IconClipboardList,
-  IconMapPin, IconDots, IconX, IconChevronRight, IconBuildingStore
+  IconMapPin, IconDots, IconX, IconChevronRight, IconBuildingStore, IconSparkles
 } from '@tabler/icons-react'
 import logo from '../assets/logo-cotacao-header.png'
 
@@ -15,6 +15,7 @@ const MAIN = [
 ]
 
 const MORE = [
+  { to: '/ia', label: 'Nutrialle IA (teste)', Icon: IconSparkles, note: 'Chat local em desenvolvimento' },
   { to: '/vendas', label: 'Pedidos', Icon: IconReceipt, note: 'Pedidos e histórico' },
   { to: '/budget', label: 'Previsão de Vendas', Icon: IconTarget, note: 'Planejamento comercial' },
   { to: '/nutricao', label: 'Nutrição', Icon: IconFlask2, note: 'TMR e planos nutricionais' },
@@ -27,9 +28,9 @@ const MORE = [
 
 const GROUPS = [
   { title: 'Visão geral', items: [MAIN[0]] },
-  { title: 'Operação comercial', items: [MAIN[1], MAIN[2], MAIN[3], MORE[0], MORE[1]] },
-  { title: 'Técnico e ferramentas', items: [MORE[2], MORE[3], MORE[4], MORE[6]] },
-  { title: 'Análises', items: [MORE[5], MORE[7]] },
+  { title: 'Operação comercial', items: [MAIN[1], MAIN[2], MAIN[3], MORE[1], MORE[2]] },
+  { title: 'Técnico e ferramentas', items: [MORE[0], MORE[3], MORE[4], MORE[5], MORE[7]] },
+  { title: 'Análises', items: [MORE[6], MORE[8]] },
 ]
 
 const activePath = (pathname, to) =>
