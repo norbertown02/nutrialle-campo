@@ -70,7 +70,6 @@ export default function TabBar() {
       <aside className="campo-sidebar" aria-label="Menu principal">
         <div className="campo-sidebar__brand">
           <img src={logo} alt="Nutrialle" />
-          <span>CAMPO</span>
         </div>
         <nav className="campo-sidebar__nav">
           {GROUPS.map(group => (
