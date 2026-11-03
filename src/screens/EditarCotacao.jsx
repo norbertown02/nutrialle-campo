@@ -71,16 +71,17 @@ export default function EditarCotacao() {
     setLoading(false)
   }
 
-  // Itens de cotações antigas podem não ter bag_kg/price_kg salvos.
-  // Preenchemos a partir do cadastro do produto para manter a
-  // precificação sempre em R$/kg.
+  // Cotações antigas foram registradas em sacos. Convertemos para kg
+  // apenas na edição, preservando a quantidade física e o valor total.
   function normalizarItem(it) {
-    if (it.bag_kg && it.price_kg) return it
     const produto = products.find(p => p.id === it.product_id)
-    if (!produto) return it
-    const bagKg = it.bag_kg || produto.bag_kg || 25
-    const priceKg = it.price_kg || produto.price_kg || (bagKg ? Number(it.unit_price || 0) / bagKg : 0)
-    return calcItem({ ...it, bag_kg: bagKg, price_kg: priceKg })
+    const bagKg = Number(it.bag_kg || produto?.bag_kg || 25)
+    const antigaEmSacos = it.unit !== 'kg'
+    const priceKg = Number(it.price_kg || (antigaEmSacos
+      ? Number(it.unit_price || 0) / bagKg
+      : it.unit_price) || produto?.price_kg || 0)
+    const quantity = Number(it.quantity || 0) * (antigaEmSacos ? bagKg : 1)
+    return calcItem({ ...it, unit: 'kg', bag_kg: bagKg, price_kg: priceKg, quantity })
   }
 
   function recalcularItensComProdutos() {
@@ -91,17 +92,16 @@ export default function EditarCotacao() {
     p.name?.toLowerCase().includes(buscaProd.toLowerCase())
   ).slice(0, 10)
 
-  // A precificação é sempre feita em R$/kg. O preço do saco é sempre
-  // derivado da fórmula: R$/kg * kg do saco. Nunca editamos unit_price
-  // diretamente — ele é sempre recalculado a partir de price_kg e bag_kg.
+  // Mesma regra da venda: quantidade em kg, preço em R$/kg.
+  // O peso da embalagem é apenas informação logística.
   function calcItem(it) {
     const bagKg = Number(it.bag_kg || 0)
     const priceKg = Number(it.price_kg || 0)
     const qty = Number(it.quantity || 0)
     const disc = Number(it.discount || 0)
-    const unitPrice = priceKg * bagKg
+    const unitPrice = priceKg
     const subtotal = unitPrice * qty * (1 - disc / 100)
-    return { ...it, unit_price: unitPrice, subtotal }
+    return { ...it, unit: 'kg', unit_price: unitPrice, subtotal }
   }
 
   function addItem(prod) {
@@ -111,7 +111,7 @@ export default function EditarCotacao() {
     setItems(prev => [...prev, calcItem({
       product_id: prod.id,
       product_name: prod.name,
-      unit: prod.unit || 'saco',
+      unit: 'kg',
       bag_kg: bagKg,
       price_kg: priceKg,
       max_discount: prod.max_discount || 10,
@@ -141,7 +141,7 @@ export default function EditarCotacao() {
       items: items.map(it => ({
         product_id: it.product_id,
         product_name: it.product_name,
-        unit: it.unit,
+        unit: 'kg',
         unit_price: Number(it.unit_price),
         bag_kg: it.bag_kg || 25,
         price_kg: it.price_kg || 0,
@@ -230,8 +230,8 @@ export default function EditarCotacao() {
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
                   <div>
-                    <div style={{fontSize:10,color:'var(--text-faint)',marginBottom:4}}>Qtd ({it.unit})</div>
-                    <input type="number" value={it.quantity} min="1"
+                    <div style={{fontSize:10,color:'var(--text-faint)',marginBottom:4}}>Quantidade (kg)</div>
+                    <input type="number" value={it.quantity} min="0" step="0.01"
                       onChange={e => updateItem(idx, 'quantity', e.target.value)}
                       style={{width:'100%',padding:'6px 8px',fontSize:13}}/>
                   </div>
@@ -252,7 +252,7 @@ export default function EditarCotacao() {
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
                   <div style={{fontSize:11,color:'var(--text-faint)'}}>
-                    {(Number(it.quantity||0) * Number(it.bag_kg||0)).toLocaleString('pt-BR')} kg total · R$ {fmt(it.unit_price)}/saco ({it.bag_kg}kg)
+                    {Number(it.quantity||0).toLocaleString('pt-BR')} kg · R$ {fmt(it.price_kg)}/kg
                   </div>
                   <div style={{fontSize:13,fontWeight:600,color:'var(--orange)'}}>
                     R$ {fmt(it.subtotal)}
