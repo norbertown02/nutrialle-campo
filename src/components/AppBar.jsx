@@ -1,69 +1,71 @@
-import { useState } from 'react'
-import { IconArrowLeft, IconUser, IconLogout, IconChevronDown } from '@tabler/icons-react'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import { IconUser, IconLogout, IconChevronDown, IconX } from '@tabler/icons-react'
 import { useAuth } from '../lib/useAuth.jsx'
 import logo from '../assets/logo-nutrialle.jpg'
 
-export default function AppBar({ title, onBack, action }) {
+const TITLES = [
+  ['/clientes', 'Minha Carteira'],
+  ['/agenda', 'Agenda'],
+  ['/prospeccao', 'Cotações'],
+  ['/vendas', 'Pedidos'],
+  ['/budget', 'Previsão de Vendas'],
+  ['/checklist', 'Checklists'],
+  ['/visitas', 'Visitas'],
+  ['/nutricao', 'Nutrição'],
+  ['/precos', 'Tabela de Preços'],
+  ['/dashboard-vendas', 'Meus Indicadores'],
+  ['/mercado', 'Mercado'],
+  ['/fazenda-dados', 'Dados da Fazenda'],
+  ['/sincronizacao', 'Sincronização'],
+]
+
+export default function AppBar() {
   const { user, logout } = useAuth()
+  const location = useLocation()
   const [menuAberto, setMenuAberto] = useState(false)
+  const page = TITLES.find(([path]) => location.pathname.startsWith(path))?.[1] || 'Visão geral'
+
+  useEffect(() => setMenuAberto(false), [location.pathname])
 
   return (
     <>
-      <div className="appbar">
-        {onBack ? (
-          <button className="bar-action" onClick={onBack}>
-            <IconArrowLeft size={18} />
-          </button>
-        ) : (
-          <img
-            src={logo}
-            alt="Nutrialle"
-            style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }}
-          />
-        )}
-
-        <h1>{title}</h1>
-
-        {action || (
-          <button
-            onClick={() => setMenuAberto(p => !p)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-dim)', padding: '4px 6px' }}
-          >
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <IconUser size={15} color="#1a0d00" />
-            </div>
-            <IconChevronDown size={13} style={{ transition: 'transform 0.2s', transform: menuAberto ? 'rotate(180deg)' : 'none' }} />
-          </button>
-        )}
-      </div>
-
-      {/* Dropdown de perfil */}
+      <header className="appbar campo-appbar">
+        <div className="campo-appbar__identity">
+          <img src={logo} alt="" />
+          <span>NUTRIALLE <b>CAMPO</b></span>
+        </div>
+        <div className="campo-appbar__divider" />
+        <h1>{page}</h1>
+        <button
+          type="button"
+          className="campo-profile-trigger"
+          onClick={() => setMenuAberto(open => !open)}
+          aria-label="Abrir perfil do usuário"
+          aria-expanded={menuAberto}
+          aria-controls="campo-account-menu"
+        >
+          <span className="campo-profile-trigger__avatar"><IconUser size={17} /></span>
+          <IconChevronDown size={14} className={menuAberto ? 'expanded' : ''} />
+        </button>
+      </header>
       {menuAberto && (
         <>
-          {/* Overlay para fechar */}
-          <div onClick={() => setMenuAberto(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />
-
-          <div style={{
-            position: 'absolute', top: 54, right: 12, zIndex: 100,
-            background: 'var(--surface-2)', border: '1px solid var(--line)',
-            borderRadius: 12, minWidth: 200, overflow: 'hidden',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          }}>
-            {/* Info do usuário */}
-            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--line-soft)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{user?.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{user?.email}</div>
-              <div style={{ fontSize: 10, color: 'var(--orange)', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.5 }}>{user?.role}</div>
+          <div className="campo-account-backdrop" onClick={() => setMenuAberto(false)} />
+          <section id="campo-account-menu" className="campo-account-menu" aria-label="Perfil do usuário">
+            <div className="campo-account-menu__heading">
+              <span>MINHA CONTA</span>
+              <button onClick={() => setMenuAberto(false)} aria-label="Fechar perfil"><IconX size={17}/></button>
             </div>
-
-            {/* Sair */}
-            <button
-              onClick={() => { setMenuAberto(false); logout() }}
-              style={{ width: '100%', padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--red)', fontSize: 13, fontFamily: 'inherit' }}
-            >
-              <IconLogout size={15} /> Sair da conta
+            <div className="campo-account-menu__user">
+              <strong>{user?.name || 'Usuário Nutrialle'}</strong>
+              <small>{user?.email}</small>
+              {user?.role && <em>{user.role}</em>}
+            </div>
+            <button type="button" className="campo-account-menu__logout" onClick={() => { setMenuAberto(false); logout() }}>
+              <IconLogout size={18} /> Sair da conta
             </button>
-          </div>
+          </section>
         </>
       )}
     </>
