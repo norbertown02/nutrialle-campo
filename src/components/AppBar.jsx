@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { IconUser, IconLogout, IconChevronDown, IconX } from '@tabler/icons-react'
 import { useAuth } from '../lib/useAuth.jsx'
-import logo from '../assets/logo-nutrialle.jpg'
+import logo from '../assets/logo-cotacao-header.png'
 
 const TITLES = [
   ['/clientes', 'Minha Carteira'],
@@ -32,8 +32,7 @@ export default function AppBar() {
     <>
       <header className="appbar campo-appbar">
         <div className="campo-appbar__identity">
-          <img src={logo} alt="" />
-          <span>NUTRIALLE <b>CAMPO</b></span>
+          <img src={logo} alt="Nutrialle" />
         </div>
         <div className="campo-appbar__divider" />
         <h1>{page}</h1>
