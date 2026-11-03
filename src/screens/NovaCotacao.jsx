@@ -61,17 +61,16 @@ export default function NovaCotacao() {
     p.name?.toLowerCase().includes(buscaProd.toLowerCase())
   ).slice(0, 10)
 
-  // A precificação é sempre feita em R$/kg. O preço do saco é sempre
-  // derivado da fórmula: R$/kg * kg do saco. Nunca editamos unit_price
-  // diretamente — ele é sempre recalculado a partir de price_kg e bag_kg.
+  // Mesma regra da venda: quantidade em kg, preço em R$/kg.
+  // O peso da embalagem é apenas informação logística.
   function calcItem(it) {
     const bagKg = Number(it.bag_kg || 0)
     const priceKg = Number(it.price_kg || 0)
     const qty = Number(it.quantity || 0)
     const disc = Number(it.discount || 0)
-    const unitPrice = priceKg * bagKg
+    const unitPrice = priceKg
     const subtotal = unitPrice * qty * (1 - disc / 100)
-    return { ...it, unit_price: unitPrice, subtotal }
+    return { ...it, unit: 'kg', unit_price: unitPrice, subtotal }
   }
 
   function addItem(prod) {
@@ -81,7 +80,7 @@ export default function NovaCotacao() {
     setItems(prev => [...prev, calcItem({
       product_id: prod.id,
       product_name: prod.name,
-      unit: prod.unit || 'saco',
+      unit: 'kg',
       bag_kg: bagKg,
       price_kg: priceKg,
       max_discount: prod.max_discount || 10,
@@ -122,7 +121,7 @@ export default function NovaCotacao() {
       items: items.map(it => ({
         product_id: it.product_id,
         product_name: it.product_name,
-        unit: it.unit,
+        unit: 'kg',
         unit_price: Number(it.unit_price),
         bag_kg: it.bag_kg || 25,
         price_kg: it.price_kg || 0,
@@ -246,8 +245,8 @@ export default function NovaCotacao() {
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
                   <div>
-                    <div style={{fontSize:10,color:'var(--text-faint)',marginBottom:4}}>Qtd ({it.unit})</div>
-                    <input type="number" value={it.quantity} min="1"
+                    <div style={{fontSize:10,color:'var(--text-faint)',marginBottom:4}}>Quantidade (kg)</div>
+                    <input type="number" value={it.quantity} min="0" step="0.01"
                       onChange={e => updateItem(idx, 'quantity', e.target.value)}
                       style={{width:'100%',padding:'6px 8px',fontSize:13}}/>
                   </div>
@@ -268,7 +267,7 @@ export default function NovaCotacao() {
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
                   <div style={{fontSize:11,color:'var(--text-faint)'}}>
-                    {(Number(it.quantity||0) * Number(it.bag_kg||0)).toLocaleString('pt-BR')} kg total · R$ {fmt(it.unit_price)}/saco ({it.bag_kg}kg)
+                    {Number(it.quantity||0).toLocaleString('pt-BR')} kg · R$ {fmt(it.price_kg)}/kg
                   </div>
                   <div style={{fontSize:13,fontWeight:600,color:'var(--orange)'}}>
                     R$ {fmt(it.subtotal)}
