@@ -1,0 +1,82 @@
+/* Supervisão comercial — mesma linguagem do Dashboard do Campo, responsiva */
+.team-page { width: 100%; max-width: 100%; min-width: 0; overflow-x: clip; padding-bottom: 48px; }
+.team-page, .team-page * { box-sizing: border-box; }
+.team-hero { border-radius: 0 0 26px 26px; background: linear-gradient(115deg,#131313 0%,#21201e 55%,#8c3e0c 100%); color: #fff; padding: 28px clamp(18px,4vw,42px) 38px; }
+.team-hero-inner { max-width: 1260px; margin: auto; min-width: 0; }
+.team-back { display: inline-flex; gap: 8px; align-items: center; color: #e7ded7; border: 0; background: none; cursor: pointer; padding: 5px 0 20px; font-size: 13px; }
+.team-eyebrow { display: flex; gap: 8px; align-items: center; font-size: 10px; letter-spacing: 1.8px; font-weight: 700; color: #ffaf71; margin-bottom: 8px; }
+.team-hero h1 { font-size: clamp(24px,4vw,38px); line-height: 1.15; font-weight: 650; letter-spacing: -.6px; margin: 0; overflow-wrap: anywhere; }
+.team-hero p { font-size: 13px; color: #ded5cf; max-width: 560px; margin: 10px 0 18px; }
+.team-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.team-period-tabs { display: flex; border: 1px solid #65605b; border-radius: 12px; padding: 4px; background: #24211f; }
+.team-period-tabs button { background: transparent; border: 0; border-radius: 9px; color: #ddd; padding: 9px 15px; font-size: 12px; cursor: pointer; }
+.team-period-tabs button.active { background: #e87722; color: #1f110a; font-weight: 700; }
+.team-month-label { display: grid; gap: 4px; font-size: 10px; color: #ddd; }
+.team-month-label input { max-width: 180px; min-height: 38px; padding: 8px 10px; border-radius: 10px; color: #222; border: 1px solid #c9bfb6; background: #fff; }
+.team-filter-return { background: #39271b; color: white; border: 1px solid #7e5c45; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.team-content { max-width: 1300px; margin: 0 auto; padding: 22px clamp(14px,3vw,34px); min-width: 0; }
+.team-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+.team-stat { display: flex; gap: 13px; align-items: flex-start; min-width: 0; background: #fff; border: 1px solid #eae4df; border-radius: 18px; padding: 18px; box-shadow: 0 6px 22px #25190e0a; }
+.team-stat-icon { flex: 0 0 43px; width: 43px; height: 43px; display: grid; place-items: center; background: #fff3e9; color: #e87722; border-radius: 13px; }
+.team-stat-content { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
+.team-stat-label { color: #776e66; font-size: 11px; }
+.team-stat strong { font-size: clamp(17px,1.9vw,24px); color: #1c1c1c; overflow-wrap: anywhere; letter-spacing: -.5px; line-height: 1.2; }
+.team-stat small { font-size: 10px; color: #827d77; }
+.team-charts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin-bottom: 16px; }
+.team-charts:has(> :only-child) { grid-template-columns: minmax(0,1fr); }
+.team-card { min-width: 0; border: 1px solid #eae4df; background: #fff; border-radius: 20px; padding: 21px; box-shadow: 0 6px 22px #25190e09; margin-bottom: 16px; }
+.team-charts .team-card { margin-bottom: 0; }
+.team-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 13px; }
+.team-card-heading > div { min-width: 0; }
+.team-card-heading span { font-size: 9px; color: #e87722; font-weight: 750; letter-spacing: 1.5px; }
+.team-card-heading h2 { color: #202020; font-size: 19px; font-weight: 650; letter-spacing: -.3px; margin: 5px 0 0; }
+.team-card-heading h2 small { font-size: 13px; color: #777; }
+.team-chart-holder { width: 100%; min-width: 0; height: 255px; }
+.team-search { display: flex; align-items: center; gap: 8px; max-width: 360px; border: 1px solid #e3ded8; border-radius: 11px; background: #faf9f7; padding: 9px 12px; margin: 4px 0 12px; color: #827b75; }
+.team-search input { min-width: 0; width: 100%; background: none; border: 0; outline: none; font-size: 13px; color: #282828; }
+.team-members { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+.team-member { display: flex; align-items: center; min-width: 0; width: 100%; text-align: left; gap: 11px; background: #fbfaf9; border: 1px solid #eeeae6; border-radius: 14px; padding: 13px; cursor: pointer; color: inherit; transition: border-color .15s, background .15s; }
+.team-member:hover, .team-member:focus-visible { background: #fff6ee; border-color: #e87722; outline: none; }
+.team-avatar { flex: 0 0 41px; width: 41px; height: 41px; border-radius: 13px; display: grid; place-items: center; color: #d16919; background: #ffecde; font-weight: 750; font-size: 13px; }
+.team-member-info { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.team-member-info strong { font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+.team-member-info small { color: #85807a; font-size: 10px; line-height: 1.4; }
+.team-member-value { flex: 0 1 auto; font-size: 12px; color: #151515; font-weight: 700; text-align: right; white-space: nowrap; }
+.team-member-arrow { flex: 0 0 auto; color: #e87722; }
+.team-tabs { display: flex; flex-wrap: wrap; gap: 7px; padding: 5px 0 16px; }
+.team-tabs button { display: flex; align-items: center; gap: 7px; border: 1px solid #e7e2dc; border-radius: 10px; background: #faf9f8; color: #5b5550; padding: 9px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.team-tabs button.active { border-color: #e87722; background: #fff1e4; color: #b94e06; }
+.team-tabs button span { background: #eee9e5; border-radius: 7px; font-size: 10px; padding: 2px 5px; }
+.team-activity-list { display: grid; gap: 8px; }
+.team-activity { border: 1px solid #ece9e4; border-radius: 13px; background: #fcfbfa; padding: 13px 15px; min-width: 0; }
+.team-activity-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.team-activity-top strong { min-width: 0; font-size: 13px; color: #222; overflow-wrap: anywhere; }
+.team-activity-top span { font-size: 11px; color: #827d77; white-space: nowrap; }
+.team-activity-meta { font-size: 11px; color: #77716a; margin-top: 5px; }
+.team-separator { padding: 0 5px; }
+.team-activity-amount { margin-top: 8px; font-weight: 700; font-size: 13px; color: #b7540d; }
+.team-activity-notes { margin: 8px 0 0; color: #45403c; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.55; }
+.team-empty, .team-feedback { color: #81776e; font-size: 13px; padding: 24px 10px; text-align: center; }
+.team-feedback { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; background: white; border-radius: 15px; }
+@media(max-width:1100px) { .team-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:760px) {
+  .team-charts,.team-members { grid-template-columns: minmax(0,1fr); }
+  .team-card { padding: 16px; }
+  .team-chart-holder { height: 235px; }
+}
+@media(max-width:480px) {
+  .team-hero { padding: 20px 16px 27px; }
+  .team-content { padding: 15px 12px 30px; }
+  .team-stats { gap: 9px; }
+  .team-stat { display: block; padding: 13px 12px; border-radius: 15px; min-height: 116px; }
+  .team-stat-icon { width: 35px; height: 35px; margin-bottom: 9px; }
+  .team-stat-icon svg { width: 19px; height: 19px; }
+  .team-stat strong { font-size: 18px; }
+  .team-card-heading h2 { font-size: 17px; }
+  .team-member { gap: 8px; padding: 10px; }
+  .team-member-value { font-size: 11px; }
+  .team-member-arrow { width: 15px; }
+  .team-chart-holder { height: 220px; }
+  .team-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .team-tabs button { justify-content: space-between; }
+}
