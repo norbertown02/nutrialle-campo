@@ -243,106 +243,20 @@ export default function DetalheCotacao() {
     showToast('Validade renovada por mais 15 dias', 'success')
   }
 
-  async function converterEmVenda() {
+  // A conversão só prepara o pedido: o vendedor completa previsão de entrega,
+  // método de pagamento e demais campos obrigatórios na tela de Nova Venda.
+  // A cotação permanece aberta até a gravação bem-sucedida do pedido.
+  function converterEmVenda() {
+    if (atualizando || !['rascunho', 'enviada'].includes(quote?.status)) return
+    if (!quote?.items?.length) {
+      showToast('Adicione produtos à cotação antes de converter em venda.', 'error')
+      return
+    }
     if (farm?.support_only) {
       showToast('Esta fazenda recebe suporte por meio de uma loja. A venda deve ser registrada no cliente comprador.', 'error', 7500)
       return
     }
-    const camposFaltando = []
-
-    // CAD/PRO é o Cadastro de Produtor Rural — só se aplica a pessoa física
-    // (CPF). Cliente pessoa jurídica (CNPJ) não tem CAD/PRO, então não faz
-    // sentido travar a venda por isso. Usamos doc_tipo/cnpj quando
-    // disponíveis e, como reforço para cadastros antigos que só têm
-    // cpf_cnpj preenchido, inferimos pelo número de dígitos (CNPJ tem 14).
-    const digitosDoc = (farm?.cpf_cnpj || '').replace(/\D/g, '')
-    const isPessoaJuridica = farm?.doc_tipo === 'cnpj' || !!farm?.cnpj || digitosDoc.length === 14
-
-    if (!farm?.cpf_cnpj) camposFaltando.push('CPF/CNPJ')
-    // A IE é opcional no cadastro e na cotação, mas obrigatória para emitir venda com CNPJ.
-    if (isPessoaJuridica && String(farm?.ie || '').trim().length < 2) camposFaltando.push('Inscrição Estadual (IE)')
-    if (!isPessoaJuridica && !farm?.cad_pro) camposFaltando.push('CAD/PRO')
-    if (!farm?.street && !farm?.address) camposFaltando.push('Endereço')
-    if (!farm?.city) camposFaltando.push('Município')
-    if (!farm?.phone) camposFaltando.push('Telefone')
-
-    if (camposFaltando.length > 0) {
-      showToast(
-        'Para converter em venda, complete os dados da fazenda:\n• ' +
-          camposFaltando.join('\n• ') +
-          '\n\nAcesse a ficha do cliente e preencha os dados faltantes.',
-        'error',
-        9000
-      )
-      return
-    }
-
-    const confirmou = await confirmDialog('Converter esta cotação em venda?', {
-      title: 'Converter em venda', confirmLabel: 'Converter',
-    })
-    if (!confirmou) return
-
-    setAtualizando(true)
-
-    // A cotação guarda os itens em snake_case (product_id, unit_price...),
-    // igual as outras tabelas do Supabase. A venda usa camelCase
-    // (productId, unitPrice...) porque é o formato que NovaVenda.jsx e
-    // toda a tela de vendas espera. Sem essa conversão, uma venda criada
-    // por conversão de cotação fica com nome de produto e preço em
-    // branco na listagem — o formato salvo não bate com o que a tela lê.
-    const itensVenda = (quote.items || []).map(it => ({
-      productId: it.product_id,
-      productName: it.product_name,
-      unit: 'kg',
-      bagKg: Number(it.bag_kg) || 0,
-      priceKg: Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / Number(it.bag_kg || 25)) || 0,
-      unitPrice: Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / Number(it.bag_kg || 25)) || 0,
-      quantity: Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : Number(it.bag_kg || 25)),
-      discount: Number(it.discount) || 0,
-      subtotal: Number(it.subtotal) || 0,
-    }))
-
-    // Passa pelo mesmo addSale() que a venda direta usa — assim os dois
-    // caminhos de criar uma venda (direto ou por conversão de cotação)
-    // seguem exatamente a mesma lógica, e o e-mail automático para o
-    // administrativo dispara nos dois casos.
-    const { error: errVenda } = await addSale({
-      farmId: quote.farm_id,
-      saleDate: new Date().toISOString().split('T')[0],
-      items: itensVenda,
-      total: quote.total,
-      paymentTermId: quote.payment_term,
-      paymentTermLabel: quote.payment_term_label,
-      frete: quote.frete || 'CIF',
-      frete_label: quote.frete_label || 'CIF - Frete por conta do vendedor',
-      needsApproval: !!quote.needs_approval,
-      notes: quote.notes || '',
-    })
-
-    if (errVenda) {
-      showToast('Erro ao criar venda: ' + errVenda.message, 'error')
-      setAtualizando(false)
-      return
-    }
-
-    await supabase
-      .from('quotes')
-      .update({
-        status: 'convertida',
-        converted_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-
-    if (farm?.prospect) {
-      await supabase
-        .from('farms')
-        .update({ prospect: false })
-        .eq('id', quote.farm_id)
-    }
-
-    setQuote(prev => ({ ...prev, status: 'convertida' }))
-    setAtualizando(false)
-    navigate('/vendas')
+    navigate('/vendas/nova?quote=' + encodeURIComponent(id))
   }
 
   function buildPDF() {
