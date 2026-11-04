@@ -8,6 +8,7 @@ function fromDB(row) {
   return {
     id: row.id,
     farmId: row.farm_id,
+    sourceQuoteId: row.source_quote_id,
     saleDate: row.sale_date,
     deliveryDate: row.delivery_date,
     items: row.items,
@@ -34,7 +35,7 @@ function fromDB(row) {
 }
 
 const SALE_COLUMNS = [
-  'id','farm_id','sale_date','delivery_date','items','total','payment_term','payment_term_label',
+  'id','farm_id','source_quote_id','sale_date','delivery_date','items','total','payment_term','payment_term_label',
   'payment_method_id','payment_method_label','price_table_id','price_table_label','frete','frete_label',
   'needs_approval','comissao_pct','notes','integration_status','integration_attempts','ultra_error',
   'ultra_order_id','ultra_order_number','ultra_status','created_at'
@@ -102,6 +103,7 @@ export function useSales() {
     const item = {
       id: 's' + Date.now(),
       farm_id: saleData.farmId,
+      source_quote_id: saleData.sourceQuoteId || null,
       sale_date: saleData.saleDate,
       delivery_date: saleData.deliveryDate || null,
       items: saleData.items,
