@@ -1,100 +1,249 @@
 import { useEffect, useMemo, useState } from 'react'
-import { IconUsers, IconCalendarCheck, IconReceipt, IconFileText, IconCalendar, IconArrowLeft } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
+import {
+  IconArrowLeft, IconUsersGroup, IconCalendarCheck, IconReceipt,
+  IconFileText, IconCalendar, IconChevronRight, IconArrowUpRight,
+  IconChartBar, IconRefresh, IconSearch,
+} from '@tabler/icons-react'
+import {
+  ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis,
+  Tooltip, BarChart, Bar,
+} from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
+import '../styles/dashboard-vendas-v2.css'
+import '../styles/minha-equipe.css'
 
-const money = n => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+const INT = new Intl.NumberFormat('pt-BR')
+const money = n => BRL.format(Number(n || 0))
+const compact = n => {
+  const v = Number(n || 0)
+  return Math.abs(v) >= 1000000 ? `R$ ${(v / 1000000).toFixed(1).replace('.', ',')} mi`
+    : Math.abs(v) >= 1000 ? `R$ ${(v / 1000).toFixed(1).replace('.', ',')} mil` : money(v)
+}
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const dateLabel = s => s ? new Date(String(s).slice(0, 10) + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
-const today = () => new Date().toLocaleDateString('en-CA')
-const monthStart = () => today().slice(0, 7) + '-01'
 const empty = { members: [], visits: [], sales: [], quotes: [], appointments: [] }
+const activityTabs = [
+  { key: 'visits', label: 'Visitas', Icon: IconCalendarCheck },
+  { key: 'quotes', label: 'Cotações', Icon: IconFileText },
+  { key: 'sales', label: 'Pedidos', Icon: IconReceipt },
+  { key: 'appointments', label: 'Agenda', Icon: IconCalendar },
+]
+const sum = (rows, field) => rows.reduce((acc, row) => acc + Number(row[field] || 0), 0)
+const statusText = value => String(value || 'Registrado').replaceAll('_', ' ')
+
+function chartSeries(sales, start, end) {
+  const totals = new Map()
+  sales.forEach(s => {
+    const day = String(s.date || '').slice(0, 10)
+    totals.set(day, (totals.get(day) || 0) + Number(s.total || 0))
+  })
+  const result = []
+  const cursor = new Date(start + 'T12:00:00')
+  const last = new Date(end + 'T12:00:00')
+  if (Number.isNaN(cursor.valueOf()) || Number.isNaN(last.valueOf())) return []
+  while (cursor <= last && result.length < 370) {
+    const day = iso(cursor)
+    result.push({ day, label: cursor.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }), valor: totals.get(day) || 0 })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  if (result.length > 65) {
+    const buckets = new Map()
+    result.forEach(item => {
+      const key = item.day.slice(0, 7)
+      buckets.set(key, (buckets.get(key) || 0) + item.valor)
+    })
+    return [...buckets].map(([key, valor]) => ({ day: key, label: new Date(key + '-15T12:00:00').toLocaleDateString('pt-BR', { month: 'short' }), valor }))
+  }
+  return result
+}
+
+function Stat({ label, value, Icon, sub }) {
+  return <article className="team-stat">
+    <span className="team-stat-icon"><Icon size={22} stroke={1.7}/></span>
+    <div className="team-stat-content">
+      <span className="team-stat-label">{label}</span>
+      <strong>{value}</strong>
+      {sub && <small>{sub}</small>}
+    </div>
+  </article>
+}
+
+function Activity({ row, type, owner }) {
+  const titles = { visits: 'Visita', sales: 'Pedido', quotes: 'Cotação', appointments: 'Compromisso' }
+  return <article className="team-activity">
+    <div className="team-activity-top">
+      <strong>{row.client || row.title || titles[type]}</strong>
+      <span>{dateLabel(row.date)}</span>
+    </div>
+    <div className="team-activity-meta">
+      <span>{owner}</span>
+      <span className="team-separator">·</span>
+      <span>{statusText(row.outcome || row.status)}</span>
+    </div>
+    {(type === 'sales' || type === 'quotes') && <div className="team-activity-amount">{money(row.total)}{type === 'sales' && Number(row.quantity_kg) > 0 ? ` · ${INT.format(Number(row.quantity_kg))} kg` : ''}</div>}
+    {type === 'visits' && row.notes && <p className="team-activity-notes">{row.notes}</p>}
+  </article>
+}
 
 export default function MinhaEquipe() {
-  const navigate = useNavigate()
   const { user } = useAuth()
-  const [start, setStart] = useState(monthStart)
-  const [end, setEnd] = useState(today)
-  const [seller, setSeller] = useState('todos')
+  const navigate = useNavigate()
+  const now = new Date()
+  const [mode, setMode] = useState('month')
+  const [month, setMonth] = useState(iso(now).slice(0, 7))
+  const [selectedId, setSelectedId] = useState(null)
   const [tab, setTab] = useState('visits')
-  const [data, setData] = useState(empty)
+  const [search, setSearch] = useState('')
+  const [payload, setPayload] = useState(empty)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const period = useMemo(() => {
+    const [year, monthIndex] = month.split('-').map(Number)
+    const first = mode === 'year' ? new Date(year, 0, 1) : new Date(year, monthIndex - 1, 1)
+    const last = mode === 'year' ? new Date(year, 11, 31) : new Date(year, monthIndex, 0)
+    return { start: iso(first), end: iso(last) }
+  }, [mode, month])
+
   useEffect(() => {
-    let mounted = true
+    let active = true
     if (!user?.id) return
-    async function load() {
+    const fetchTeam = async () => {
       setLoading(true)
       setError('')
-      const { data: response, error: err } = await supabase.rpc('campo_my_team', { p_start: start, p_end: end })
-      if (!mounted) return
-      if (err) {
-        setData(empty)
-        setError('Não foi possível consultar a equipe. Tente novamente.')
+      const { data, error: queryError } = await supabase.rpc('campo_my_team', { p_start: period.start, p_end: period.end })
+      if (!active) return
+      if (queryError) {
+        setPayload(empty)
+        setError('Não foi possível carregar os indicadores. Tente novamente.')
       } else {
-        setData(response || empty)
+        setPayload(data || empty)
       }
       setLoading(false)
     }
-    load()
-    return () => { mounted = false }
-  }, [start, end, user?.id])
+    fetchTeam()
+    return () => { active = false }
+  }, [period.start, period.end, user?.id])
 
-  const members = data.members || []
-  const visible = useMemo(() => {
+  const members = payload.members || []
+  const selected = members.find(person => person.id === selectedId)
+  const rows = useMemo(() => {
     const result = {}
-    for (const type of ['visits', 'sales', 'quotes', 'appointments']) {
-      result[type] = (data[type] || []).filter(item => seller === 'todos' || item.seller_id === seller)
-    }
+    activityTabs.forEach(({ key }) => {
+      result[key] = (payload[key] || []).filter(record => !selectedId || record.seller_id === selectedId)
+    })
     return result
-  }, [data, seller])
-  const memberName = id => members.find(m => m.id === id)?.name || 'Vendedor'
-  const cards = [
-    { label: 'Visitas', value: visible.visits.length, Icon: IconCalendarCheck },
-    { label: 'Pedidos', value: visible.sales.length, Icon: IconReceipt },
-    { label: 'Valor em pedidos', value: money(visible.sales.reduce((sum, item) => sum + Number(item.total || 0), 0)), Icon: IconReceipt },
-    { label: 'Cotações', value: visible.quotes.length, Icon: IconFileText },
-    { label: 'Agenda', value: visible.appointments.length, Icon: IconCalendar },
-  ]
-  const tabs = [{ key: 'visits', label: 'Visitas' }, { key: 'sales', label: 'Pedidos' }, { key: 'quotes', label: 'Cotações' }, { key: 'appointments', label: 'Agenda' }]
+  }, [payload, selectedId])
+  const names = useMemo(() => new Map(members.map(person => [person.id, person.name])), [members])
+  const total = sum(rows.sales, 'total')
+  const quotesConverted = rows.quotes.filter(q => String(q.status || '').toLowerCase().includes('convert')).length
+  const series = useMemo(() => chartSeries(rows.sales, period.start, period.end), [rows.sales, period])
+  const ranking = useMemo(() => members.map(person => {
+    const sales = (payload.sales || []).filter(s => s.seller_id === person.id)
+    return {
+      ...person,
+      orders: sales.length,
+      value: sum(sales, 'total'),
+      visits: (payload.visits || []).filter(v => v.seller_id === person.id).length,
+      quotes: (payload.quotes || []).filter(q => q.seller_id === person.id).length,
+    }
+  }).sort((a, b) => b.value - a.value), [members, payload])
+  const filtered = ranking.filter(person => person.name.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')))
+  const chartData = ranking.map(p => ({ name: p.name.split(' ')[0], value: p.value, fullName: p.name }))
 
-  return <main className="home-pro" style={{ paddingBottom: 36 }}>
-    <section className="home-hero">
-      <div className="home-hero__content">
-        <button onClick={() => navigate('/')} style={{ background: 'transparent', border: 0, color: 'inherit', display: 'flex', alignItems: 'center', gap: 6, padding: '0 0 18px', cursor: 'pointer' }}><IconArrowLeft size={18} /> Voltar</button>
-        <div className="home-eyebrow">GESTÃO COMERCIAL</div>
-        <h2>Minha <span>Equipe</span></h2>
-        <p className="home-hero__subtitle">Resultados consolidados dos profissionais sob sua supervisão.</p>
-      </div>
-    </section>
-    <section className="home-panel">
-      <div className="home-kpi-card" style={{ marginBottom: 16 }}>
-        <label style={{ display: 'block', fontWeight: 700, marginBottom: 8 }}>Período e profissional</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <label style={{ flex: '1 1 130px' }}>De <input aria-label="Início" type="date" value={start} max={end} onChange={e => setStart(e.target.value)} style={{ display: 'block', width: '100%', padding: 9, borderRadius: 8 }} /></label>
-          <label style={{ flex: '1 1 130px' }}>Até <input aria-label="Fim" type="date" value={end} min={start} onChange={e => setEnd(e.target.value)} style={{ display: 'block', width: '100%', padding: 9, borderRadius: 8 }} /></label>
-          <label style={{ flex: '1 1 200px' }}>Profissional <select value={seller} onChange={e => setSeller(e.target.value)} style={{ display: 'block', width: '100%', padding: 9, borderRadius: 8 }}><option value="todos">Toda a equipe</option>{members.map(m => <option value={m.id} key={m.id}>{m.name}</option>)}</select></label>
-        </div>
-      </div>
-      {error && <p role="alert" style={{ color: '#a33' }}>{error}</p>}
-      {loading ? <p>Carregando informações da equipe...</p> : members.length === 0 ? <div className="home-kpi-card"><IconUsers size={24}/><h3>Nenhum promotor vinculado</h3><p>Os vínculos de supervisão são configurados pela administração.</p></div> : <>
-        <div className="home-kpi-grid">
-          {cards.map(card => <article className="home-kpi-card" key={card.label}><div className="home-kpi-card__icon"><card.Icon size={21}/></div><div className="home-kpi-card__label">{card.label}</div><div className="home-kpi-card__value home-kpi-card__value--small">{card.value}</div></article>)}
-        </div>
-        <div className="home-section-title" style={{ marginTop: 20 }}>Atividade comercial</div>
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 0' }}>{tabs.map(t => <button type="button" key={t.key} onClick={() => setTab(t.key)} style={{ border: tab === t.key ? '1px solid #e9772b' : '1px solid #ddd', borderRadius: 10, background: tab === t.key ? 'rgba(233,119,43,.12)' : 'transparent', color: 'inherit', padding: '9px 13px', fontWeight: 650 }}>{t.label}</button>)}</div>
-        {visible[tab].length === 0 ? <div className="home-kpi-card">Nenhum registro no período selecionado.</div> : visible[tab].map(item => <article key={item.id} className="home-kpi-card" style={{ marginBottom: 9 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
-            <strong>{item.client || item.title || 'Registro comercial'}</strong>
-            <small>{dateLabel(item.date)}</small>
+  return <main className="dash-page team-page">
+    <header className="dash-hero team-hero">
+      <div className="team-hero-inner">
+        <button type="button" className="team-back" onClick={() => selectedId ? setSelectedId(null) : navigate('/')}>
+          <IconArrowLeft size={18}/> {selectedId ? 'Voltar à equipe' : 'Voltar'}
+        </button>
+        <span className="team-eyebrow"><IconUsersGroup size={17}/> SUPERVISÃO COMERCIAL</span>
+        <h1>{selected ? selected.name : 'Minha Equipe'}</h1>
+        <p>{selected ? 'Visão individual de visitas, cotações e pedidos.' : 'Resultados consolidados e desempenho dos profissionais da sua equipe.'}</p>
+        <div className="team-filters">
+          <div className="team-period-tabs" role="group" aria-label="Período">
+            <button type="button" className={mode === 'month' ? 'active' : ''} onClick={() => setMode('month')}>Mês</button>
+            <button type="button" className={mode === 'year' ? 'active' : ''} onClick={() => setMode('year')}>Ano</button>
           </div>
-          <div style={{ fontSize: 13, opacity: .75, marginTop: 5 }}>{memberName(item.seller_id)} · {item.outcome || item.status || 'Registrado'}</div>
-          {tab === 'sales' && <strong style={{ display: 'block', marginTop: 8 }}>{money(item.total)}{Number(item.quantity_kg) > 0 ? ' · ' + Number(item.quantity_kg).toLocaleString('pt-BR') + ' kg' : ''}</strong>}
-          {tab === 'quotes' && <strong style={{ display: 'block', marginTop: 8 }}>{money(item.total)}</strong>}
-          {tab === 'visits' && item.notes && <p style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{item.notes}</p>}
-        </article>)}
-      </>}
-    </section>
+          <label className="team-month-label">Período
+            <input aria-label="Mês de referência" type="month" value={month} onChange={e => { if (e.target.value) setMonth(e.target.value) }} />
+          </label>
+          {selected && <button className="team-filter-return" type="button" onClick={() => setSelectedId(null)}><IconUsersGroup size={16}/> Equipe completa</button>}
+        </div>
+      </div>
+    </header>
+
+    <div className="team-content">
+      {error && <div className="team-feedback" role="alert">{error}</div>}
+      {loading ? <div className="team-feedback">Carregando indicadores...</div> : members.length === 0
+        ? <div className="team-feedback"><IconUsersGroup size={28}/> Nenhuma equipe vinculada. Peça à administração para cadastrar os vendedores do supervisor.</div>
+        : <>
+          <section className="team-stats" aria-label="Indicadores comerciais">
+            <Stat label="Pedidos" value={compact(total)} Icon={IconReceipt} sub={`${INT.format(rows.sales.length)} pedidos no período`}/>
+            <Stat label="Visitas realizadas" value={INT.format(rows.visits.length)} Icon={IconCalendarCheck}/>
+            <Stat label="Cotações" value={INT.format(rows.quotes.length)} Icon={IconFileText} sub={`${quotesConverted} convertidas`}/>
+            <Stat label="Volume em pedidos" value={`${INT.format(sum(rows.sales, 'quantity_kg'))} kg`} Icon={IconChartBar}/>
+          </section>
+
+          <div className="team-charts">
+            <section className="team-card">
+              <div className="team-card-heading"><div><span>RESULTADO COMERCIAL</span><h2>Evolução de pedidos</h2></div><IconArrowUpRight size={20}/></div>
+              <div className="team-chart-holder">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={series} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
+                    <defs><linearGradient id="team-area-gradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#e87722" stopOpacity={0.22}/><stop offset="100%" stopColor="#e87722" stopOpacity={0.015}/></linearGradient></defs>
+                    <CartesianGrid vertical={false} stroke="#eee8e2" strokeDasharray="3 4"/>
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#89837d' }} interval="preserveStartEnd" axisLine={false} tickLine={false} minTickGap={25}/>
+                    <YAxis tickFormatter={compact} width={78} tick={{ fontSize: 10, fill: '#89837d' }} axisLine={false} tickLine={false}/>
+                    <Tooltip formatter={v => [money(v), 'Pedidos']} labelStyle={{ color: '#151515' }} contentStyle={{ borderRadius: 12, border: '1px solid #eee' }}/>
+                    <Area type="monotone" dataKey="valor" stroke="#e87722" strokeWidth={2.5} fill="url(#team-area-gradient)"/>
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+            {!selected && <section className="team-card">
+              <div className="team-card-heading"><div><span>COMPARATIVO DA EQUIPE</span><h2>Pedidos por vendedor</h2></div></div>
+              <div className="team-chart-holder">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} layout="vertical" margin={{ top: 6, left: 0, right: 10, bottom: 0 }}>
+                    <CartesianGrid horizontal={false} stroke="#eee8e2" strokeDasharray="3 4"/>
+                    <XAxis type="number" tickFormatter={compact} tick={{ fontSize: 10, fill: '#89837d' }} axisLine={false} tickLine={false}/>
+                    <YAxis dataKey="name" type="category" width={78} tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+                    <Tooltip formatter={v => [money(v), 'Pedidos']} labelFormatter={(_, items) => items?.[0]?.payload?.fullName || ''} contentStyle={{ borderRadius: 12, border: '1px solid #eee' }}/>
+                    <Bar dataKey="value" fill="#e87722" radius={[0, 7, 7, 0]} maxBarSize={29}/>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>}
+          </div>
+
+          {!selected && <section className="team-card team-members-section">
+            <div className="team-card-heading"><div><span>ESTRUTURA COMERCIAL</span><h2>Profissionais da equipe <small>({ranking.length})</small></h2></div></div>
+            <label className="team-search"><IconSearch size={18}/><input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar vendedor" aria-label="Buscar vendedor"/></label>
+            <div className="team-members">
+              {filtered.map(person => <button type="button" className="team-member" key={person.id} onClick={() => { setSelectedId(person.id); setTab('visits') }}>
+                <span className="team-avatar">{person.name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()}</span>
+                <span className="team-member-info"><strong>{person.name}</strong><small>{person.visits} visitas · {person.quotes} cotações · {person.orders} pedidos</small></span>
+                <span className="team-member-value">{compact(person.value)}</span><IconChevronRight size={19} className="team-member-arrow"/>
+              </button>)}
+              {filtered.length === 0 && <p className="team-empty">Nenhum profissional encontrado.</p>}
+            </div>
+          </section>}
+
+          <section className="team-card team-activities">
+            <div className="team-card-heading"><div><span>ATIVIDADE COMERCIAL</span><h2>{selected ? `Histórico de ${selected.name.split(' ')[0]}` : 'Histórico da equipe'}</h2></div></div>
+            <div className="team-tabs" role="tablist" aria-label="Tipo de atividade">
+              {activityTabs.map(({ key, label, Icon }) => <button type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} key={key} onClick={() => setTab(key)}><Icon size={16}/>{label}<span>{rows[key].length}</span></button>)}
+            </div>
+            <div className="team-activity-list">
+              {rows[tab].length === 0 ? <p className="team-empty">Nenhum registro encontrado para este período.</p> : rows[tab].map(row => <Activity key={row.id} row={row} type={tab} owner={names.get(row.seller_id) || 'Vendedor'}/>)}
+            </div>
+          </section>
+        </>
+      }
+    </div>
   </main>
 }
