@@ -15,6 +15,7 @@ import './styles/dashboard-refine.css'
 
 const Login = lazyWithRetry(() => import('./screens/Login'))
 const Home = lazyWithRetry(() => import('./screens/Home'))
+const MinhaEquipe = lazyWithRetry(() => import('./screens/MinhaEquipe'))
 
 const Clientes = lazyWithRetry(() => import('./screens/Clientes'))
 const NovaFazenda = lazyWithRetry(() => import('./screens/NovaFazenda'))
@@ -80,6 +81,7 @@ function AppContent() {
         <Suspense fallback={<CarregandoTela />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/minha-equipe" element={<MinhaEquipe />} />
 
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/clientes/novo" element={<NovaFazenda />} />
