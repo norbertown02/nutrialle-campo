@@ -1,15 +1,11 @@
-// Motivos padronizados para cancelamento de cotações.
+// Motivos objetivos para o vendedor e agrupamento de oportunidades no Gestão.
+// Os motivos antigos permanecem salvos nas cotações históricas.
 export const QUOTE_CANCELLATION_REASONS = Object.freeze([
-  'Preço não competitivo',
-  'Condição de pagamento',
-  'Fechou com concorrente',
-  'Prazo de entrega',
-  'Frete / Logística',
-  'Cliente adiou a compra',
-  'Cliente desistiu da compra',
+  'Preço / condições comerciais',
+  'Comprou de concorrente',
+  'Entrega / disponibilidade',
+  'Compra adiada ou cancelada',
   'Sem retorno do cliente',
   'Produto não atendeu à necessidade',
-  'Indisponibilidade do produto',
-  'Cotação substituída / duplicada',
-  'Outros motivos',
+  'Cotação duplicada / outro motivo',
 ])
