@@ -607,6 +607,7 @@ export default function NovaVenda() {
     const freteInfo = FRETES.find(f => f.value === frete)
 
     const { error } = await addSale({
+      sourceQuoteId: sourceQuoteId || null,
       farmId,
       saleDate,
       deliveryDate,
@@ -637,6 +638,12 @@ export default function NovaVenda() {
     })
 
     if (error) {
+      // A restrição única no banco impede que a mesma cotação gere duas vendas.
+      if (sourceQuoteId && error.code === '23505') {
+        showToast('Esta cotação já originou uma venda. Confira os pedidos antes de tentar novamente.', 'error', 8000)
+        setSaving(false)
+        return
+      }
       setSaving(false)
       showToast('Não foi possível registrar o pedido: ' + (error.message || 'erro desconhecido'), 'error')
       return
