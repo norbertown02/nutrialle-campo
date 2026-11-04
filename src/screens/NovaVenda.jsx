@@ -8,6 +8,8 @@ import { useFarms } from '../lib/useFarms'
 import { useSales } from '../lib/useSales'
 import { useProducts } from '../lib/useProducts'
 import { showToast } from '../lib/toast'
+import { supabase } from '../lib/supabase'
+import { db } from '../lib/db'
 
 function todayISO() {
   const d = new Date()
@@ -447,6 +449,7 @@ export default function NovaVenda() {
   const addSale = salesHook.addSale
   const { products, paymentTerms, paymentMethods, priceTables } = useProducts()
 
+  const sourceQuoteId = searchParams.get('quote')
   const preselectedFarmId = searchParams.get('farm')
   const preselectedFarm = preselectedFarmId ? getFarm(preselectedFarmId) : null
 
@@ -460,6 +463,65 @@ export default function NovaVenda() {
   const [notes, setNotes] = useState('')
   const [comissao, setComissao] = useState('')
   const [saving, setSaving] = useState(false)
+  const [sourceQuote, setSourceQuote] = useState(null)
+  const [loadingQuote, setLoadingQuote] = useState(!!sourceQuoteId)
+  const [quoteError, setQuoteError] = useState('')
+
+  // Uma cotação abre um formulário de pedido preenchido, sem criar venda ainda.
+  useEffect(() => {
+    if (!sourceQuoteId) return
+    let active = true
+    async function loadSourceQuote() {
+      setLoadingQuote(true)
+      setQuoteError('')
+      const { data, error } = await supabase.from('quotes').select('*').eq('id', sourceQuoteId).maybeSingle()
+      const quote = !error && data ? data : await db.quotes_cache.get(sourceQuoteId)
+      if (!active) return
+      if (!quote) {
+        setQuoteError('Não foi possível carregar a cotação original.')
+        setLoadingQuote(false)
+        return
+      }
+      if (!['rascunho', 'enviada'].includes(quote.status)) {
+        setQuoteError('Esta cotação já foi convertida ou cancelada.')
+        setLoadingQuote(false)
+        return
+      }
+      setSourceQuote(quote)
+      setFarmId(quote.farm_id || '')
+      setPaymentTermId(quote.payment_term || '')
+      setFrete(['CIF', 'FOB', 'EXW'].includes(quote.frete) ? quote.frete : 'CIF')
+      setNotes(quote.notes || '')
+      setItems((quote.items || []).map((it, index) => {
+        const bagKg = Number(it.bag_kg) || 25
+        const isKg = it.unit === 'kg'
+        const priceKg = Number(it.price_kg) || (isKg
+          ? Number(it.unit_price || 0)
+          : Number(it.unit_price || 0) / bagKg)
+        return calcItem({
+          key: 'quote-' + index,
+          productId: it.product_id,
+          productName: it.product_name || '',
+          unit: 'kg',
+          bagKg,
+          priceKg,
+          tablePriceKg: priceKg,
+          maxDiscount: Number(it.max_discount) || 10,
+          quantity: Number(it.quantity || 0) * (isKg ? 1 : bagKg),
+          discount: Number(it.discount) || 0,
+        })
+      }))
+      setLoadingQuote(false)
+    }
+    loadSourceQuote().catch(error => {
+      console.error('Erro ao abrir cotação para conversão:', error)
+      if (active) {
+        setQuoteError('Erro ao carregar cotação. Tente novamente.')
+        setLoadingQuote(false)
+      }
+    })
+    return () => { active = false }
+  }, [sourceQuoteId])
 
   const selectedFarm = farmId ? getFarm(farmId) : preselectedFarm
   const farmsDisponiveisParaVenda = farms.filter(cadastroCompletoParaVenda)
@@ -527,7 +589,7 @@ export default function NovaVenda() {
     !!it.productId && Number(it.quantity) > 0 && Number(it.priceKg) > 0
   )
   const cadastroClienteValido = cadastroCompletoParaVenda(selectedFarm)
-  const isValid = !!farmId && !!selectedFarm && cadastroClienteValido && datasValidas && itensValidos &&
+  const isValid = !loadingQuote && !quoteError && (!sourceQuoteId || !!sourceQuote) && !!farmId && !!selectedFarm && cadastroClienteValido && datasValidas && itensValidos &&
     !!paymentTermId && !!paymentMethodId && !!tabelaPreco && !!frete
 
   const handleSave = async () => {
@@ -580,6 +642,26 @@ export default function NovaVenda() {
       return
     }
 
+    if (sourceQuoteId) {
+      const { data: updatedQuote, error: quoteUpdateError } = await supabase.from('quotes')
+        .update({ status: 'convertida', converted_at: new Date().toISOString() })
+        .eq('id', sourceQuoteId)
+        .in('status', ['rascunho', 'enviada'])
+        .select('id,status,converted_at')
+        .maybeSingle()
+      if (quoteUpdateError || !updatedQuote) {
+        console.warn('Venda salva, mas falhou atualização da cotação:', quoteUpdateError)
+        showToast('Pedido registrado, mas não foi possível atualizar o status da cotação. Não converta novamente.', 'error', 9000)
+        navigate('/vendas')
+        return
+      }
+      try {
+        const cached = await db.quotes_cache.get(sourceQuoteId)
+        if (cached) await db.quotes_cache.put({ ...cached, ...updatedQuote, _pending: false })
+      } catch (cacheError) {
+        console.warn('Falha no cache da cotação convertida:', cacheError)
+      }
+    }
     showToast('Pedido registrado com sucesso.', 'success')
     navigate('/vendas')
   }
@@ -591,12 +673,22 @@ export default function NovaVenda() {
       </button>
 
       <div className="page-head">
-        <div className="eyebrow">Nova venda</div>
+        <div className="eyebrow">{sourceQuoteId ? "Converter cotação em venda" : "Nova venda"}</div>
         <h2>Registrar pedido</h2>
         <p>{selectedFarm ? selectedFarm.name : 'Escolha a fazenda e adicione os produtos'}</p>
       </div>
 
-      {!preselectedFarm ? (
+      {sourceQuoteId && (loadingQuote || quoteError) && (
+        <div className="hint" style={{ marginBottom: 16, color: quoteError ? 'var(--red)' : 'var(--text-dim)' }}>
+          {quoteError || 'Carregando produtos e condições da cotação...'}
+        </div>
+      )}
+      {sourceQuote && (
+        <div className="hint" style={{ marginBottom: 16 }}>
+          Produtos, quantidades e preços importados da cotação. Preencha os campos faltantes antes de salvar.
+        </div>
+      )}
+      {!preselectedFarm && !sourceQuoteId ? (
         <>
           <div className="section-label">Fazenda</div>
           {farmsDisponiveisParaVenda.length === 0 ? (
