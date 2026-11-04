@@ -133,7 +133,7 @@ export default function TabBar() {
               <button className="campo-more-close" onClick={() => setMoreOpen(false)} aria-label="Fechar menu"><IconX size={20} /></button>
             </div>
             <div className="campo-more-sheet__list">
-              {MORE.map(({ to, label, Icon, note }) => (
+              {moreItems.map(({ to, label, Icon, note }) => (
                 <button
                   key={to}
                   type="button"
