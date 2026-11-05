@@ -424,19 +424,35 @@ function ProductSearchSelect({ products, value, onChange }) {
   )
 }
 
-function cadastroCompletoParaVenda(farm) {
-  if (!farm || farm.supportOnly) return false
+// Para criar um pedido, um cliente já cadastrado no Ultra não depende de a
+// inscrição estadual estar duplicada no cache do Campo. O Ultra é a fonte fiscal.
+function pendenciasCadastroParaVenda(farm) {
+  if (!farm) return ['Selecione um cliente.']
+  const pendencias = []
+  if (farm.supportOnly) pendencias.push('Esta fazenda é atendida por loja; selecione o cliente comprador.')
+  if (farm.prospect) pendencias.push('Cadastro marcado como prospecto; conclua a ativação do cliente.')
+  if (String(farm.name || '').trim().length < 3) pendencias.push('Nome do cliente não informado.')
+  if (String(farm.owner || '').trim().length < 3) pendencias.push('Nome do responsável não informado.')
+  if (String(farm.city || '').trim().length < 2) pendencias.push('Cidade não informada.')
+
   const doc = String(farm.cpfCnpj || farm.cpf_cnpj || farm.cpf || farm.cnpj || '').replace(/\D/g, '')
   const isCnpj = farm.docTipo === 'cnpj' || farm.doc_tipo === 'cnpj' || !!farm.cnpj || doc.length === 14
-  const documentoValido = isCnpj ? doc.length === 14 : doc.length === 11
-  const ieValida = !isCnpj || String(farm.ie || '').trim().length >= 2
+  if (doc.length !== (isCnpj ? 14 : 11)) {
+    pendencias.push(isCnpj ? 'CNPJ incompleto.' : 'CPF incompleto.')
+  }
 
-  return !farm.prospect &&
-    String(farm.name || '').trim().length >= 3 &&
-    String(farm.owner || '').trim().length >= 3 &&
-    String(farm.city || '').trim().length >= 2 &&
-    documentoValido &&
-    ieValida
+  // IE continua obrigatória para PJ sem cadastro no Ultra, mas nunca bloqueia
+  // pedidos de um parceiro que já possui cadastro fiscal naquele ERP.
+  const vinculadoAoUltra = Number(farm.ultraPartnerId || farm.ultra_partner_id || 0) > 0
+  if (isCnpj && !vinculadoAoUltra && String(farm.ie || '').trim().length < 2) {
+    pendencias.push('Inscrição Estadual (IE) não informada para cliente sem vínculo com o Ultra.')
+  }
+
+  return pendencias
+}
+
+function cadastroCompletoParaVenda(farm) {
+  return pendenciasCadastroParaVenda(farm).length === 0
 }
 
 export default function NovaVenda() {
@@ -596,7 +612,7 @@ export default function NovaVenda() {
     if (!isValid || saving) {
       if (!saving) {
         if (selectedFarm && !cadastroClienteValido) {
-          showToast('Para registrar uma venda, complete primeiro o cadastro do cliente. Prospectos com cadastro simplificado podem receber cotação, mas não pedido.', 'error')
+          showToast('Cadastro do cliente: ' + pendenciasCadastroParaVenda(selectedFarm).join(' '), 'error', 8000)
         } else {
           showToast('Preencha cliente, datas, produtos em kg, preço/kg, condição e método de pagamento.', 'error')
         }
@@ -719,7 +735,8 @@ export default function NovaVenda() {
 
       {selectedFarm && !cadastroClienteValido ? (
         <div className="hint" style={{ marginBottom: 16, color: 'var(--amber)' }}>
-          Este cadastro ainda é um prospecto ou está incompleto. Ele pode receber cotação, mas para venda é necessário completar o cadastro do cliente.
+          <strong>Cadastro do cliente: verifique as pendências abaixo.</strong>
+          <div style={{ marginTop: 6 }}>{pendenciasCadastroParaVenda(selectedFarm).join(' ')}</div>
         </div>
       ) : null}
 
