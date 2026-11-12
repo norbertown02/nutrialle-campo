@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   IconArrowLeft, IconUsersGroup, IconCalendarCheck, IconReceipt,
   IconFileText, IconCalendar, IconChevronRight, IconArrowUpRight,
-  IconChartBar, IconRefresh, IconSearch,
+  IconChartBar, IconRefresh, IconSearch, IconX,
 } from '@tabler/icons-react'
 import {
   ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis,
@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/useAuth.jsx'
+import { visitPurposeLabel, visitReasonLabel } from '../data/visitReasons'
 import '../styles/dashboard-vendas-v2.css'
 import '../styles/minha-equipe.css'
 
@@ -71,9 +72,14 @@ function Stat({ label, value, Icon, sub }) {
   </article>
 }
 
-function Activity({ row, type, owner }) {
+const visitOutcomeLabel = outcome => {
+  const normalized = String(outcome || '').toLowerCase()
+  return { positiva: 'Positiva', neutra: 'Neutra', negativa: 'Negativa' }[normalized] || statusText(outcome)
+}
+
+function Activity({ row, type, owner, onOpenVisit }) {
   const titles = { visits: 'Visita', sales: 'Pedido', quotes: 'Cotação', appointments: 'Compromisso' }
-  return <article className="team-activity">
+  const content = <>
     <div className="team-activity-top">
       <strong>{row.client || row.title || titles[type]}</strong>
       <span>{dateLabel(row.date)}</span>
@@ -81,11 +87,59 @@ function Activity({ row, type, owner }) {
     <div className="team-activity-meta">
       <span>{owner}</span>
       <span className="team-separator">·</span>
-      <span>{statusText(row.outcome || row.status)}</span>
+      <span>{type === 'visits' ? visitOutcomeLabel(row.outcome) : statusText(row.outcome || row.status)}</span>
     </div>
     {(type === 'sales' || type === 'quotes') && <div className="team-activity-amount">{money(row.total)}{type === 'sales' && Number(row.quantity_kg) > 0 ? ` · ${INT.format(Number(row.quantity_kg))} kg` : ''}</div>}
     {type === 'visits' && row.notes && <p className="team-activity-notes">{row.notes}</p>}
-  </article>
+    {type === 'visits' && <div className="team-activity-open-link">Ver detalhes da visita <IconChevronRight size={16}/></div>}
+  </>
+
+  return type === 'visits'
+    ? <button type="button" className="team-activity team-activity-clickable" onClick={() => onOpenVisit(row)} aria-label={`Ver todos os detalhes da visita a ${row.client || 'cliente'} em ${dateLabel(row.date)}`}>{content}</button>
+    : <article className="team-activity">{content}</article>
+}
+
+function VisitDetails({ visit, owner, onClose }) {
+  const motivos = Array.isArray(visit.outcome_reasons) ? visit.outcome_reasons : []
+
+  return <div className="team-visit-overlay" onClick={onClose}>
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="team-visit-title"
+      aria-describedby="team-visit-subtitle"
+      className="team-visit-modal"
+      onClick={event => event.stopPropagation()}
+    >
+      <header className="team-visit-header">
+        <div>
+          <span className="team-visit-eyebrow"><IconCalendarCheck size={16}/> Registro de visita</span>
+          <h2 id="team-visit-title">{visit.client || 'Cliente não identificado'}</h2>
+          <p id="team-visit-subtitle">{dateLabel(visit.date)} · {owner}</p>
+        </div>
+        <button type="button" className="team-visit-close" onClick={onClose} aria-label="Fechar detalhes da visita" autoFocus><IconX size={20}/></button>
+      </header>
+
+      <div className="team-visit-content">
+        <div className="team-visit-facts">
+          <div><small>Resultado</small><strong>{visitOutcomeLabel(visit.outcome)}</strong></div>
+          <div><small>Objetivo</small><strong>{visitPurposeLabel(visit.visit_purpose)}</strong></div>
+          <div><small>Próxima visita</small><strong>{dateLabel(visit.next_visit_date)}</strong></div>
+          <div><small>Produto relacionado</small><strong>{visit.related_product_id || 'Não informado'}</strong></div>
+        </div>
+
+        <section className="team-visit-section">
+          <h3>Motivos registrados</h3>
+          <p>{motivos.length > 0 ? motivos.map(visitReasonLabel).join('; ') : 'Nenhum motivo registrado.'}</p>
+        </section>
+
+        <section className="team-visit-section">
+          <h3>Anotações do vendedor</h3>
+          <p className="team-visit-notes-full">{String(visit.notes || '').trim() || 'Nenhuma anotação registrada nesta visita.'}</p>
+        </section>
+      </div>
+    </section>
+  </div>
 }
 
 export default function MinhaEquipe() {
@@ -96,10 +150,20 @@ export default function MinhaEquipe() {
   const [month, setMonth] = useState(iso(now).slice(0, 7))
   const [selectedId, setSelectedId] = useState(null)
   const [tab, setTab] = useState('visits')
+  const [openVisit, setOpenVisit] = useState(null)
   const [search, setSearch] = useState('')
   const [payload, setPayload] = useState(empty)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!openVisit) return undefined
+    const handleEscape = event => {
+      if (event.key === 'Escape') setOpenVisit(null)
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [openVisit])
 
   const period = useMemo(() => {
     const [year, monthIndex] = month.split('-').map(Number)
@@ -239,11 +303,12 @@ export default function MinhaEquipe() {
               {activityTabs.map(({ key, label, Icon }) => <button type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} key={key} onClick={() => setTab(key)}><Icon size={16}/>{label}<span>{rows[key].length}</span></button>)}
             </div>
             <div className="team-activity-list">
-              {rows[tab].length === 0 ? <p className="team-empty">Nenhum registro encontrado para este período.</p> : rows[tab].map(row => <Activity key={row.id} row={row} type={tab} owner={names.get(row.seller_id) || 'Vendedor'}/>)}
+              {rows[tab].length === 0 ? <p className="team-empty">Nenhum registro encontrado para este período.</p> : rows[tab].map(row => <Activity key={row.id} row={row} type={tab} owner={names.get(row.seller_id) || 'Vendedor'} onOpenVisit={setOpenVisit}/>)}
             </div>
           </section>
         </>
       }
     </div>
+    {openVisit && <VisitDetails visit={openVisit} owner={names.get(openVisit.seller_id) || 'Vendedor'} onClose={() => setOpenVisit(null)}/>}
   </main>
 }
