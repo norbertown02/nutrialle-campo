@@ -401,7 +401,7 @@ export default function Budget() {
     setBusy(false)
   }
   async function createClient() {
-    const name = newClient.name.trim()
+    const name = newClient.name.trim().toLocaleUpperCase('pt-BR')
     if (name.length < 3) { setNotice({ kind: 'error', text: 'Informe um nome de pelo menos três caracteres.' });return }
     if (myFarms.some(f => normal(f.name) === normal(name))) {
       setNotice({ kind: 'error', text: 'Este cliente já está na sua carteira. Encontre-o pela busca.' });return
