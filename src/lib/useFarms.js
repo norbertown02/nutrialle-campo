@@ -54,6 +54,10 @@ function fromDB(row) {
   }
 }
 
+function normalizeClientName(name) {
+  return typeof name === 'string' ? name.toLocaleUpperCase('pt-BR') : name
+}
+
 function toDB(farm) {
   const explicitDocTipo = String(farm.docTipo ?? farm.doc_tipo ?? '').trim().toLowerCase()
   const docTipo = explicitDocTipo === 'cpf' || explicitDocTipo === 'cnpj'
@@ -63,7 +67,7 @@ function toDB(farm) {
   return {
     id: farm.id,
     client_code: farm.clientCode,
-    name: farm.name,
+    name: normalizeClientName(farm.name),
     owner_role: farm.ownerRole,
     phone: farm.phone,
     email: farm.email,
@@ -192,6 +196,7 @@ export function useFarms() {
     const clientCode = generateClientCode(farms)
     const newFarm = {
       ...farmData,
+      name: normalizeClientName(farmData.name),
       id,
       clientCode,
       clientSince: String(new Date().getFullYear()),
@@ -210,7 +215,11 @@ export function useFarms() {
 
   const updateFarm = useCallback(async (id, changes) => {
     const updatedAt = new Date().toISOString()
-    const payload = toDB(changes)
+    const normalizedChanges = {
+      ...changes,
+      ...(typeof changes.name === 'string' ? { name: normalizeClientName(changes.name) } : {}),
+    }
+    const payload = toDB(normalizedChanges)
     Object.keys(payload).forEach(key => {
       if (payload[key] === undefined) delete payload[key]
     })
@@ -226,7 +235,7 @@ export function useFarms() {
     setFarms(prev => prev.map(f =>
       f.id === id
         ? {
-            ...f, ...changes, updatedAt, pending: true,
+            ...f, ...normalizedChanges, updatedAt, pending: true,
             ...(docAlterado ? { ultraSyncStatus: 'pendente', ultraError: null } : {}),
           }
         : f
