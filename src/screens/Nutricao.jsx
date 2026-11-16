@@ -71,7 +71,7 @@ export default function Nutricao() {
         </div>
         <iframe
           title={TITULOS[modo]}
-          src={`/planos?modo=${modo}&embed=1${linkedFarmId && modo === 'nutricional' ? '&farm_id='+encodeURIComponent(linkedFarmId) : ''}`}
+          src={`/planos?modo=${modo}&embed=1&ui=2026111603${linkedFarmId && modo === 'nutricional' ? '&farm_id='+encodeURIComponent(linkedFarmId) : ''}`}
           style={{ flex: '1 1 0%', height: 0, minHeight: 0, minWidth: 0, width: '100%', display: 'block', border: 'none', overscrollBehavior: 'contain' }}
         />
       </div>
