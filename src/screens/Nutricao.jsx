@@ -53,7 +53,7 @@ export default function Nutricao() {
 
   if (modo) {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100dvh', minHeight: 0, overflow: 'hidden', background: '#fff' }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
           background: '#0A0A0A', flexShrink: 0,
@@ -72,7 +72,7 @@ export default function Nutricao() {
         <iframe
           title={TITULOS[modo]}
           src={`/planos?modo=${modo}&embed=1${linkedFarmId && modo === 'nutricional' ? '&farm_id='+encodeURIComponent(linkedFarmId) : ''}`}
-          style={{ flex: 1, width: '100%', border: 'none' }}
+          style={{ flex: '1 1 0%', height: 0, minHeight: 0, minWidth: 0, width: '100%', display: 'block', border: 'none', overscrollBehavior: 'contain' }}
         />
       </div>
     )
