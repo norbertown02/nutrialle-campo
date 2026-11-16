@@ -61,6 +61,7 @@
 
 .screen {
   flex: 1;
+  min-height: 0; /* permite ao flex reduzir a area rolavel em celulares com viewport baixo */
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain; /* impede que o "estouro" do scroll no fim do conteudo vaze para o body e arraste o appbar */
