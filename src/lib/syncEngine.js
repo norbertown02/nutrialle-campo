@@ -2,6 +2,7 @@ import { db } from './db'
 import { supabase } from './supabase'
 import { showToast } from './toast'
 import { logError } from './logError'
+import { normalizeClientPayload } from './clientName'
 
 // Depois de N tentativas com um erro que veio de verdade do servidor
 // (validação, permissão etc — não conectividade), paramos de tentar
@@ -71,7 +72,7 @@ export async function enqueue({ entity, entityId, op, payload }) {
     entity,
     entity_id: entityId,
     op,
-    payload,
+    payload: entity === 'farm' ? normalizeClientPayload(payload) : payload,
     status: 'pending',
     attempts: 0,
     error: null,
@@ -102,14 +103,16 @@ export async function processOutbox() {
       notify()
 
       const table = TABLE_BY_ENTITY[item.entity]
+      // Normaliza também itens antigos ainda guardados offline no aparelho.
+      const payload = item.entity === 'farm' ? normalizeClientPayload(item.payload) : item.payload
       let error = null
 
       try {
         if (item.op === 'update') {
-          const res = await supabase.from(table).update(item.payload).eq('id', item.entity_id).select('id')
+          const res = await supabase.from(table).update(payload).eq('id', item.entity_id).select('id')
           error = res.error || (!res.data?.length ? new Error('Atualização não confirmada pelo servidor') : null)
         } else {
-          const res = await supabase.from(table).upsert(item.payload, { onConflict: 'id' }).select('id')
+          const res = await supabase.from(table).upsert(payload, { onConflict: 'id' }).select('id')
           error = res.error || (!res.data?.length ? new Error('Gravação não confirmada pelo servidor') : null)
         }
       } catch (e) {
