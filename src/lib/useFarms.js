@@ -20,6 +20,8 @@ function fromDB(row) {
     authUserId: row.auth_user_id,
     city: row.city,
     state: row.state,
+    countryCode: row.country_code || 'BR',
+    foreignTaxId: row.foreign_tax_id || '',
     region: row.region,
     cep: row.cep,
     street: row.street,
@@ -57,9 +59,10 @@ function fromDB(row) {
 
 function toDB(farm) {
   const explicitDocTipo = String(farm.docTipo ?? farm.doc_tipo ?? '').trim().toLowerCase()
-  const docTipo = explicitDocTipo === 'cpf' || explicitDocTipo === 'cnpj'
+  const isForeign = !!farm.countryCode && String(farm.countryCode).toUpperCase() !== 'BR'
+  const docTipo = isForeign ? null : (explicitDocTipo === 'cpf' || explicitDocTipo === 'cnpj'
     ? explicitDocTipo
-    : farm.cnpj ? 'cnpj' : farm.cpf ? 'cpf' : undefined
+    : farm.cnpj ? 'cnpj' : farm.cpf ? 'cpf' : undefined)
 
   return {
     id: farm.id,
@@ -70,6 +73,8 @@ function toDB(farm) {
     email: farm.email,
     city: farm.city,
     state: farm.state,
+    country_code: farm.countryCode,
+    foreign_tax_id: farm.foreignTaxId,
     region: farm.region,
     cep: farm.cep,
     street: farm.street,
@@ -114,7 +119,7 @@ function generateClientCode(farms) {
 
 const FARM_COLUMNS = [
   'id','client_code','seller_id','parent_store_id','support_only','name','owner_role','phone','email','auth_user_id',
-  'city','state','region','cep','street','street_number','bairro','complemento',
+  'city','state','country_code','foreign_tax_id','region','cep','street','street_number','bairro','complemento',
   'segment','herd_size','production','area','status','has_checklist','client_since',
   'created_at','updated_at','cpf_cnpj','ie','cad_pro','doc_tipo','cpf','cnpj',
   'cadpro_1','cadpro_2','cadpro_3','owner','prospect','notes','marca_atual',
