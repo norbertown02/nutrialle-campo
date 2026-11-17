@@ -3,6 +3,7 @@ import { db } from './db'
 import { enqueue } from './syncEngine'
 import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
+import { normalizeClientName } from './clientName'
 
 function fromDB(row) {
   if (!row) return null
@@ -12,7 +13,7 @@ function fromDB(row) {
     parentStoreId: row.parent_store_id ?? null,
     supportOnly: !!row.support_only,
     clientCode: row.client_code,
-    name: row.name,
+    name: normalizeClientName(row.name),
     ownerRole: row.owner_role,
     phone: row.phone,
     email: row.email,
@@ -52,10 +53,6 @@ function fromDB(row) {
     ultraPartnerId: row.ultra_partner_id ?? null,
     pending: !!row._pending,
   }
-}
-
-function normalizeClientName(name) {
-  return typeof name === 'string' ? name.toLocaleUpperCase('pt-BR') : name
 }
 
 function toDB(farm) {
