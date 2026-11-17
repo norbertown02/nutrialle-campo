@@ -120,7 +120,7 @@ export function useSales() {
       comissao_pct: saleData.comissaoPct ?? 0,
       notes: saleData.notes || null,
       seller_id: user && user.id,
-      integration_status: 'pendente',
+      integration_status: saleData.foreign ? 'exportacao_pendente' : 'pendente',
       created_at: new Date().toISOString(),
     }
     const { error } = await supabase.from('sales').insert(item)
@@ -149,6 +149,7 @@ export function useSales() {
   const resendSaleToUltra = useCallback(async (id) => {
     const sale = sales.find(s => s.id === id)
     if (!sale) return { error: new Error('Venda não encontrada.') }
+    if (sale.integrationStatus === 'exportacao_pendente') return { error: new Error('Pedido internacional exige conferência fiscal antes do envio ao Ultra.') }
     if (sale.ultraOrderId) return { error: new Error(`Esta venda já possui pedido no Ultra (${sale.ultraOrderNumber || sale.ultraOrderId}).`) }
 
     const { error: markError } = await supabase
