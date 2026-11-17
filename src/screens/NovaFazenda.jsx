@@ -7,6 +7,7 @@ import { useConfig } from '../lib/useConfig'
 import { useOnlineStatus } from '../lib/useOnlineStatus'
 import { documentoValido as validarDocumento, erroDocumento, somenteDigitos } from '../lib/documentValidation'
 import { normalizeClientName, normalizeProducerName } from '../lib/clientName'
+import CountrySelector, { isBrazilianCountry } from '../components/CountrySelector'
 
 async function buscarCidades(termo, uf) {
   if (termo.length < 2) return []
@@ -118,7 +119,7 @@ export default function NovaFazenda() {
   const [form, setForm] = useState({
     name:'', owner:'', ownerRole:'Proprietário', phone:'', email:'',
     docTipo:'cpf', cpf:'', cnpj:'', cnpjIE:'', cadPro:'',
-    segment:'leite', city:'', state:'PR', cep:'', street:'', street_number:'', bairro:'', complemento:'',
+    segment:'leite', city:'', state:'PR', countryCode:'BR', foreignTaxId:'', cep:'', street:'', street_number:'', bairro:'', complemento:'',
     herdSize:'', production:'', area:'',
   })
 
@@ -148,21 +149,23 @@ export default function NovaFazenda() {
     setCidadeVerificada(true)
   }
 
-  const documentoInformado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
-  const documentoValido = validarDocumento(form.docTipo, documentoInformado)
+  const isBrazil = isBrazilianCountry(form.countryCode)
+  const paisValido = /^[A-Z]{2}$/.test(form.countryCode)
+  const documentoInformado = isBrazil ? (form.docTipo === 'cnpj' ? form.cnpj : form.cpf) : ''
+  const documentoValido = !isBrazil || validarDocumento(form.docTipo, documentoInformado)
   const mensagemDocumento = documentoInformado ? erroDocumento(form.docTipo, documentoInformado) : null
 
   const cadastroCompletoValido = form.name.trim().length >= 3 && form.owner.trim().length >= 3 &&
-    form.city.trim().length >= 2 && (cidadeVerificada || !online) && (!somenteDigitos(documentoInformado) || documentoValido)
+    form.city.trim().length >= 2 && paisValido &&
+    (isBrazil ? (cidadeVerificada || !online) : form.state.trim().length >= 2) &&
+    (!somenteDigitos(documentoInformado) || documentoValido)
 
-  // Documento opcional para operação comercial; se preenchido, precisa ser válido.
-  // A sincronização com o Ultra deve validar o documento separadamente.
   const documentoOk = !somenteDigitos(documentoInformado) || documentoValido
   const isValid = atendimentoViaLoja
-    ? Boolean(lojaSelecionada) && form.segment !== 'loja' && form.name.trim().length >= 3 && documentoOk &&
-      (!form.city.trim() || cidadeVerificada || !online)
+    ? Boolean(lojaSelecionada) && form.segment !== 'loja' && form.name.trim().length >= 3 && paisValido && documentoOk &&
+      (!isBrazil || !form.city.trim() || cidadeVerificada || !online)
     : isProspect
-      ? form.name.trim().length >= 3 && documentoOk
+      ? form.name.trim().length >= 3 && paisValido && documentoOk
       : cadastroCompletoValido
 
   const handleSave = async () => {
@@ -170,21 +173,22 @@ export default function NovaFazenda() {
     setSalvando(true)
     setSaveError('')
     try {
-    const cpfCnpjConsolidado = form.docTipo === 'cnpj' ? form.cnpj : form.cpf
+    const cpfCnpjConsolidado = isBrazil ? (form.docTipo === 'cnpj' ? form.cnpj : form.cpf) : null
     const cadProConsolidado = form.cadPro?.trim() || null
 
     const newFarm = await addFarm({
       name: form.name.trim(), owner: form.owner.trim(), ownerRole: form.ownerRole,
       phone: form.phone.trim(), email: form.email?.trim(), segment: form.segment,
-      docTipo: form.docTipo, cpf: form.docTipo === 'cpf' ? form.cpf || null : null, cnpj: form.docTipo === 'cnpj' ? form.cnpj || null : null,
-      cadpro_1: form.cadPro?.trim()||null, cadpro_2: null, cadpro_3: null,
+      docTipo: isBrazil ? form.docTipo : null, cpf: isBrazil && form.docTipo === 'cpf' ? form.cpf || null : null, cnpj: isBrazil && form.docTipo === 'cnpj' ? form.cnpj || null : null,
+      cadpro_1: isBrazil ? form.cadPro?.trim() || null : null, cadpro_2: null, cadpro_3: null,
       cpfCnpj: cpfCnpjConsolidado || null,
-      cadPro: form.docTipo === 'cpf' ? cadProConsolidado : null,
-      ie: form.cnpjIE?.trim()||null,
-      city: form.city.trim(), state: form.state,
+      cadPro: isBrazil && form.docTipo === 'cpf' ? cadProConsolidado : null,
+      ie: isBrazil ? form.cnpjIE?.trim() || null : null,
+      countryCode: form.countryCode, foreignTaxId: isBrazil ? null : form.foreignTaxId?.trim() || null,
+      city: form.city.trim(), state: form.state.trim(),
       cep: form.cep?.trim(), street: form.street?.trim(), street_number: form.street_number?.trim(),
       bairro: form.bairro?.trim()||null, complemento: form.complemento?.trim()||null,
-      region: inferRegion(form.city, form.state),
+      region: isBrazil ? inferRegion(form.city, form.state) : form.state.trim(),
       herdSize: form.herdSize.trim(), production: form.production.trim(), area: form.area.trim(),
       prospect: isProspect && !atendimentoViaLoja,
       sellerId: lojaSelecionada?.sellerId || undefined,
@@ -257,8 +261,14 @@ export default function NovaFazenda() {
         <input value={form.email||''} onChange={e => setField('email', e.target.value)} placeholder="produtor@email.com" type="email" inputMode="email"/>
       </Field>
 
-      <div className="section-label">Documentos</div>
-
+      <div className="section-label">País e documentos</div>
+      <Field label="País *">
+        <CountrySelector value={form.countryCode} onChange={code => setForm(prev => ({
+          ...prev, countryCode: code, state: code === 'BR' ? 'PR' : '', city: '',
+          cpf: '', cnpj: '', cnpjIE: '', cadPro: '', foreignTaxId: '',
+        }))} />
+      </Field>
+      {isBrazil ? (<>
       <Field label="Tipo de documento">
         <div style={{ display:'flex', gap:6, marginBottom:10 }}>
           {[{v:'cpf',l:'CPF (Pessoa Física)'},{v:'cnpj',l:'CNPJ (Pessoa Jurídica)'}].map(opt=>(
@@ -293,7 +303,13 @@ export default function NovaFazenda() {
         </>
       )}
 
-      {mensagemDocumento && (
+      </>) : (
+        <Field label="Documento fiscal do país (RUC, NIF, Tax ID — opcional para cotação)">
+          <input value={form.foreignTaxId} onChange={e => setField('foreignTaxId', e.target.value)}
+            placeholder="Número fiscal local, se disponível" autoCapitalize="characters" />
+        </Field>
+      )}
+      {isBrazil && mensagemDocumento && (
         <div role="alert" style={{
           padding: '10px 12px', borderRadius: 10, marginBottom: 12,
           background: 'var(--red-bg)', border: '1px solid var(--red)',
@@ -322,22 +338,28 @@ export default function NovaFazenda() {
       </Field>
 
       <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
-        <Field label={isProspect ? 'UF' : 'UF *'}>
-          <select value={form.state} onChange={e => { setField('state', e.target.value); setField('city', ''); setCidadeVerificada(false) }}>
-            {STATES.map(s => <option key={s.value} value={s.value}>{s.value}</option>)}
-          </select>
+        <Field label={isBrazil ? (isProspect ? 'UF' : 'UF *') : (isProspect ? 'Estado / Província' : 'Estado / Província *')}>
+          {isBrazil ? (
+            <select value={form.state} onChange={e => { setField('state', e.target.value); setField('city', ''); setCidadeVerificada(false) }}>
+              {STATES.map(s => <option key={s.value} value={s.value}>{s.value}</option>)}
+            </select>
+          ) : (
+            <input value={form.state} onChange={e => setField('state', e.target.value)} placeholder="Ex.: Alto Paraná" />
+          )}
         </Field>
         <Field label={isProspect || atendimentoViaLoja ? 'Cidade (opcional)' : 'Cidade *'}>
-          <CidadeInput
-            value={form.city}
-            uf={form.state}
-            onChange={v => { setField('city', v); setCidadeVerificada(false) }}
-            onSelectCity={onSelectCity}
-          />
+          {isBrazil ? (
+            <CidadeInput value={form.city} uf={form.state}
+              onChange={v => { setField('city', v); setCidadeVerificada(false) }}
+              onSelectCity={onSelectCity} />
+          ) : (
+            <input value={form.city} onChange={e => setField('city', e.target.value)}
+              placeholder="Ex.: Ciudad del Este" />
+          )}
         </Field>
       </div>
 
-      {form.city && (
+      {isBrazil && form.city && (
         <div style={{ fontSize:11, color: cidadeVerificada ? 'var(--text-faint)' : (online ? 'var(--red)' : 'var(--amber)'), marginTop:-8, marginBottom:12, display:'flex', alignItems:'center', gap:4 }}>
           {online ? <IconMapPin size={11} /> : <IconCloudOff size={11} />}
           {cidadeVerificada
@@ -350,8 +372,9 @@ export default function NovaFazenda() {
 
       <div className="section-label">Endereço</div>
 
-      <Field label="CEP">
-        <input value={form.cep||''} onChange={e => setField('cep', e.target.value)} placeholder="Ex.: 85900-000" maxLength={9}/>
+      <Field label={isBrazil ? 'CEP' : 'Código postal'}>
+        <input value={form.cep||''} onChange={e => setField('cep', e.target.value)}
+          placeholder={isBrazil ? 'Ex.: 85900-000' : 'Código postal (opcional)'} maxLength={isBrazil ? 9 : 20}/>
       </Field>
 
       <Field label="Rua / Logradouro">
@@ -373,7 +396,9 @@ export default function NovaFazenda() {
           ? 'Para criar uma cotação, somente o nome é obrigatório. Os demais dados podem ser completados depois, antes de transformar a cotação em venda.'
           : atendimentoViaLoja
             ? 'Fazenda de suporte técnico: basta informar o nome. CPF/CNPJ e dados completos são opcionais. Não enviamos esta propriedade ao Ultra; as visitas e checklists ficam registrados normalmente.'
-            : 'O CPF/CNPJ é opcional para o trabalho comercial, mas será necessário para sincronizar o cliente com o Ultra. A cidade é validada pelo IBGE.'}
+            : isBrazil
+               ? 'O CPF/CNPJ é opcional para o trabalho comercial, mas será necessário para sincronizar o cliente com o Ultra. A cidade é validada pelo IBGE.'
+               : 'Cliente internacional: país, província e cidade são preenchidos livremente. A cotação funciona normalmente; pedidos de exportação ficam para conferência no Ultra.'}
       </div>
 
       {!online && (

@@ -278,7 +278,7 @@ export default function DetalheCotacao() {
 
     const cliente = farm?.name || 'Cliente'
     const vendedor = user?.name || user?.email || '—'
-    const cidadeUf = [farm?.city, farm?.state].filter(Boolean).join('/')
+    const cidadeUf = [farm?.city, farm?.state, farm?.countryCode && farm.countryCode !== 'BR' ? farm.countryCode : null].filter(Boolean).join(' / ')
     const emitidaEm = quote?.created_at ? dataBR(quote.created_at) : new Date().toLocaleDateString('pt-BR')
     const validade = dataBR(quote?.valid_until)
 

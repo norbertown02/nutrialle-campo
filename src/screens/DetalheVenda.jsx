@@ -108,7 +108,7 @@ export default function DetalheVenda() {
 
     const cliente = farmName
     const vendedor = user?.name || user?.email || '—'
-    const cidadeUf = [farm?.city, farm?.state].filter(Boolean).join('/')
+    const cidadeUf = [farm?.city, farm?.state, farm?.countryCode && farm.countryCode !== 'BR' ? farm.countryCode : null].filter(Boolean).join(' / ')
     const emitidaEm = formatDate(venda.saleDate)
     const pedidoNum = numeroPedido(venda)
 
@@ -162,6 +162,8 @@ export default function DetalheVenda() {
 
     doc.setFontSize(7.4); doc.setTextColor(...SOFT)
     const docsCliente = [
+      farm?.countryCode && farm.countryCode !== 'BR' && `País: ${farm.countryCode}`,
+      farm?.foreignTaxId && `Documento fiscal: ${farm.foreignTaxId}`,
       farm?.cpfCnpj && `CPF/CNPJ: ${farm.cpfCnpj}`,
       farm?.ie && `IE: ${farm.ie}`,
       farm?.cadPro && `CAD/PRO: ${farm.cadPro}`,
@@ -301,6 +303,12 @@ export default function DetalheVenda() {
         <p>{itens.length} {itens.length===1?'item':'itens'} · {venda.paymentTermLabel||'Pagamento não informado'}</p>
       </div>
 
+      {venda.integrationStatus === 'exportacao_pendente' && (
+        <div className="hint" style={{ color: 'var(--amber)', marginBottom: 14 }}>
+          <strong>Pedido internacional · aguardando conferência de exportação.</strong>
+          <div style={{ marginTop: 5 }}>Pedido registrado no Campo. Envio automático ao Ultra desativado para clientes no exterior.</div>
+        </div>
+      )}
       {venda.needsApproval ? <div style={{display:'flex',alignItems:'center',gap:8,margin:'14px 0'}}><span style={{fontSize:11,fontWeight:600,color:'var(--red)',background:'var(--red-bg)',padding:'4px 10px',borderRadius:20,display:'flex',alignItems:'center',gap:4}}><IconAlertTriangle size={13}/> Precisa aprovação</span></div> : null}
 
       {farm ? (
