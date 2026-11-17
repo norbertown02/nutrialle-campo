@@ -5,6 +5,7 @@ import {
   IconAlertTriangle, IconReceipt, IconSearch, IconChevronDown
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
+import { isBrazilianCountry, countryName } from '../components/CountrySelector'
 import { useSales } from '../lib/useSales'
 import { useProducts } from '../lib/useProducts'
 import { showToast } from '../lib/toast'
@@ -434,6 +435,12 @@ function pendenciasCadastroParaVenda(farm) {
   if (String(farm.name || '').trim().length < 3) pendencias.push('Nome do cliente não informado.')
   if (String(farm.owner || '').trim().length < 3) pendencias.push('Nome do responsável não informado.')
   if (String(farm.city || '').trim().length < 2) pendencias.push('Cidade não informada.')
+  if (!isBrazilianCountry(farm.countryCode)) {
+    if (!/^[A-Z]{2}$/.test(farm.countryCode || '')) pendencias.push('País inválido.')
+    if (String(farm.state || '').trim().length < 2) pendencias.push('Estado/província não informado.')
+    if (String(farm.foreignTaxId || '').trim().length < 3) pendencias.push('Documento fiscal estrangeiro não informado.')
+    return pendencias
+  }
 
   const doc = String(farm.cpfCnpj || farm.cpf_cnpj || farm.cpf || farm.cnpj || '').replace(/\D/g, '')
   const isCnpj = farm.docTipo === 'cnpj' || farm.doc_tipo === 'cnpj' || !!farm.cnpj || doc.length === 14
@@ -651,6 +658,7 @@ export default function NovaVenda() {
       comissaoPct,
       notes: notes.trim(),
       needsApproval: hasOverDiscount,
+      foreign: !isBrazilianCountry(selectedFarm?.countryCode),
     })
 
     if (error) {
@@ -685,7 +693,9 @@ export default function NovaVenda() {
         console.warn('Falha no cache da cotação convertida:', cacheError)
       }
     }
-    showToast('Pedido registrado com sucesso.', 'success')
+    showToast(!isBrazilianCountry(selectedFarm?.countryCode)
+      ? 'Pedido internacional registrado. Aguardando conferência para integração com o Ultra.'
+      : 'Pedido registrado com sucesso.', 'success')
     navigate('/vendas')
   }
 
@@ -733,6 +743,12 @@ export default function NovaVenda() {
         </>
       ) : null}
 
+      {selectedFarm && !isBrazilianCountry(selectedFarm.countryCode) && (
+        <div className="hint" style={{ marginBottom: 16, color: 'var(--amber)' }}>
+          <strong>Venda internacional · {countryName(selectedFarm.countryCode)}</strong>
+          <div style={{ marginTop: 5 }}>Valores em reais (BRL). O pedido ficará aguardando conferência de exportação e não será transmitido automaticamente ao Ultra.</div>
+        </div>
+      )}
       {selectedFarm && !cadastroClienteValido ? (
         <div className="hint" style={{ marginBottom: 16, color: 'var(--amber)' }}>
           <strong>Cadastro do cliente: verifique as pendências abaixo.</strong>
