@@ -6,7 +6,7 @@ import { useFarms } from '../lib/useFarms'
 import { useConfig } from '../lib/useConfig'
 import { useOnlineStatus } from '../lib/useOnlineStatus'
 import { documentoValido as validarDocumento, erroDocumento, somenteDigitos } from '../lib/documentValidation'
-import { normalizeClientName } from '../lib/clientName'
+import { normalizeClientName, normalizeProducerName } from '../lib/clientName'
 
 async function buscarCidades(termo, uf) {
   if (termo.length < 2) return []
@@ -141,7 +141,7 @@ export default function NovaFazenda() {
       .replace(/(\d{4})(\d{1,2})$/,'$1-$2')
   }
 
-  const setField = (field, value) => setForm(prev => ({ ...prev, [field]: field === 'name' ? normalizeClientName(value) : value }))
+  const setField = (field, value) => setForm(prev => ({ ...prev, [field]: field === 'name' ? normalizeClientName(value) : field === 'owner' ? normalizeProducerName(value) : value }))
 
   function onSelectCity(nome, uf) {
     setForm(prev => ({ ...prev, city: nome, state: uf }))
