@@ -3,7 +3,7 @@ import { db } from './db'
 import { enqueue } from './syncEngine'
 import { useAuth } from './useAuth.jsx'
 import { supabase } from './supabase'
-import { normalizeClientName } from './clientName'
+import { normalizeClientName, normalizeProducerName } from './clientName'
 
 function fromDB(row) {
   if (!row) return null
@@ -44,7 +44,7 @@ function fromDB(row) {
     cadpro1: row.cadpro_1,
     cadpro2: row.cadpro_2,
     cadpro3: row.cadpro_3,
-    owner: row.owner,
+    owner: normalizeProducerName(row.owner),
     prospect: row.prospect,
     notes: row.notes,
     marcaAtual: row.marca_atual,
@@ -95,7 +95,7 @@ function toDB(farm) {
     cadpro_1: farm.cadpro1 ?? farm.cadPro ?? null,
     cadpro_2: farm.cadpro2 ?? null,
     cadpro_3: farm.cadpro3 ?? null,
-    owner: farm.owner,
+    owner: normalizeProducerName(farm.owner),
     prospect: farm.prospect,
     notes: farm.notes,
     marca_atual: farm.marcaAtual,
@@ -194,6 +194,7 @@ export function useFarms() {
     const newFarm = {
       ...farmData,
       name: normalizeClientName(farmData.name),
+      owner: normalizeProducerName(farmData.owner),
       id,
       clientCode,
       clientSince: String(new Date().getFullYear()),
@@ -215,6 +216,7 @@ export function useFarms() {
     const normalizedChanges = {
       ...changes,
       ...(typeof changes.name === 'string' ? { name: normalizeClientName(changes.name) } : {}),
+      ...(typeof changes.owner === 'string' ? { owner: normalizeProducerName(changes.owner) } : {}),
     }
     const payload = toDB(normalizedChanges)
     Object.keys(payload).forEach(key => {
