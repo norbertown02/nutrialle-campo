@@ -23,6 +23,7 @@ import { useConfig } from '../lib/useConfig'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/db'
 import { erroDocumento, somenteDigitos } from '../lib/documentValidation'
+import CountrySelector, { countryName, isBrazilianCountry } from '../components/CountrySelector'
 
 const STATUS_COTACAO_CFG = {
   rascunho:   { label: 'Rascunho',   color: 'var(--text-faint)', bg: 'var(--surface-2)' },
@@ -274,6 +275,8 @@ export default function FichaCliente() {
 
       city:          farm.city || '',
       state:         farm.state || '',
+      countryCode:   farm.countryCode || 'BR',
+      foreignTaxId:  farm.foreignTaxId || '',
       region:        farm.region || '',
       cep:           farm.cep || '',
       street:        farm.street || '',
@@ -299,8 +302,17 @@ export default function FichaCliente() {
   }
 
   async function salvarEdicao() {
-    const tipo = editForm.docTipo === 'cnpj' ? 'cnpj' : 'cpf'
-    const problema = erroDocumento(tipo, editForm.cpfCnpj)
+    const isBrazil = isBrazilianCountry(editForm.countryCode)
+    if (!/^[A-Z]{2}$/.test(editForm.countryCode || '')) {
+      showToast('Informe o país (código ISO de duas letras).', 'error')
+      return
+    }
+    if (!isBrazil && farm.ultraPartnerId) {
+      showToast('Cliente já vinculado ao Ultra: mudança para exterior exige conferência fiscal.', 'error', 8000)
+      return
+    }
+    const tipo = isBrazil ? (editForm.docTipo === 'cnpj' ? 'cnpj' : 'cpf') : null
+    const problema = isBrazil ? erroDocumento(tipo, editForm.cpfCnpj) : null
     if (problema && somenteDigitos(editForm.cpfCnpj)) {
       showToast(problema, 'error', 7000)
       return
@@ -315,6 +327,8 @@ export default function FichaCliente() {
 
       city:          editForm.city?.trim(),
       state:         editForm.state?.trim(),
+      countryCode:   editForm.countryCode,
+      foreignTaxId:  isBrazil ? null : editForm.foreignTaxId?.trim(),
       region:        editForm.region?.trim(),
       cep:           editForm.cep?.trim(),
       street:        editForm.street?.trim(),
@@ -322,12 +336,12 @@ export default function FichaCliente() {
       bairro:        editForm.bairro?.trim(),
       complemento:   editForm.complemento?.trim(),
 
-      cpfCnpj:       editForm.cpfCnpj?.trim(),
+      cpfCnpj:       isBrazil ? editForm.cpfCnpj?.trim() : null,
       docTipo:       tipo,
       cpf:           tipo === 'cpf' ? editForm.cpfCnpj?.trim() || null : null,
       cnpj:          tipo === 'cnpj' ? editForm.cpfCnpj?.trim() || null : null,
-      ie:            editForm.ie?.trim(),
-      cadPro:        editForm.cadPro?.trim(),
+      ie:            isBrazil ? editForm.ie?.trim() : null,
+      cadPro:        isBrazil ? editForm.cadPro?.trim() : null,
 
       herdSize:      editForm.herdSize,
       production:    editForm.production,
@@ -446,7 +460,15 @@ export default function FichaCliente() {
           <p>{farm.supportOnly ? 'Fazenda de suporte: troque a loja quando necessário. Para converter em cliente direto, use um fluxo comercial específico.' : 'O vínculo técnico não modifica o cadastro de venda no Ultra.'}</p>
         </div>
       )}
-      <div className="section-label">Documentos</div>
+      <div className="section-label">País e documentos</div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>País *</label>
+        <CountrySelector value={editForm.countryCode} onChange={code => setEditForm(p => ({
+          ...p, countryCode: code, state: code === 'BR' ? 'PR' : '', city: '',
+          cpfCnpj: '', ie: '', cadPro: '', foreignTaxId: '',
+        }))} />
+      </div>
+      {isBrazilianCountry(editForm.countryCode) ? (<>
       <div style={{ marginBottom: 12 }}>
         <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>Tipo de documento</label>
         <select value={editForm.docTipo || 'cpf'} onChange={e => setEditForm(p => ({ ...p, docTipo: e.target.value, cpfCnpj: '' }))}>
@@ -471,15 +493,23 @@ export default function FichaCliente() {
         </div>
       ))}
 
+      </>) : (
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>
+            Documento fiscal do exterior (RUC, NIF, Tax ID)
+          </label>
+          <input value={editForm.foreignTaxId || ''} onChange={e => setEditForm(p => ({ ...p, foreignTaxId: e.target.value }))} />
+        </div>
+      )}
       <div className="section-label">Endereço completo</div>
       {[
-        { label: 'CEP', key: 'cep' },
+        { label: isBrazilianCountry(editForm.countryCode) ? 'CEP' : 'Código postal', key: 'cep' },
         { label: 'Rua / Logradouro', key: 'street' },
         { label: 'Número', key: 'streetNumber' },
         { label: 'Bairro', key: 'bairro' },
         { label: 'Complemento', key: 'complemento' },
         { label: 'Cidade', key: 'city' },
-        { label: 'Estado / UF', key: 'state' },
+        { label: isBrazilianCountry(editForm.countryCode) ? 'Estado / UF' : 'Estado / Província', key: 'state' },
         { label: 'Região', key: 'region' },
       ].map(f => (
         <div key={f.key} style={{ marginBottom: 12 }}>
@@ -556,7 +586,7 @@ export default function FichaCliente() {
               alignItems: 'center',
               gap: 4
             }}>
-              <IconMapPin size={12} /> {farm.city}, {farm.state}
+              <IconMapPin size={12} /> {[farm.city, farm.state, countryName(farm.countryCode)].filter(Boolean).join(', ')}
             </div>
             <div style={{
               display: 'flex',
