@@ -8,7 +8,7 @@ import {
   IconLock, IconCopy, IconAlertTriangle, IconBuildingStore, IconArrowRight
 } from '@tabler/icons-react'
 import { useFarms } from '../lib/useFarms'
-import { normalizeClientName } from '../lib/clientName'
+import { normalizeClientName, normalizeProducerName } from '../lib/clientName'
 import { showToast } from '../lib/toast'
 import { criarAcessoCliente } from '../lib/clienteAcesso'
 import { useVisits } from '../lib/useVisits'
@@ -412,7 +412,7 @@ export default function FichaCliente() {
           <input
             type={f.type || 'text'}
             value={editForm[f.key] || ''}
-            onChange={e => setEditForm(p => ({ ...p, [f.key]: f.key === 'name' ? normalizeClientName(e.target.value) : e.target.value }))}
+            onChange={e => setEditForm(p => ({ ...p, [f.key]: f.key === 'name' ? normalizeClientName(e.target.value) : f.key === 'owner' ? normalizeProducerName(e.target.value) : e.target.value }))}
           />
         </div>
       ))}
