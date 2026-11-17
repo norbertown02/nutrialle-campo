@@ -168,7 +168,7 @@ export default function Clientes() {
                       {farms.filter(child => child.parentStoreId === f.id).length} fazendas assistidas
                     </div>}
                     <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <IconMapPin size={11} /> {f.city || 'Cidade não informada'}{f.state ? `, ${f.state}` : ''}
+                      <IconMapPin size={11} /> {f.city || 'Cidade não informada'}{f.state ? `, ${f.state}` : ''}{f.countryCode && f.countryCode !== 'BR' ? ` · ${f.countryCode}` : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
