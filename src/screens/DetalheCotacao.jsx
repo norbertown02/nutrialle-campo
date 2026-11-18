@@ -6,6 +6,7 @@ import { db } from '../lib/db'
 import { showToast } from '../lib/toast'
 import { confirmDialog } from '../lib/confirm'
 import { QUOTE_CANCELLATION_REASONS } from '../lib/quoteCancellationReasons'
+import { normalizeQuoteProductNames } from '../lib/quoteProductName'
 import '../styles/quote-cancellation.css'
 import { useSales } from '../lib/useSales'
 import {
@@ -123,7 +124,7 @@ export default function DetalheCotacao() {
     }
 
     if (q) {
-      setQuote(q)
+      setQuote(normalizeQuoteProductNames(q))
 
       let f
       const { data: fNet, error: fErr } = await supabase.from('farms').select('*').eq('id', q.farm_id).single()

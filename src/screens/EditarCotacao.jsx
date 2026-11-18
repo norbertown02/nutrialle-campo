@@ -7,6 +7,7 @@ import { useProducts } from '../lib/useProducts'
 import { useOnlineStatus } from '../lib/useOnlineStatus'
 import { db } from '../lib/db'
 import { enqueue } from '../lib/syncEngine'
+import { normalizeQuoteProductNames } from '../lib/quoteProductName'
 import { IconTrash, IconSearch, IconCloudOff } from '@tabler/icons-react'
 
 const FRETES = [
@@ -63,7 +64,7 @@ export default function EditarCotacao() {
 
     if (q) {
       setFarmSel(q.farm_id)
-      setItems((q.items || []).map(it => normalizarItem(it)))
+      setItems((normalizeQuoteProductNames(q).items || []).map(it => normalizarItem(it)))
       setPagamento(q.payment_term || '')
       setFrete(q.frete || 'CIF')
       setNotes(q.notes || '')
