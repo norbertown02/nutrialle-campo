@@ -1,3 +1,4 @@
+import { getBagKg } from '../lib/bagWeights'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -75,12 +76,12 @@ export default function EditarCotacao() {
   // apenas na edição, preservando a quantidade física e o valor total.
   function normalizarItem(it) {
     const produto = products.find(p => p.id === it.product_id)
-    const bagKg = Number(it.bag_kg || produto?.bag_kg || 25)
+    const bagKg = getBagKg(it.product_name, produto?.bag_kg, it.bag_kg)
     const antigaEmSacos = it.unit !== 'kg'
     const priceKg = Number(it.price_kg || (antigaEmSacos
-      ? Number(it.unit_price || 0) / bagKg
+      ? (bagKg ? Number(it.unit_price || 0) / bagKg : 0)
       : it.unit_price) || produto?.price_kg || 0)
-    const quantity = Number(it.quantity || 0) * (antigaEmSacos ? bagKg : 1)
+    const quantity = Number(it.quantity || 0) * (antigaEmSacos && bagKg ? bagKg : 1)
     return calcItem({ ...it, unit: 'kg', bag_kg: bagKg, price_kg: priceKg, quantity })
   }
 
@@ -106,7 +107,7 @@ export default function EditarCotacao() {
 
   function addItem(prod) {
     if (items.find(i => i.product_id === prod.id)) return
-    const bagKg = prod.bag_kg || 25
+    const bagKg = getBagKg(prod.name, prod.bag_kg)
     const priceKg = prod.price_kg || (prod.price && bagKg ? prod.price / bagKg : 0)
     setItems(prev => [...prev, calcItem({
       product_id: prod.id,
@@ -143,7 +144,7 @@ export default function EditarCotacao() {
         product_name: it.product_name,
         unit: 'kg',
         unit_price: Number(it.unit_price),
-        bag_kg: it.bag_kg || 25,
+        bag_kg: getBagKg(it.product_name, products.find(p => p.id === it.product_id)?.bag_kg, it.bag_kg),
         price_kg: it.price_kg || 0,
         quantity: Number(it.quantity),
         discount: Number(it.discount),
