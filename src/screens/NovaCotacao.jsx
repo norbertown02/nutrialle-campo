@@ -1,3 +1,4 @@
+import { getBagKg } from '../lib/bagWeights'
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../lib/useAuth.jsx'
@@ -75,7 +76,7 @@ export default function NovaCotacao() {
 
   function addItem(prod) {
     if (items.find(i => i.product_id === prod.id)) return
-    const bagKg = prod.bag_kg || 25
+    const bagKg = getBagKg(prod.name, prod.bag_kg)
     const priceKg = prod.price_kg || (prod.price && bagKg ? prod.price / bagKg : 0)
     setItems(prev => [...prev, calcItem({
       product_id: prod.id,
@@ -123,7 +124,7 @@ export default function NovaCotacao() {
         product_name: it.product_name,
         unit: 'kg',
         unit_price: Number(it.unit_price),
-        bag_kg: it.bag_kg || 25,
+        bag_kg: getBagKg(it.product_name, products.find(p => p.id === it.product_id)?.bag_kg, it.bag_kg),
         price_kg: it.price_kg || 0,
         quantity: Number(it.quantity),
         discount: Number(it.discount),
