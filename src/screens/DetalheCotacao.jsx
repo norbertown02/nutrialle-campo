@@ -1,3 +1,4 @@
+import { getBagKg } from '../lib/bagWeights'
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -399,7 +400,7 @@ export default function DetalheCotacao() {
       body: items.map(item => {
         const produto = produtosPorId[item.product_id]
         // Prioriza o cadastro atual do produto; não inventa peso de sacaria.
-        const bagKg = Number(produto?.bag_kg || item.bag_kg || 0)
+        const bagKg = getBagKg(item.product_name, produto?.bag_kg, item.bag_kg)
         const pesoValido = Number.isFinite(bagKg) && bagKg > 0
         const totalKg = Number(item.quantity || 0) * (item.unit === 'kg' ? 1 : (pesoValido ? bagKg : 1))
         const valorKg = Number(item.price_kg) || (
@@ -816,7 +817,7 @@ export default function DetalheCotacao() {
                 </div>
 
                 <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
-                  {(Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : Number(it.bag_kg || 25))).toLocaleString('pt-BR')} kg × R$ {fmt(Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / Number(it.bag_kg || 25)))}/kg
+                  {(Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1))).toLocaleString('pt-BR')} kg × R$ {fmt(Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1))}/kg
                   {Number(it.discount) > 0 && (
                     <span
                       style={{
