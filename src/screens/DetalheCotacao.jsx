@@ -817,7 +817,7 @@ export default function DetalheCotacao() {
                 </div>
 
                 <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
-                  {(Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1))).toLocaleString('pt-BR')} kg × R$ {fmt(Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1))}/kg
+                  {(Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1))).toLocaleString('pt-BR')} kg × R$ {fmt(Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1)))}/kg
                   {Number(it.discount) > 0 && (
                     <span
                       style={{
