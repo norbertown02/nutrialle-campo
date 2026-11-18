@@ -392,20 +392,27 @@ export default function DetalheCotacao() {
       head: [[
         'Produto',
         'Quantidade (kg)',
+        'Sacos (kg/saco)',
         'R$/kg',
         'Subtotal',
       ]],
       body: items.map(item => {
         const produto = produtosPorId[item.product_id]
-        const bagKg = Number(item.bag_kg || produto?.bag_kg || 25)
-        const totalKg = Number(item.quantity || 0) * (item.unit === 'kg' ? 1 : bagKg)
+        // Prioriza o cadastro atual do produto; não inventa peso de sacaria.
+        const bagKg = Number(produto?.bag_kg || item.bag_kg || 0)
+        const pesoValido = Number.isFinite(bagKg) && bagKg > 0
+        const totalKg = Number(item.quantity || 0) * (item.unit === 'kg' ? 1 : (pesoValido ? bagKg : 1))
         const valorKg = Number(item.price_kg) || (
-          item.unit === 'kg' ? Number(item.unit_price || 0) : Number(item.unit_price || 0) / bagKg
+          item.unit === 'kg' ? Number(item.unit_price || 0) : (pesoValido ? Number(item.unit_price || 0) / bagKg : 0)
         ) || Number(produto?.price_kg || 0)
+        const sacos = pesoValido ? totalKg / bagKg : null
+        const sacosFormatados = sacos === null ? 'Peso não cadastrado' :
+          `${Number(sacos.toFixed(3)).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} sacos (${bagKg.toLocaleString('pt-BR')} kg)`
 
         return [
           item.product_name || '—',
           `${totalKg.toLocaleString('pt-BR')} kg`,
+          sacosFormatados,
           moeda(valorKg),
           moeda(item.subtotal),
         ]
@@ -448,33 +455,11 @@ export default function DetalheCotacao() {
         fillColor: [253, 251, 248],
       },
       columnStyles: {
-        0: {
-          cellWidth: 63,
-          halign: 'left',
-          fontStyle: 'bold',
-        },
-        1: {
-          cellWidth: 18,
-          halign: 'center',
-        },
-        2: {
-          cellWidth: 26,
-          halign: 'center',
-        },
-        3: {
-          cellWidth: 25,
-          halign: 'right',
-        },
-        4: {
-          cellWidth: 26,
-          halign: 'right',
-        },
-        5: {
-          cellWidth: 24,
-          halign: 'right',
-          fontStyle: 'bold',
-          textColor: ORANGE_DARK,
-        },
+        0: { cellWidth: 66, halign: 'left', fontStyle: 'bold' },
+        1: { cellWidth: 29, halign: 'center' },
+        2: { cellWidth: 35, halign: 'center' },
+        3: { cellWidth: 24, halign: 'center' },
+        4: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: ORANGE_DARK },
       },
       didDrawPage: () => {
         if (doc.internal.getNumberOfPages() > 1) {
