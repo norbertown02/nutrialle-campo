@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { showToast } from './toast'
 import { logError } from './logError'
 import { normalizeClientPayload } from './clientName'
+import { normalizeQuoteProductNames } from './quoteProductName'
 
 // Depois de N tentativas com um erro que veio de verdade do servidor
 // (validação, permissão etc — não conectividade), paramos de tentar
@@ -104,7 +105,9 @@ export async function processOutbox() {
 
       const table = TABLE_BY_ENTITY[item.entity]
       // Normaliza também itens antigos ainda guardados offline no aparelho.
-      const payload = item.entity === 'farm' ? normalizeClientPayload(item.payload) : item.payload
+      let payload = item.payload
+      if (item.entity === 'farm') payload = normalizeClientPayload(payload)
+      if (item.entity === 'quote') payload = normalizeQuoteProductNames(payload)
       let error = null
 
       try {

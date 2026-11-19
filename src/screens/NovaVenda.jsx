@@ -8,6 +8,7 @@ import { useFarms } from '../lib/useFarms'
 import { isBrazilianCountry, countryName } from '../components/CountrySelector'
 import { useSales } from '../lib/useSales'
 import { useProducts } from '../lib/useProducts'
+import { normalizeQuoteProductName } from '../lib/quoteProductName'
 import { showToast } from '../lib/toast'
 import { supabase } from '../lib/supabase'
 import { db } from '../lib/db'
@@ -524,7 +525,7 @@ export default function NovaVenda() {
         return calcItem({
           key: 'quote-' + index,
           productId: it.product_id,
-          productName: it.product_name || '',
+          productName: normalizeQuoteProductName(it.product_name) || '',
           unit: 'kg',
           bagKg,
           priceKg,
