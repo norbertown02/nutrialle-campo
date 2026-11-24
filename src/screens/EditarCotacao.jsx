@@ -54,7 +54,10 @@ export default function EditarCotacao() {
     setLoading(true)
     let q = null
     const { data, error } = await supabase.from('quotes').select('*').eq('id', id).single()
-    if (!error && data) {
+    const local = await db.quotes_cache.get(id)
+    if (local?._pending) {
+      q = local
+    } else if (!error && data) {
       q = data
       await db.quotes_cache.put({ ...data, _pending: false })
     } else {
@@ -145,7 +148,7 @@ export default function EditarCotacao() {
         unit: 'kg',
         unit_price: Number(it.unit_price),
         bag_kg: getBagKg(it.product_name, products.find(p => p.id === it.product_id)?.bag_kg, it.bag_kg),
-        price_kg: it.price_kg || 0,
+        price_kg: Number(it.price_kg || 0),
         quantity: Number(it.quantity),
         discount: Number(it.discount),
         subtotal: it.subtotal,
@@ -254,6 +257,7 @@ export default function EditarCotacao() {
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8}}>
                   <div style={{fontSize:11,color:'var(--text-faint)'}}>
                     {Number(it.quantity||0).toLocaleString('pt-BR')} kg · R$ {fmt(it.price_kg)}/kg
+                    <div>{Number(it.bag_kg) > 0 ? `R$ ${fmt(Number(it.price_kg || 0) * Number(it.bag_kg))}/saco (${it.bag_kg} kg)` : 'Peso da sacaria não cadastrado'}</div>
                   </div>
                   <div style={{fontSize:13,fontWeight:600,color:'var(--orange)'}}>
                     R$ {fmt(it.subtotal)}
