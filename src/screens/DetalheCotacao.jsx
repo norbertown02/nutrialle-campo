@@ -116,7 +116,10 @@ export default function DetalheCotacao() {
     // não tiver sincronizado, cai para o que estiver salvo no aparelho.
     let q
     const { data: qNet, error: qErr } = await supabase.from('quotes').select('*').eq('id', id).single()
-    if (!qErr && qNet) {
+    const local = await db.quotes_cache.get(id)
+    if (local?._pending) {
+      q = local
+    } else if (!qErr && qNet) {
       q = qNet
       await db.quotes_cache.put({ ...qNet, _pending: false })
     } else {
@@ -395,6 +398,7 @@ export default function DetalheCotacao() {
         'Quantidade (kg)',
         'Sacos (kg/saco)',
         'R$/kg',
+        'R$/saco',
         'Subtotal',
       ]],
       body: items.map(item => {
@@ -415,6 +419,7 @@ export default function DetalheCotacao() {
           `${totalKg.toLocaleString('pt-BR')} kg`,
           sacosFormatados,
           moeda(valorKg),
+          pesoValido ? moeda(valorKg * bagKg) : '—',
           moeda(item.subtotal),
         ]
       }),
@@ -456,11 +461,12 @@ export default function DetalheCotacao() {
         fillColor: [253, 251, 248],
       },
       columnStyles: {
-        0: { cellWidth: 66, halign: 'left', fontStyle: 'bold' },
-        1: { cellWidth: 29, halign: 'center' },
-        2: { cellWidth: 35, halign: 'center' },
-        3: { cellWidth: 24, halign: 'center' },
-        4: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: ORANGE_DARK },
+        0: { cellWidth: 52, halign: 'left', fontStyle: 'bold' },
+        1: { cellWidth: 25, halign: 'center' },
+        2: { cellWidth: 32, halign: 'center' },
+        3: { cellWidth: 21, halign: 'center' },
+        4: { cellWidth: 24, halign: 'center' },
+        5: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: ORANGE_DARK },
       },
       didDrawPage: () => {
         if (doc.internal.getNumberOfPages() > 1) {
@@ -818,6 +824,7 @@ export default function DetalheCotacao() {
 
                 <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
                   {(Number(it.quantity || 0) * (it.unit === 'kg' ? 1 : (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1))).toLocaleString('pt-BR')} kg × R$ {fmt(Number(it.price_kg) || (it.unit === 'kg' ? Number(it.unit_price) : Number(it.unit_price) / (getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg) || 1)))}/kg
+                  <div>{(() => { const kg = getBagKg(it.product_name, produtosPorId[it.product_id]?.bag_kg, it.bag_kg); const price = Number(it.price_kg ?? (it.unit === 'kg' ? it.unit_price : kg ? Number(it.unit_price) / kg : 0)); return kg > 0 ? `R$ ${fmt(price * kg)}/saco (${kg} kg)` : 'Peso da sacaria não cadastrado' })()}</div>
                   {Number(it.discount) > 0 && (
                     <span
                       style={{
