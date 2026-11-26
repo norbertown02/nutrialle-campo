@@ -312,10 +312,10 @@ export default function DetalheCotacao() {
 
     function drawHeader() {
       doc.setFillColor(...BLACK)
-      doc.rect(0, 0, W, 52, 'F')
+      doc.rect(0, 0, W, 48, 'F')
 
       doc.setFillColor(...ORANGE)
-      doc.rect(0, 52, W, 1.3, 'F')
+      doc.rect(0, 48, W, 1.3, 'F')
 
       try {
         doc.addImage(logoHeader, 'PNG', M, 12, 66, 14)
@@ -349,7 +349,7 @@ export default function DetalheCotacao() {
 
     drawHeader()
 
-    let y = 66
+    let y = 57
 
     doc.setFillColor(...WHITE)
     doc.setDrawColor(...LINE)
@@ -389,7 +389,7 @@ export default function DetalheCotacao() {
     doc.setTextColor(...TEXT)
     doc.text(vendedor, W - M - 51, y + 18, { maxWidth: 45 })
 
-    y += 45
+    y += 40
 
     autoTable(doc, {
       startY: y,
@@ -427,6 +427,7 @@ export default function DetalheCotacao() {
       margin: {
         left: M,
         right: M,
+        top: M,
         bottom: 26,
       },
       tableWidth: W - M * 2,
@@ -434,9 +435,9 @@ export default function DetalheCotacao() {
         font: 'helvetica',
         fontSize: 8,
         cellPadding: {
-          top: 4,
+          top: 1.5,
           right: 3,
-          bottom: 4,
+          bottom: 1.5,
           left: 3,
         },
         lineColor: LINE,
@@ -468,14 +469,9 @@ export default function DetalheCotacao() {
         4: { cellWidth: 24, halign: 'center' },
         5: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: ORANGE_DARK },
       },
-      didDrawPage: () => {
-        if (doc.internal.getNumberOfPages() > 1) {
-          if (doc.internal.getCurrentPageInfo().pageNumber > 1) {
-            doc.setFillColor(...WHITE)
-            doc.rect(0, 0, W, H, 'F')
-          }
-        }
-      },
+      // Never paint over a completed page: AutoTable has already drawn its rows.
+      showHead: 'everyPage',
+      rowPageBreak: 'avoid',
     })
 
     y = doc.lastAutoTable.finalY + 9
