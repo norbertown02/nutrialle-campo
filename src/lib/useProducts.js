@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { db } from './db'
 import { supabase } from './supabase'
+import { normalizeQuoteProductName } from './quoteProductName'
+
+function normalizeProductNames(products) {
+  return products.map(product => ({ ...product, name: normalizeQuoteProductName(product.name) }))
+}
 
 export function useProducts() {
   const [products,       setProducts]       = useState([])
@@ -21,13 +26,14 @@ export function useProducts() {
       ])
 
       if (!prod.error && prod.data) {
-        setProducts(prod.data)
+        const catalog = normalizeProductNames(prod.data)
+        setProducts(catalog)
         setOffline(false)
         await db.products_cache.clear()
-        await db.products_cache.bulkPut(prod.data)
+        await db.products_cache.bulkPut(catalog)
       } else {
         const cached = await db.products_cache.toArray()
-        setProducts(cached)
+        setProducts(normalizeProductNames(cached))
         setOffline(true)
       }
 
