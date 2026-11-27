@@ -15,6 +15,7 @@ import { useVisits } from '../lib/useVisits'
 import { useChecklists } from '../lib/useChecklists'
 import { useAppointments } from '../lib/useAppointments'
 import StorePortfolio from '../components/StorePortfolio'
+import AssistenciaCliente from '../components/AssistenciaCliente'
 import '../styles/lojas-carteira.css'
 import { gerarRelatorioChecklist } from '../lib/gerarRelatorioChecklist'
 import { CHECKLIST_TEMPLATES } from '../data/checklists'
@@ -933,6 +934,7 @@ export default function FichaCliente() {
         ) : null}
       </div>
 
+      <AssistenciaCliente key={farm.id} farmId={farm.id} farmName={farm.name} visits={farmVisits}/>
       <div className="section-label">Historico</div>
 
       <div style={{
